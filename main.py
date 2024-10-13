@@ -8,7 +8,7 @@
 #   git clone https://github.com/pyimgui/pyimgui.git
 #   cd pyimgui
 #   git checkout docking
-#   pip install .[glfw]
+#   pip install .[glfw] (this takes a while)
 #   set ENABLE_DOCKING = True
 
 import glfw
