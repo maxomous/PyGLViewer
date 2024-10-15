@@ -1,72 +1,10 @@
 from OpenGL.GL import *
-from OpenGL.GL import shaders
 import numpy as np
 import ctypes
 from geometry import Geometry
 from color import Color
+from shaders import Shader, basic_vertex_shader, basic_fragment_shader
 
-basic_vertex_shader = """
-#version 330 core
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aColor;
-out vec3 ourColor;
-uniform mat4 view;
-uniform mat4 projection;
-void main() {
-    gl_Position = projection * view * vec4(aPos, 1.0);
-    ourColor = aColor;
-}
-"""
-basic_fragment_shader = """
-#version 330 core
-in vec3 ourColor;
-out vec4 FragColor;
-void main() {
-    FragColor = vec4(ourColor, 1.0);
-}
-"""
-class Shader:
-        
-
-    def __init__(self, vertex_source, fragment_source):
-        self.program = self.create_shader_program(vertex_source, fragment_source)
-
-    def create_shader_program(self, vertex_source, fragment_source):
-        vertex_shader = shaders.compileShader(vertex_source, GL_VERTEX_SHADER)
-        fragment_shader = shaders.compileShader(fragment_source, GL_FRAGMENT_SHADER)
-        program = shaders.compileProgram(vertex_shader, fragment_shader)
-        return program
-
-    def use(self):
-        glUseProgram(self.program)
-
-    def set_uniform(self, name, value):
-        location = glGetUniformLocation(self.program, name)
-        if location == -1:
-            print(f"Warning: Uniform '{name}' not found in shader program.")
-            return
-
-        if isinstance(value, int):
-            glUniform1i(location, value)
-        elif isinstance(value, float):
-            glUniform1f(location, value)
-        elif isinstance(value, (list, tuple, np.ndarray)):
-            if isinstance(value, np.ndarray):
-                value = value.flatten()  # Flatten the array
-            if len(value) == 2:
-                glUniform2f(location, *value)
-            elif len(value) == 3:
-                glUniform3f(location, *value)
-            elif len(value) == 4:
-                glUniform4f(location, *value)
-            elif len(value) == 9:  # 3x3 matrix
-                glUniformMatrix3fv(location, 1, GL_FALSE, (GLfloat * 9)(*value))
-            elif len(value) == 16:  # 4x4 matrix
-                glUniformMatrix4fv(location, 1, GL_FALSE, (GLfloat * 16)(*value))
-            else:
-                raise ValueError(f"Unsupported uniform vector size: {len(value)}")
-        else:
-            raise ValueError(f"Unsupported uniform type: {type(value)}")
 
 class BufferType:
     Static = GL_STATIC_DRAW
@@ -114,23 +52,24 @@ class VertexArray:
     def add_buffer(self, vb, layout):
         self.bind()
         vb.bind()
-        offset = 0
-        stride = sum(attr['size'] * 4 for attr in layout)  # Assuming float (4 bytes) for all attributes
         for attribute in layout:
             glEnableVertexAttribArray(attribute['index'])
-            glVertexAttribPointer(attribute['index'], attribute['size'], 
-                                  GL_FLOAT, GL_FALSE, 
-                                  stride, ctypes.c_void_p(offset))
-            offset += attribute['size'] * 4
+            glVertexAttribPointer(
+                attribute['index'], 
+                attribute['size'], 
+                attribute['type'], 
+                attribute['normalized'], 
+                attribute['stride'], 
+                ctypes.c_void_p(attribute['offset'])
+            )
 
 class RenderObject:
-    def __init__(self, vb, ib, va, draw_type, shader, wireframe):
+    def __init__(self, vb, ib, va, draw_type, shader):
         self.vb = vb
         self.ib = ib
         self.va = va
         self.draw_type = draw_type
         self.shader = shader
-        self.wireframe = wireframe
 
     def update_vertex_data(self, data, offset=0):
         self.vb.update_data(data, offset)
@@ -140,71 +79,81 @@ class RenderObject:
         
 class Renderer:
     def __init__(self):
+        self.lights = []
         self.objects = []
         self.wireframe_color = Color.WHITE
-
-    def add_object(self, vertex_data, index_data, buffer_type, layout, draw_type, shader, wireframe=False):
-        vb = VertexBuffer(vertex_data, buffer_type)
-        ib = IndexBuffer(index_data, buffer_type)
+        self.default_shader = Shader(basic_vertex_shader, basic_fragment_shader)
+        
+    def add_object(self, vertices, indices, buffer_type, shader=None, draw_type=GL_TRIANGLES):
+        shader = shader or self.default_shader
+        vb = VertexBuffer(vertices, buffer_type)
+        ib = IndexBuffer(indices, buffer_type)
         va = VertexArray()
+        
+        layout = [
+            {'index': 0, 'size': 3, 'type': GL_FLOAT, 'normalized': GL_FALSE, 'stride': 36, 'offset': 0},
+            {'index': 1, 'size': 3, 'type': GL_FLOAT, 'normalized': GL_FALSE, 'stride': 36, 'offset': 12},
+            {'index': 2, 'size': 3, 'type': GL_FLOAT, 'normalized': GL_FALSE, 'stride': 36, 'offset': 24}
+        ]
+        
         va.add_buffer(vb, layout)
-        obj = RenderObject(vb, ib, va, draw_type, shader, wireframe)
+        obj = RenderObject(vb, ib, va, draw_type, shader)
         self.objects.append(obj)
         return obj
 
-    def add_point(self, x, y, z, color, shader, buffer_type=BufferType.Static):
+    def add_point(self, x, y, z, color, shader=None, buffer_type=BufferType.Static):
         vertices, indices = Geometry.create_point(x, y, z, color)
-        return self.add_object(vertices, indices, buffer_type, [{'index': 0, 'size': 3}, {'index': 1, 'size': 3}], GL_POINTS, shader)
+        return self.add_object(vertices, indices, buffer_type, shader, GL_POINTS)
 
-    def add_line(self, start, end, color, shader, buffer_type=BufferType.Static):
+    def add_line(self, start, end, color, shader=None, buffer_type=BufferType.Static):
         vertices, indices = Geometry.create_line(start, end, color)
-        return self.add_object(vertices, indices, buffer_type, [{'index': 0, 'size': 3}, {'index': 1, 'size': 3}], GL_LINES, shader)
+        return self.add_object(vertices, indices, buffer_type, shader, GL_LINES)
 
-    def add_triangle(self, p1, p2, p3, color, shader, buffer_type=BufferType.Static, show_wireframe=False):
+    def add_triangle(self, p1, p2, p3, color, shader=None, buffer_type=BufferType.Static, show_wireframe=False):
         vertices, indices = Geometry.create_triangle(p1, p2, p3, color)
-        solid_obj = self.add_object(vertices, indices, buffer_type, [{'index': 0, 'size': 3}, {'index': 1, 'size': 3}], GL_TRIANGLES, shader)
+        solid_obj = self.add_object(vertices, indices, buffer_type, shader, GL_TRIANGLES)
         
         if show_wireframe:
-            vertices, indices = Geometry.create_triangle(p1, p2, p3, self.wireframe_color)
-            wireframe_obj = self.add_object(vertices, indices, buffer_type, [{'index': 0, 'size': 3}, {'index': 1, 'size': 3}], GL_LINE_LOOP, shader, True)
+            wireframe_vertices, wireframe_indices = Geometry.create_triangle_wireframe(p1, p2, p3, self.wireframe_color)
+            wireframe_obj = self.add_object(wireframe_vertices, wireframe_indices, buffer_type, shader, GL_LINES)
             return [solid_obj, wireframe_obj]
         
         return solid_obj
 
-    def add_rectangle(self, x, y, width, height, color, shader, buffer_type=BufferType.Static, show_wireframe=False):
+    def add_rectangle(self, x, y, width, height, color, shader=None, buffer_type=BufferType.Static, show_wireframe=False):
         vertices, indices = Geometry.create_rectangle(x, y, width, height, color)
-        solid_obj = self.add_object(vertices, indices, buffer_type, [{'index': 0, 'size': 3}, {'index': 1, 'size': 3}], GL_TRIANGLES, shader)
+        solid_obj = self.add_object(vertices, indices, buffer_type, shader, GL_TRIANGLES)
         
         if show_wireframe:
-            wireframe_vertices, wireframe_indices = Geometry.create_rectangle(x, y, width * 1.01, height * 1.01, self.wireframe_color)
-            wireframe_obj = self.add_object(wireframe_vertices, wireframe_indices, buffer_type, [{'index': 0, 'size': 3}, {'index': 1, 'size': 3}], GL_LINE_LOOP, shader, True)
+            wireframe_vertices, wireframe_indices = Geometry.create_rectangle_wireframe(x, y, width * 1.01, height * 1.01, self.wireframe_color)
+            wireframe_obj = self.add_object(wireframe_vertices, wireframe_indices, buffer_type, shader, GL_LINES)
             return [solid_obj, wireframe_obj]
         
         return solid_obj
 
-    def add_circle(self, x, y, radius, segments, color, shader, buffer_type=BufferType.Static, show_wireframe=False):
+    def add_circle(self, x, y, radius, segments, color, shader=None, buffer_type=BufferType.Static, show_wireframe=False):
         vertices, indices = Geometry.create_circle(x, y, radius, segments, color)
-        solid_obj = self.add_object(vertices, indices, buffer_type, [{'index': 0, 'size': 3}, {'index': 1, 'size': 3}], GL_TRIANGLES, shader)
+        solid_obj = self.add_object(vertices, indices, buffer_type, shader, GL_TRIANGLE_FAN)
         
         if show_wireframe:
-            wireframe_vertices, wireframe_indices = Geometry.create_circle(x, y, radius * 1.01, segments, self.wireframe_color)
-            wireframe_obj = self.add_object(wireframe_vertices, wireframe_indices, buffer_type, [{'index': 0, 'size': 3}, {'index': 1, 'size': 3}], GL_LINE_LOOP, shader, True)
+            wireframe_vertices, wireframe_indices = Geometry.create_circle_wireframe(x, y, radius * 1.01, segments, self.wireframe_color)
+            wireframe_obj = self.add_object(wireframe_vertices, wireframe_indices, buffer_type, shader, GL_LINE_LOOP)
             return [solid_obj, wireframe_obj]
         
         return solid_obj
 
-    def add_cube(self, position, size, color, shader, buffer_type=BufferType.Static, show_wireframe=False):
-        vertices, indices = Geometry.create_cube(position, size, color)
-        solid_obj = self.add_object(vertices, indices, buffer_type, [{'index': 0, 'size': 3}, {'index': 1, 'size': 3}], GL_TRIANGLES, shader)
+    def add_cube(self, position, size, color, shader=None, buffer_type=BufferType.Static, show_wireframe=False):
+        vertices, indices = Geometry.create_cube_solid(position, size, color)
+        solid_obj = self.add_object(vertices, indices, buffer_type, shader, GL_TRIANGLES)
         
         if show_wireframe:
-            wireframe_vertices, wireframe_indices = Geometry.create_cube(position, size * 1.01, self.wireframe_color, wireframe=True)
-            wireframe_obj = self.add_object(wireframe_vertices, wireframe_indices, buffer_type, [{'index': 0, 'size': 3}, {'index': 1, 'size': 3}], GL_LINES, shader, True)
+            wireframe_vertices, wireframe_indices = Geometry.create_cube_wireframe(position, size * 1.01, self.wireframe_color)
+            wireframe_obj = self.add_object(wireframe_vertices, wireframe_indices, buffer_type, shader, GL_LINES)
             return [solid_obj, wireframe_obj]
         
         return solid_obj
 
-    def add_axis(self, length, shader, buffer_type=BufferType.Static):
+    def add_axis(self, length, shader=None, buffer_type=BufferType.Static):
         # X-axis (red)
         self.add_line((0, 0, 0), (length, 0, 0), Color.RED, shader, buffer_type)
         # Y-axis (green)
@@ -212,38 +161,12 @@ class Renderer:
         # Z-axis (blue)
         self.add_line((0, 0, 0), (0, 0, length), Color.BLUE, shader, buffer_type)
 
-    def add_grid(self, position, size, increment, color, shader, buffer_type=BufferType.Static):
-        vertices = []
-        indices = []
-        index = 0
-        
-        # Calculate the number of lines based on size and increment
-        num_lines = int(size / increment) + 1
-        
-        # Create vertices and indices for the grid lines
-        for i in range(num_lines):
-            # X-axis lines
-            x = i * increment - size/2 + position[0]
-            vertices.extend([x, position[1] - size/2, position[2], *color])
-            vertices.extend([x, position[1] + size/2, position[2], *color])
-            
-            # Y-axis lines
-            y = i * increment - size/2 + position[1]
-            vertices.extend([position[0] - size/2, y, position[2], *color])
-            vertices.extend([position[0] + size/2, y, position[2], *color])
-            
-            # Indices for X-axis lines
-            indices.extend([index, index + 1])
-            # Indices for Y-axis lines
-            indices.extend([index + 2, index + 3])
-            index += 4
+    def add_grid(self, position, size, increment, color, shader=None, buffer_type=BufferType.Static):
+        vertices, indices = Geometry.create_grid(position, size, increment, color)
+        return self.add_object(vertices, indices, buffer_type, shader, GL_LINES)
 
-        vertices = np.array(vertices, dtype=np.float32)
-        indices = np.array(indices, dtype=np.uint32)
-
-        return self.add_object(vertices, indices, buffer_type, 
-                               [{'index': 0, 'size': 3}, {'index': 1, 'size': 3}], 
-                               GL_LINES, shader)
+    def add_light(self, light):
+        self.lights.append(light)
 
     def draw(self):
         for obj in self.objects:
@@ -251,20 +174,41 @@ class Renderer:
             obj.va.bind()
             obj.ib.bind()
             
-            # if obj.wireframe:
-            #     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-            #     glDisable(GL_DEPTH_TEST)  # Disable depth testing for wireframes
-            # else:
-            #     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+            if (obj.draw_type == GL_LINES) or (obj.draw_type == GL_LINE_LOOP) or (obj.draw_type == GL_LINE_STRIP):
+                glDisable(GL_DEPTH_TEST)
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+            else:
+                glEnable(GL_DEPTH_TEST)
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
             
             glDrawElements(obj.draw_type, obj.ib.count, GL_UNSIGNED_INT, None)
             
-            # if obj.wireframe:
-            #     glEnable(GL_DEPTH_TEST)  # Re-enable depth testing
-            
             obj.va.unbind()
             obj.ib.unbind()
-
+        
+        # Reset to default state
+        glEnable(GL_DEPTH_TEST)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+            
     def clear(self):
         glClearColor(0.2, 0.3, 0.3, 1.0)  # Set a dark teal background color
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+class LightType:
+    DIRECTIONAL = 0
+    POINT = 1
+    SPOT = 2
+
+class Light:
+    def __init__(self, light_type, position=None, direction=None, color=(1, 1, 1), intensity=1.0, 
+                 attenuation=(1.0, 0.0, 0.0), cutoff=None):
+        self.light_type = light_type
+        self.position = np.array(position) if position else None
+        self.direction = np.array(direction) if direction else None
+        self.color = np.array(color)
+        self.intensity = intensity
+        self.attenuation = np.array(attenuation)  # (constant, linear, quadratic)
+        self.cutoff = cutoff  # for spot light
+
+
+
