@@ -7,7 +7,6 @@ class Geometry:
     def create_grid(position, size, increment, color):
         vertices, indices = [], []
         index = 0
-        
         num_lines = int(size / increment) + 1
         
         for i in range(num_lines):
@@ -70,6 +69,18 @@ class Geometry:
         return vertices, indices
 
     @staticmethod
+    def create_rectangle_wireframe(x, y, width, height, color):
+        half_w, half_h = width / 2, height / 2
+        vertices = np.array([
+            x - half_w, y - half_h, 0, *color, 0, 0, 0,
+            x + half_w, y - half_h, 0, *color, 0, 0, 0,
+            x + half_w, y + half_h, 0, *color, 0, 0, 0,
+            x - half_w, y + half_h, 0, *color, 0, 0, 0
+        ], dtype=np.float32)
+        indices = np.array([0, 1, 1, 2, 2, 3, 3, 0], dtype=np.uint32)
+        return vertices, indices
+
+    @staticmethod
     def create_circle(x, y, radius, segments, color):
         normal = [0, 0, 1]  # Normal pointing outwards
         vertices = [x, y, 0, *color, *normal]
@@ -89,7 +100,23 @@ class Geometry:
         return vertices, indices
         
     @staticmethod
-    def create_cube_solid(position, size, color):
+    def create_circle_wireframe(x, y, radius, segments, color):
+        vertices = []
+        indices = []
+        for i in range(segments):
+            angle = 2 * np.pi * i / segments
+            vertices.extend([
+                x + radius * np.cos(angle),
+                y + radius * np.sin(angle),
+                0, *color, 0, 0, 0
+            ])
+            indices.extend([i, (i + 1) % segments])
+        vertices = np.array(vertices, dtype=np.float32)
+        indices = np.array(indices, dtype=np.uint32)
+        return vertices, indices
+
+    @staticmethod
+    def create_cube(position, size, color):
         s = size / 2
         x, y, z = position
         vertices = np.array([
@@ -160,45 +187,151 @@ class Geometry:
         return vertices, indices
 
     @staticmethod
-    def create_line_wireframe(start, end, color):
-        # Line is already wireframe, so just return the same as create_line
-        return Geometry.create_line(start, end, color)
+    def create_cylinder(start, direction, length, radius, segments, color):
+        direction = direction / np.linalg.norm(direction)
+        
+        # Choose a vector that's not parallel to direction
+        if np.abs(direction[0]) < 0.9:
+            right = np.array([1, 0, 0])
+        elif np.abs(direction[1]) < 0.9:
+            right = np.array([0, 1, 0])
+        else:
+            right = np.array([0, 0, 1])
+        
+        # Create an orthonormal basis
+        right = np.cross(direction, right)
+        right /= np.linalg.norm(right)
+        up = np.cross(direction, right)
 
-    @staticmethod
-    def create_triangle_wireframe(p1, p2, p3, color):
-        vertices = np.array([
-            *p1, *color, 0, 0, 0,
-            *p2, *color, 0, 0, 0,
-            *p3, *color, 0, 0, 0
-        ], dtype=np.float32)
-        indices = np.array([0, 1, 1, 2, 2, 0], dtype=np.uint32)
-        return vertices, indices
-
-    @staticmethod
-    def create_rectangle_wireframe(x, y, width, height, color):
-        half_w, half_h = width / 2, height / 2
-        vertices = np.array([
-            x - half_w, y - half_h, 0, *color, 0, 0, 0,
-            x + half_w, y - half_h, 0, *color, 0, 0, 0,
-            x + half_w, y + half_h, 0, *color, 0, 0, 0,
-            x - half_w, y + half_h, 0, *color, 0, 0, 0
-        ], dtype=np.float32)
-        indices = np.array([0, 1, 1, 2, 2, 3, 3, 0], dtype=np.uint32)
-        return vertices, indices
-
-    @staticmethod
-    def create_circle_wireframe(x, y, radius, segments, color):
         vertices = []
         indices = []
+
         for i in range(segments):
             angle = 2 * np.pi * i / segments
-            vertices.extend([
-                x + radius * np.cos(angle),
-                y + radius * np.sin(angle),
-                0, *color, 0, 0, 0
-            ])
+            x = radius * np.cos(angle)
+            y = radius * np.sin(angle)
+            
+            for end in [0, 1]:
+                point = start + direction * (length * end) + right * x + up * y
+                normal = right * np.cos(angle) + up * np.sin(angle)
+                vertices.extend((*point, *normal, *color))
+
+        for i in range(segments):
+            i0 = i * 2
+            i1 = (i * 2 + 2) % (segments * 2)
+            i2 = i * 2 + 1
+            i3 = (i * 2 + 3) % (segments * 2)
+
+            indices.extend([i0, i1, i2, i1, i3, i2])
+
+        return np.array(vertices, dtype=np.float32), np.array(indices, dtype=np.uint32)
+
+    @staticmethod
+    def create_cylinder_wireframe(start, direction, length, radius, segments, color):
+        direction = direction / np.linalg.norm(direction)
+        up = np.array([0, 0, 1])
+        if np.allclose(direction, up):
+            right = np.array([1, 0, 0])
+        else:
+            right = np.cross(up, direction)
+            right /= np.linalg.norm(right)
+        up = np.cross(direction, right)
+
+        vertices = []
+        indices = []
+
+        for i in range(segments):
+            angle = 2 * np.pi * i / segments
+            x = radius * np.cos(angle)
+            y = radius * np.sin(angle)
+            
+            for end in [0, 1]:
+                point = start + direction * (length * end) + right * x + up * y
+                vertices.extend((*point, *color))
+
+        # Circular edges
+        for i in range(segments):
             indices.extend([i, (i + 1) % segments])
-        vertices = np.array(vertices, dtype=np.float32)
-        indices = np.array(indices, dtype=np.uint32)
-        return vertices, indices
+            indices.extend([i + segments, (i + 1) % segments + segments])
+
+        # Longitudinal edges
+        for i in range(segments):
+            indices.extend([i, i + segments])
+
+        return np.array(vertices, dtype=np.float32), np.array(indices, dtype=np.uint32)
+
+    @staticmethod
+    def create_cone(start, direction, length, radius, segments, color):
+        direction = direction / np.linalg.norm(direction)
+        up = np.array([0, 0, 1])
+        if np.allclose(direction, up):
+            right = np.array([1, 0, 0])
+        else:
+            right = np.cross(up, direction)
+            right /= np.linalg.norm(right)
+        up = np.cross(direction, right)
+
+        vertices = []
+        indices = []
+
+        # Apex
+        apex = start + direction * length
+        vertices.extend((*apex, *direction, *color))
+
+        # Base
+        for i in range(segments):
+            angle = 2 * np.pi * i / segments
+            x = radius * np.cos(angle)
+            y = radius * np.sin(angle)
+            point = start + right * x + up * y
+            normal = right * np.cos(angle) + up * np.sin(angle)
+            vertices.extend((*point, *normal, *color))
+
+        # Indices for the base
+        for i in range(1, segments - 1):
+            indices.extend([0, i, i + 1])
+
+        # Indices for the sides
+        for i in range(segments):
+            i1 = i + 1
+            i2 = (i + 1) % segments + 1
+            indices.extend([0, i2, i1])
+
+        return np.array(vertices, dtype=np.float32), np.array(indices, dtype=np.uint32)
+
+    @staticmethod
+    def create_cone_wireframe(start, direction, length, radius, segments, color):
+        direction = direction / np.linalg.norm(direction)
+        up = np.array([0, 0, 1])
+        if np.allclose(direction, up):
+            right = np.array([1, 0, 0])
+        else:
+            right = np.cross(up, direction)
+            right /= np.linalg.norm(right)
+        up = np.cross(direction, right)
+
+        vertices = []
+        indices = []
+
+        # Apex
+        apex = start + direction * length
+        vertices.extend((*apex, *color))
+
+        # Base
+        for i in range(segments):
+            angle = 2 * np.pi * i / segments
+            x = radius * np.cos(angle)
+            y = radius * np.sin(angle)
+            point = start + right * x + up * y
+            vertices.extend((*point, *color))
+
+        # Circular base
+        for i in range(1, segments + 1):
+            indices.extend([i, i % segments + 1])
+
+        # Lines from base to apex
+        for i in range(1, segments + 1):
+            indices.extend([0, i])
+
+        return np.array(vertices, dtype=np.float32), np.array(indices, dtype=np.uint32)
 
