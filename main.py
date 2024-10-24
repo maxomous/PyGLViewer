@@ -3,13 +3,16 @@
 # pip install PyOpenGL_accelerate (optional)
 # pip install glfw
 # pip install imgui[glfw]
+''' OR Imgui docking branch 
+  git clone --recurse-submodules https://github.com/pyimgui/pyimgui.git
+  cd pyimgui
+  git checkout docking
+  pip install .[glfw] 
+''' # set ENABLE_DOCKING = True
+# Imgui intellisense 
+#   https://github.com/masc-it/pyimgui-interface-generator/blob/master/imgui.pyi
+#   Save to: AppData\Roaming\Python\Python311\site-packages\imgui\__init__.pyi
 
-# To install docking branch
-#   git clone https://github.com/pyimgui/pyimgui.git
-#   cd pyimgui
-#   git checkout docking
-#   pip install .[glfw] (this takes a while)
-#   set ENABLE_DOCKING = True
 
 import os
 import glfw
@@ -24,7 +27,7 @@ from input_handlers import Mouse, Keyboard
 from light import Light, LightType
 from renderer import Renderer, BufferType
 
-ENABLE_DOCKING = True  # Set this to False to disable docking
+ENABLE_DOCKING = False  # Set this to False to disable docking
 
 class Application:
     def __init__(self, width, height, title):
@@ -59,7 +62,7 @@ class Application:
         self.init_renderer()
         self.set_frame_size(self.window, self.width, self.height)
 
-        self.imgui_manager = ImGuiManager(self.window, enable_docking=True)
+        self.imgui_manager = ImGuiManager(self.window, enable_docking=ENABLE_DOCKING)
         
         font_path = './Fonts/Inter-Light.ttf'
         if not os.path.exists(font_path):
@@ -87,33 +90,37 @@ class Application:
         self.renderer.add_grid((0, 0, 0), 20.0, 1.0, Color.rgb(100, 100, 100))
         self.renderer.add_axis(10.0, line_width=3.0)
         
-        self.renderer.add_cube((-1, 0, 0), 0.5, Color.RED, buffer_type=BufferType.Dynamic, show_wireframe=False)
-        self.renderer.add_cube((0, 0, 0), 0.5, Color.GREEN, buffer_type=BufferType.Dynamic, show_wireframe=False)
-        self.renderer.add_cube((1, 0, 0), 0.5, Color.BLUE, buffer_type=BufferType.Dynamic, show_wireframe=False)
-        self.renderer.add_cube((0, 1, 0), 0.5, Color.rgb(255, 165, 0), buffer_type=BufferType.Dynamic, show_wireframe=False)
-        self.renderer.add_cube((0, 0, 1), 0.5, Color.YELLOW, buffer_type=BufferType.Dynamic, show_wireframe=False)
+        # self.renderer.add_cube((-1, 0, 0), 0.5, Color.RED, buffer_type=BufferType.Dynamic, show_wireframe=False)
+        # self.renderer.add_cube((0, 0, 0), 0.5, Color.GREEN, buffer_type=BufferType.Dynamic, show_wireframe=False)
+        # self.renderer.add_cube((1, 0, 0), 0.5, Color.BLUE, buffer_type=BufferType.Dynamic, show_wireframe=False)
+        # self.renderer.add_cube((0, 1, 0), 0.5, Color.rgb(255, 165, 0), buffer_type=BufferType.Dynamic, show_wireframe=False)
+        # self.renderer.add_cube((0, 0, 1), 0.5, Color.YELLOW, buffer_type=BufferType.Dynamic, show_wireframe=False)
+        self.renderer.add_circle((1, 2, 0), 1.0, 20, Color.WHITE, show_body=False, show_wireframe=True, line_width=3.0)
+        # self.renderer.add_cone((5, 0, 0), (0, 0, 1), 1.0, 0.5, 10, Color.rgb(255, 165, 0))
+        self.renderer.add_cylinder((2, 0, 0), (0, 1, 0), 1.0, 0.5, 10, Color.WHITE)
         self.init_lights()
 
     def init_lights(self):
         lights = {  
             # Slightly warm color
             "main": { "type": LightType.DIRECTIONAL, "position": (10, 10, 10), "target": (0, 0, 0), "color": (1.0, 0.95, 0.8),"intensity": 0.6},
-            "ambient": { "type": LightType.DIRECTIONAL, "direction": (0, 0, -1),  "color": (0.2, 0.2, 0.3), "intensity": 0.2 },
-            "front":  {"type": LightType.DIRECTIONAL, "position": (0, 5, 0), "target": (0, 0, 0), "color": (0.9, 0.9, 1.0), "intensity": 0.3},
-            "back":   {"type": LightType.DIRECTIONAL, "position": (0, -5, 0), "target": (0, 0, 0), "color": (1.0, 0.9, 0.8), "intensity": 0.3},
-            "left":   {"type": LightType.DIRECTIONAL, "position": (-5, 0, 0), "target": (0, 0, 0), "color": (0.8, 1.0, 0.8), "intensity": 0.3},
-            "right":  {"type": LightType.DIRECTIONAL, "position": (5, 0, 0), "target": (0, 0, 0), "color": (1.0, 0.8, 0.8), "intensity": 0.3},
-            "top":    {"type": LightType.DIRECTIONAL, "position": (0, 0, 5), "target": (0, 0, 0), "color": (0.9, 0.9, 1.0), "intensity": 0.3},
-            "bottom": {"type": LightType.DIRECTIONAL, "position": (0, 0, -5), "target": (0, 0, 0), "color": (1.0, 0.9, 0.8), "intensity": 0.2},
+            "main2": { "type": LightType.DIRECTIONAL, "position": (-10, -10, 10), "target": (0, 0, 0), "color": (1.0, 0.95, 0.8),"intensity": 0.6},
+            # "ambient": { "type": LightType.DIRECTIONAL, "direction": (0, 0, -1),  "color": (0.2, 0.2, 0.3), "intensity": 0.8 },
+            "front":  {"type": LightType.DIRECTIONAL, "position": (0, 10, 0), "target": (0, 0, 0), "color": (0.9, 0.9, 1.0), "intensity": 0.3},
+            "back":   {"type": LightType.DIRECTIONAL, "position": (0, -10, 0), "target": (0, 0, 0), "color": (1.0, 0.9, 0.8), "intensity": 0.3},
+            "left":   {"type": LightType.DIRECTIONAL, "position": (-10, 0, 0), "target": (0, 0, 0), "color": (0.8, 1.0, 0.8), "intensity": 0.3},
+            "right":  {"type": LightType.DIRECTIONAL, "position": (10, 0, 0), "target": (0, 0, 0), "color": (1.0, 0.8, 0.8), "intensity": 0.3},
+            "top":    {"type": LightType.DIRECTIONAL, "position": (0, 0, 10), "target": (0, 0, 0), "color": (0.9, 0.9, 1.0), "intensity": 0.3},
+            "bottom": {"type": LightType.DIRECTIONAL, "position": (0, 0, -10), "target": (0, 0, 0), "color": (1.0, 0.9, 0.8), "intensity": 0.3},
         }
         # Create and add lights to the renderer
         for fill_light_data in lights.values():
             self.renderer.add_light(Light(**fill_light_data))
 
-        # Draw arrows for all lights
-        for light in self.renderer.lights:
-            if light.position is not None:
-                self.renderer.draw_arrow(light.position, light.direction, color=Color.RED)
+        # # Draw arrows for all lights
+        # for light in self.renderer.lights:
+        #     if light.position is not None:
+        #         self.renderer.add_arrow(light.position, light.direction, color=Color.RED)
             
     def run(self):
         while not glfw.window_should_close(self.window):
