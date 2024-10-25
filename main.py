@@ -26,6 +26,8 @@ from color import Color
 from input_handlers import Mouse, Keyboard
 from light import Light, LightType
 from renderer import Renderer, BufferType
+from geometry import Geometry
+from transform import Transform
 
 ENABLE_DOCKING = False  # Set this to False to disable docking
 
@@ -87,8 +89,17 @@ class Application:
     def init_renderer(self):
         self.renderer = Renderer()
         
-        self.renderer.add_grid((0, 0, 0), 20.0, 1.0, Color.rgb(100, 100, 100))
-        self.renderer.add_axis(10.0, line_width=3.0)
+
+        # point_data = Geometry.create_point(Color.RED, Transform(translation=(5, 5, 5)))
+
+        # line_data = Geometry.create_line(Color.GREEN, Transform(translation=(0, 0, 1), rotation=(0, np.pi/2, 0), scale=(5, 1, 1)))
+        
+        
+        self.renderer.add_grid(
+            10, 1, Color.WHITE, Transform(translation=(1, 1, 0), rotation=(0, 0, np.pi/4), scale=(2, 2, 1)))
+
+        # self.renderer.add_grid(grid_data['vertices'], grid_data['indices'], Color.WHITE)
+        self.renderer.add_axis(scale=(10.0, 10.0, 10.0), line_width=3.0)
         
         # self.renderer.add_cube((-1, 0, 0), 0.5, Color.RED, buffer_type=BufferType.Dynamic, show_wireframe=False)
         # self.renderer.add_cube((0, 0, 0), 0.5, Color.GREEN, buffer_type=BufferType.Dynamic, show_wireframe=False)
@@ -166,7 +177,7 @@ class Application:
         imgui.text(f"Scroll Sensitivity: {self.mouse.scroll_sensitivity:.4f}")
         imgui.text(f"Camera Distance: {self.camera.distance:.2f}")
         imgui.end()
-        
+
 
     def render_demo_window(self):
         imgui.show_demo_window()
@@ -175,16 +186,12 @@ class Application:
         view_matrix = self.camera.get_view_matrix()
         camera_position = self.camera.position
 
-        self.renderer.default_shader.use()
-        self.renderer.default_shader.set_view_matrix(view_matrix)
-        self.renderer.default_shader.set_projection_matrix(self.projection)
-        self.renderer.default_shader.set_view_position(camera_position)
-        self.renderer.default_shader.set_light_uniforms(self.renderer.lights)
+        # Update renderer with new matrices and camera position
+        self.renderer.set_view_matrix(view_matrix)
+        self.renderer.set_projection_matrix(self.projection)
+        self.renderer.set_camera_position(camera_position)
 
-        # Add a model matrix
-        model_matrix = np.identity(4, dtype=np.float32)
-        self.renderer.default_shader.set_uniform("model", model_matrix)
-        
+        # Draw the scene
         self.renderer.draw()
 
     def cleanup(self):
@@ -196,3 +203,4 @@ if __name__ == "__main__":
     app = Application(800, 600, "Third Person Camera")
     if app.init():
         app.run()
+
