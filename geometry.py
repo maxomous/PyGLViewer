@@ -1,6 +1,5 @@
 import numpy as np
 from OpenGL.GL import *
-from transform import Transform
 from color import Color
 
 class GeometryData:
@@ -8,7 +7,23 @@ class GeometryData:
         self.vertices = np.array(vertices, dtype=np.float32)
         self.indices = np.array(indices, dtype=np.uint32)
 
-    def transform(self, translation=(0, 0, 0), rotation=(0, 0, 0), scale=(1, 1, 1)):
+    def __add__(self, other):
+        if not isinstance(other, GeometryData):
+            raise TypeError("Can only add GeometryData to GeometryData")
+
+        # Combine vertices
+        combined_vertices = np.concatenate((self.vertices, other.vertices))
+
+        # Adjust indices for the second object
+        max_index = len(self.vertices) // 9  # Assuming 9 values per vertex (position, color, normal)
+        adjusted_other_indices = other.indices + max_index
+
+        # Combine indices
+        combined_indices = np.concatenate((self.indices, adjusted_other_indices))
+
+        return GeometryData(combined_vertices, combined_indices)
+
+    def transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
         # Reshape vertices to separate positions, colors, and normals
         vertices = self.vertices.reshape(-1, 9)
         positions = vertices[:, :3]
@@ -16,7 +31,7 @@ class GeometryData:
         normals = vertices[:, 6:]
 
         # Create transformation matrices
-        transform_matrix = self.transform_matrix(translation, rotation, scale)
+        transform_matrix = self.transform_matrix(translate, rotate, scale)
         normal_matrix = np.linalg.inv(transform_matrix[:3, :3]).T  # For transforming normals
 
         # Apply transformation to positions
@@ -30,18 +45,18 @@ class GeometryData:
 
         # Combine transformed positions, original colors, and transformed normals
         transformed_vertices = np.column_stack((transformed_positions, colors, transformed_normals))
-        self.vertices = transformed_vertices.flatten()
+        self.vertices = transformed_vertices.flatten().astype(np.float32)
         return self
 
     @staticmethod
-    def transform_matrix(translation=(0, 0, 0), rotation=(0, 0, 0), scale=(1, 1, 1)):
+    def transform_matrix(translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
         """
         Create a 4x4 transformation matrix from the current transform parameters.
         
         :return: 4x4 numpy array representing the transformation matrix
         """
-        tx, ty, tz = translation
-        rx, ry, rz = rotation
+        tx, ty, tz = translate
+        rx, ry, rz = rotate
         sx, sy, sz = scale
 
         # Create rotation matrices
@@ -65,20 +80,20 @@ class GeometryData:
 
 class Geometry:
     @staticmethod
-    def create_grid(position, size, increment, color):
-        ''' Returns GeometryData for a 3D grid '''
+    def create_grid(size, increment, color):
+        ''' Returns GeometryData for a 3D grid centered at origin '''
         vertices, indices = [], []
         index = 0
         num_lines = int(size / increment) + 1
         
         for i in range(num_lines):
-            x = i * increment - size/2 + position[0]
-            vertices.extend([x, position[1] - size/2, position[2], *color, 0, 0, 1])
-            vertices.extend([x, position[1] + size/2, position[2], *color, 0, 0, 1])
+            x = i * increment - size/2
+            vertices.extend([x, -size/2, 0, *color, 0, 0, 1])
+            vertices.extend([x, size/2, 0, *color, 0, 0, 1])
             
-            y = i * increment - size/2 + position[1]
-            vertices.extend([position[0] - size/2, y, position[2], *color, 0, 0, 1])
-            vertices.extend([position[0] + size/2, y, position[2], *color, 0, 0, 1])
+            y = i * increment - size/2
+            vertices.extend([-size/2, y, 0, *color, 0, 0, 1])
+            vertices.extend([size/2, y, 0, *color, 0, 0, 1])
             
             indices.extend([index, index + 1, index + 2, index + 3])
             index += 4
@@ -140,12 +155,13 @@ class Geometry:
     def create_rectangle_wireframe(x, y, width, height, color):
         ''' Returns GeometryData for a 2D rectangle wireframe '''
         half_w, half_h = width / 2, height / 2
+        normal = [0, 0, 1]  # Normal pointing outwards
         return GeometryData(
             [
-                x - half_w, y - half_h, 0, *color, 0, 0, 0,
-                x + half_w, y - half_h, 0, *color, 0, 0, 0,
-                x + half_w, y + half_h, 0, *color, 0, 0, 0,
-                x - half_w, y + half_h, 0, *color, 0, 0, 0
+                x - half_w, y - half_h, 0, *color, *normal,
+                x + half_w, y - half_h, 0, *color, *normal,
+                x + half_w, y + half_h, 0, *color, *normal,
+                x - half_w, y + half_h, 0, *color, *normal
             ],
             [0, 1, 1, 2, 2, 3, 3, 0]
         )
@@ -154,14 +170,14 @@ class Geometry:
     def create_circle(centre, radius, segments, color):
         ''' Returns GeometryData for a 2D circle '''
         normal = [0, 0, 1]  # Normal pointing outwards
-        vertices = [centre[0], centre[1], 0, *color, *normal]
+        vertices = [*centre, *color, *normal]
         indices = []
         for i in range(segments):
             angle = 2 * np.pi * i / segments
             vertices.extend([
                 centre[0] + radius * np.cos(angle),
                 centre[1] + radius * np.sin(angle),
-                0, *color, *normal
+                centre[2], *color, *normal
             ])
             if i > 0:
                 indices.extend([0, i, i + 1])
@@ -169,43 +185,9 @@ class Geometry:
         return GeometryData(vertices, indices)
         
     @staticmethod
-    def create_circle(centre, normal, radius, segments, color):
-        ''' Returns GeometryData for a 3D circle '''
-        # Normalize the normal vector
-        normal = normal / np.linalg.norm(normal)
-        
-        # Create an orthonormal basis using the normal
-        if np.allclose(normal, [0, 0, 1]):
-            right = np.array([1, 0, 0])
-        else:
-            right = np.cross([0, 0, 1], normal)
-            right /= np.linalg.norm(right)
-        up = np.cross(normal, right)
-
-        vertices = []
-        indices = []
-
-        # Center vertex
-        vertices.extend((*centre, *color, *normal))
-
-        # Create vertices around the circle
-        for i in range(segments):
-            angle = 2 * np.pi * i / segments
-            x = radius * np.cos(angle)
-            y = radius * np.sin(angle)
-            point = centre + right * x + up * y
-            vertices.extend((*point, *color, *normal))
-            if i > 0:
-                indices.extend([0, i, i + 1])
-
-        # Close the circle
-        indices.extend([0, segments, 1])
-
-        return GeometryData(vertices, indices)
-    
-    @staticmethod
     def create_circle_wireframe(centre, radius, segments, color):
         ''' Returns GeometryData for a 3D circle wireframe '''
+        normal = [0, 0, 1]  # Normal pointing outwards
         vertices = []
         indices = []
         for i in range(segments):
@@ -213,14 +195,13 @@ class Geometry:
             vertices.extend([
                 centre[0] + radius * np.cos(angle),
                 centre[1] + radius * np.sin(angle),
-                0, *color, 0, 0, 0
+                centre[2], *color, *normal
             ])
             indices.extend([i, (i + 1) % segments])
         return GeometryData(vertices, indices)
 
-
     @staticmethod
-    def create_cube(size, color, transform=None):
+    def create_cube(size, color):
         ''' Returns GeometryData for a 3D cube '''
         s = size / 2
         vertices = [
@@ -268,19 +249,20 @@ class Geometry:
         return GeometryData(vertices, indices)
 
     @staticmethod
-    def create_cube_wireframe(position, size, color):
+    def create_cube_wireframe(size, color):
         ''' Returns GeometryData for a 3D cube wireframe '''
         s = size / 2
-        x, y, z = position
+        x, y, z = (0,0,0)
+        normal = [0, 0, 1]  # Normal pointing outwards
         vertices = [
-            x-s, y-s, z-s, *color, 0, 0, 0,
-            x+s, y-s, z-s, *color, 0, 0, 0,
-            x+s, y+s, z-s, *color, 0, 0, 0,
-            x-s, y+s, z-s, *color, 0, 0, 0,
-            x-s, y-s, z+s, *color, 0, 0, 0,
-            x+s, y-s, z+s, *color, 0, 0, 0,
-            x+s, y+s, z+s, *color, 0, 0, 0,
-            x-s, y+s, z+s, *color, 0, 0, 0
+            x-s, y-s, z-s, *color, *normal,
+            x+s, y-s, z-s, *color, *normal,
+            x+s, y+s, z-s, *color, *normal,
+            x-s, y+s, z-s, *color, *normal,
+            x-s, y-s, z+s, *color, *normal,
+            x+s, y-s, z+s, *color, *normal,
+            x+s, y+s, z+s, *color, *normal,
+            x-s, y+s, z+s, *color, *normal
         ]
 
         indices = [
@@ -291,166 +273,113 @@ class Geometry:
 
         return GeometryData(vertices, indices)
 
-    @staticmethod
-    def create_cylinder(start, direction, length, radius, segments, color):
-        ''' Returns GeometryData for a 3D cylinder '''
-        direction = direction / np.linalg.norm(direction)
-        
-        # Choose a vector that's not parallel to direction
-        if np.abs(direction[0]) < 0.9:
-            right = np.array([1, 0, 0])
-        elif np.abs(direction[1]) < 0.9:
-            right = np.array([0, 1, 0])
-        else:
-            right = np.array([0, 0, 1])
-        
-        # Create an orthonormal basis
-        right = np.cross(direction, right)
-        right /= np.linalg.norm(right)
-        up = np.cross(direction, right)
-
+    def create_cylinder(segments, color):
+        ''' Returns GeometryData for a 3D cylinder along Z-axis '''
         vertices = []
         indices = []
 
+        radius = 0.5
         for i in range(segments):
             angle = 2 * np.pi * i / segments
             x = radius * np.cos(angle)
             y = radius * np.sin(angle)
+            normal = [x, y, 0]
             
-            for end in [0, 1]:
-                point = start + direction * (length * end) + right * x + up * y
-                normal = right * np.cos(angle) + up * np.sin(angle)
-                vertices.extend((*point, *normal, *color))
+            # Bottom circle
+            vertices.extend([x, y, 0, *color, *normal])
+            # Top circle
+            vertices.extend([x, y, 1, *color, *normal])
 
+        # Indices for the side faces
         for i in range(segments):
-            i0 = i * 2
-            i1 = (i * 2 + 2) % (segments * 2)
-            i2 = i * 2 + 1
-            i3 = (i * 2 + 3) % (segments * 2)
-
-            indices.extend([i0, i1, i2, i1, i3, i2])
-
-        # vertices_1, indices_1 = Geometry.create_circle(start[0], start[1], radius, segments, color)
-        # end = start + direction * length
-        # vertices_2, indices_2 = Geometry.create_circle(end[0], end[1], radius, segments, color)
-        # vertices.extend(vertices_1)
-        # indices.extend(indices_1)
-        # vertices.extend(vertices_2)
-        # indices.extend(indices_2)
-
-        return GeometryData(vertices, indices)
+            i1 = i * 2
+            i2 = (i * 2 + 2) % (segments * 2)
+            i3 = i * 2 + 1
+            i4 = (i * 2 + 3) % (segments * 2)
+            indices.extend([i1, i2, i3, i2, i4, i3])
+            
+        cylinder = GeometryData(vertices, indices)
+        bottom = Geometry.create_circle(centre=(0,0,0), radius=radius, segments=segments, color=color).transform(rotate=(np.pi,0,0))
+        top = Geometry.create_circle(centre=(0,0,1), radius=radius, segments=segments, color=color)
+        return cylinder + bottom + top
 
     @staticmethod
-    def create_cylinder_wireframe(start, direction, length, radius, segments, color):
-        ''' Returns GeometryData for a 3D cylinder wireframe '''
-        direction = direction / np.linalg.norm(direction)
-        up = np.array([0, 0, 1])
-        if np.allclose(direction, up):
-            right = np.array([1, 0, 0])
-        else:
-            right = np.cross(up, direction)
-            right /= np.linalg.norm(right)
-        up = np.cross(direction, right)
-
-        vertices = []
-        indices = []
-
-        for i in range(segments):
-            angle = 2 * np.pi * i / segments
-            x = radius * np.cos(angle)
-            y = radius * np.sin(angle)
-            
-            for end in [0, 1]:
-                point = start + direction * (length * end) + right * x + up * y
-                vertices.extend((*point, *color))
-
-        # Circular edges
-        for i in range(segments):
-            indices.extend([i, (i + 1) % segments])
-            indices.extend([i + segments, (i + 1) % segments + segments])
-
-        # Longitudinal edges
-        for i in range(segments):
-            indices.extend([i, i + segments])
-
-        return GeometryData(vertices, indices)
-
-    @staticmethod
-    def create_cone(start, direction, length, radius, segments, color):
+    def create_cylinder_wireframe(segments, color):
+        ''' Returns GeometryData for a 3D cylinder wireframe along Z-axis '''
         
-        direction = direction / np.linalg.norm(direction)
-        up = np.array([0, 0, 1])
-        if np.allclose(direction, up):
-            right = np.array([1, 0, 0])
-        else:
-            right = np.cross(up, direction)
-            right /= np.linalg.norm(right)
-        up = np.cross(direction, right)
-
+        bottom = Geometry.create_circle_wireframe(centre=(0,0,0), radius=0.5, segments=segments, color=color)
+        top = Geometry.create_circle_wireframe(centre=(0,0,1), radius=0.5, segments=segments, color=color)
+        return bottom + top
+        
+    @staticmethod
+    def create_cone(segments, color):
+        ''' Returns GeometryData for a 3D cone along Z-axis '''
+        assert isinstance(segments, int) and segments > 2, "segments must be an integer greater than 2"
+        assert len(color) == 3, "color must be a tuple of 3 values"
+        
         vertices = []
         indices = []
-
+        normal_apex = [0, 0, 1]  # Normal pointing outwards
         # Apex
-        apex = start + direction * length
-        vertices.extend((*apex, *direction, *color))
-
-        # Base
+        vertices.extend([0, 0, 1, *color, *normal_apex])
+        radius = 0.5
+        # Side vertices
         for i in range(segments):
             angle = 2 * np.pi * i / segments
             x = radius * np.cos(angle)
             y = radius * np.sin(angle)
-            point = start + right * x + up * y
-            normal = right * np.cos(angle) + up * np.sin(angle)
-            vertices.extend((*point, *normal, *color))
+            normal = [x, y, 0.5]  # Adjusted normal for smooth shading
+            normal = normal / np.linalg.norm(normal)
+            vertices.extend([x, y, 0, *color, *normal])
 
-        # Indices for the base
-        for i in range(1, segments - 1):
-            indices.extend([0, i, i + 1])
+        # Base center vertex
+        base_center_index = len(vertices) // 9
+        vertices.extend([0, 0, 0, *color, 0, 0, -1])  # Base center with normal pointing down
 
         # Indices for the sides
         for i in range(segments):
             i1 = i + 1
             i2 = (i + 1) % segments + 1
-            indices.extend([0, i2, i1])
+            indices.extend([0, i1, i2])
 
-        return GeometryData(vertices, indices)
+        cone = GeometryData(vertices, indices)
+        bottom = Geometry.create_circle(centre=(0,0,0), radius=0.5, segments=segments, color=color).transform(rotate=(np.pi,0,0))
+        return cone + bottom
 
     @staticmethod
-    def create_cone_wireframe(start, direction, length, radius, segments, color):
-        direction = direction / np.linalg.norm(direction)
-        up = np.array([0, 0, 1])
-        if np.allclose(direction, up):
-            right = np.array([1, 0, 0])
-        else:
-            right = np.cross(up, direction)
-            right /= np.linalg.norm(right)
-        up = np.cross(direction, right)
+    def create_cone_wireframe(segments, color):
+        ''' Returns GeometryData for a 3D cone wireframe along Z-axis '''
+        return Geometry.create_circle_wireframe(centre=(0,0,0), radius=0.5, segments=segments, color=color)
 
+    @staticmethod
+    def create_sphere(radius, stacks, sectors, color):
+        ''' Returns GeometryData for a 3D sphere '''
         vertices = []
         indices = []
 
-        # Apex
-        apex = start + direction * length
-        vertices.extend((*apex, *color))
+        for i in range(stacks + 1):
+            V = i / stacks
+            phi = V * np.pi
 
-        # Base
-        for i in range(segments):
-            angle = 2 * np.pi * i / segments
-            x = radius * np.cos(angle)
-            y = radius * np.sin(angle)
-            point = start + right * x + up * y
-            vertices.extend((*point, *color))
+            for j in range(sectors + 1):
+                U = j / sectors
+                theta = U * 2 * np.pi
 
-        # Circular base
-        for i in range(1, segments + 1):
-            indices.extend([i, i % segments + 1])
+                x = radius * np.cos(theta) * np.sin(phi)
+                y = radius * np.sin(theta) * np.sin(phi)
+                z = radius * np.cos(phi)
 
-        # Lines from base to apex
-        for i in range(1, segments + 1):
-            indices.extend([0, i])
+                normal = [x, y, z]
+                normal = normal / np.linalg.norm(normal)
+
+                vertices.extend([x, y, z, *color, *normal])
+
+        for i in range(stacks):
+            for j in range(sectors):
+                first = i * (sectors + 1) + j
+                second = first + sectors + 1
+
+                indices.extend([first, second, first + 1])
+                indices.extend([second, second + 1, first + 1])
 
         return GeometryData(vertices, indices)
-
-
-
-

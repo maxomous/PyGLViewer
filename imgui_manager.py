@@ -15,7 +15,14 @@ class ImGuiManager:
         io = imgui.get_io()
         if self.enable_docking:
             io.config_flags |= imgui.CONFIG_DOCKING_ENABLE
-        self.imgui_renderer = GlfwRenderer(self.window, attach_callbacks=False)
+        self.imgui_renderer = GlfwRenderer(self.window, attach_callbacks=True)
+        # # Manually attach callbacks to the renderer
+        # r = self.imgui_renderer
+        # glfw.set_key_callback(r.window, lambda *a: r.queue.put((r.keyboard_callback, a)))
+        # # glfw.set_cursor_pos_callback(r.window, lambda *a: r.queue.put((r.mouse_callback, a)))
+        # # glfw.set_window_size_callback(r.window, lambda *a: r.queue.put((r.resize_callback, a)))
+        # glfw.set_char_callback(r.window, lambda *a: r.queue.put((r.char_callback, a)))
+        # glfw.set_scroll_callback(r.window, lambda *a: r.queue.put((r.scroll_callback, a)))
 
         # Set ImGui style
         style = imgui.get_style()

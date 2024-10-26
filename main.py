@@ -27,7 +27,6 @@ from input_handlers import Mouse, Keyboard
 from light import Light, LightType
 from renderer import Renderer, BufferType
 from geometry import Geometry
-from transform import Transform
 
 ENABLE_DOCKING = False  # Set this to False to disable docking
 
@@ -59,8 +58,8 @@ class Application:
         print(f"ImGui Version: {imgui.get_version()}")
         
         self.camera = ThirdPersonCamera(position=(5, 0, 2), target=(0, 0, 0), up=(0, 0, 1), distance=9)
-        self.mouse = Mouse(self.window, self.camera)
-        self.keyboard = Keyboard(self.window, self.camera)
+        self.mouse = Mouse(self.camera)
+        self.keyboard = Keyboard(self.camera)
         self.init_renderer()
         self.set_frame_size(self.window, self.width, self.height)
 
@@ -90,38 +89,38 @@ class Application:
         self.renderer = Renderer()
         
 
-        # point_data = Geometry.create_point(Color.RED, Transform(translation=(5, 5, 5)))
-
-        # line_data = Geometry.create_line(Color.GREEN, Transform(translation=(0, 0, 1), rotation=(0, np.pi/2, 0), scale=(5, 1, 1)))
+        self.renderer.add_point((1,1,1), Color.RED, point_size=5.0)
+        self.renderer.add_line((2,1,1), (2,2,2), Color.RED, line_width=5.0)
         
-        
-        self.renderer.add_grid(
-            10, 1, Color.WHITE, Transform(translation=(1, 1, 0), rotation=(0, 0, np.pi/4), scale=(2, 2, 1)))
+        self.renderer.add_grid(10, 1, Color.GRAY)#, translate=(1, 1, 0), rotate=(0, 0, np.pi/4), scale=(2, 2, 1))
 
         # self.renderer.add_grid(grid_data['vertices'], grid_data['indices'], Color.WHITE)
-        self.renderer.add_axis(scale=(10.0, 10.0, 10.0), line_width=3.0)
+        self.renderer.add_axis(scale=(3.0, 3.0, 3.0), line_width=3.0)
         
-        # self.renderer.add_cube((-1, 0, 0), 0.5, Color.RED, buffer_type=BufferType.Dynamic, show_wireframe=False)
-        # self.renderer.add_cube((0, 0, 0), 0.5, Color.GREEN, buffer_type=BufferType.Dynamic, show_wireframe=False)
-        # self.renderer.add_cube((1, 0, 0), 0.5, Color.BLUE, buffer_type=BufferType.Dynamic, show_wireframe=False)
-        # self.renderer.add_cube((0, 1, 0), 0.5, Color.rgb(255, 165, 0), buffer_type=BufferType.Dynamic, show_wireframe=False)
-        # self.renderer.add_cube((0, 0, 1), 0.5, Color.YELLOW, buffer_type=BufferType.Dynamic, show_wireframe=False)
-        self.renderer.add_circle((1, 2, 0), 1.0, 20, Color.WHITE, show_body=False, show_wireframe=True, line_width=3.0)
-        # self.renderer.add_cone((5, 0, 0), (0, 0, 1), 1.0, 0.5, 10, Color.rgb(255, 165, 0))
-        self.renderer.add_cylinder((2, 0, 0), (0, 1, 0), 1.0, 0.5, 10, Color.WHITE)
+        segments = 32
+        self.renderer.add_circle(position=(1, 2, 0), radius=1.0, segments=segments, color=Color.GREEN, show_body=False, show_wireframe=True, line_width=3.0)
+        self.renderer.add_circle(position=(3, 2, 0), radius=0.5, segments=segments, color=Color.GREEN, show_body=False, show_wireframe=True)
+        self.renderer.add_cube(Color.RED, translate=(-1, 0, 0), scale=(0.5, 0.5, 0.5), buffer_type=BufferType.Dynamic, show_wireframe=True)
+        self.renderer.add_cube(Color.GREEN, translate=(0, 0, 0), scale=(0.5, 0.5, 0.5), buffer_type=BufferType.Dynamic, show_wireframe=True)
+        self.renderer.add_cube(Color.BLUE, translate=(1, 0, 0), scale=(0.5, 0.5, 0.5), buffer_type=BufferType.Dynamic, show_wireframe=True)
+        self.renderer.add_cube(Color.rgb(255, 165, 0), translate=(0, 1, 0), scale=(0.5, 0.5, 0.5), buffer_type=BufferType.Dynamic, show_wireframe=True)
+        self.renderer.add_cube(Color.YELLOW, translate=(0, 0, 1), scale=(0.5, 0.5, 0.5), buffer_type=BufferType.Dynamic, show_wireframe=True)
+        self.renderer.add_cone(Color.rgb(255, 165, 0), segments=segments, translate=(5, 0, 0), scale=(0.5, 0.5, 0.5), show_wireframe=True)
+        self.renderer.add_cylinder(Color.WHITE, segments=segments, translate=(2, 0, 0), scale=(0.5, 0.5, 0.5), show_wireframe=True)
+        self.renderer.add_sphere(translate=(3,0,0), radius=0.5, stacks=16, sectors=16, color=Color.WHITE)
         self.init_lights()
 
     def init_lights(self):
         lights = {  
             # Slightly warm color
-            "main": { "type": LightType.DIRECTIONAL, "position": (10, 10, 10), "target": (0, 0, 0), "color": (1.0, 0.95, 0.8),"intensity": 0.6},
-            "main2": { "type": LightType.DIRECTIONAL, "position": (-10, -10, 10), "target": (0, 0, 0), "color": (1.0, 0.95, 0.8),"intensity": 0.6},
-            # "ambient": { "type": LightType.DIRECTIONAL, "direction": (0, 0, -1),  "color": (0.2, 0.2, 0.3), "intensity": 0.8 },
+            "main": { "type": LightType.DIRECTIONAL, "position": (10, 10, 10), "target": (0, 0, 0), "color": (1.0, 0.95, 0.8),"intensity": 0.5},
+            "main2": { "type": LightType.DIRECTIONAL, "position": (-10, -10, 10), "target": (0, 0, 0), "color": (1.0, 0.95, 0.8),"intensity": 0.5},
+            "ambient": { "type": LightType.DIRECTIONAL, "direction": (0, 0, -1),  "color": (0.2, 0.2, 0.3), "intensity": 0.6 },
             "front":  {"type": LightType.DIRECTIONAL, "position": (0, 10, 0), "target": (0, 0, 0), "color": (0.9, 0.9, 1.0), "intensity": 0.3},
             "back":   {"type": LightType.DIRECTIONAL, "position": (0, -10, 0), "target": (0, 0, 0), "color": (1.0, 0.9, 0.8), "intensity": 0.3},
             "left":   {"type": LightType.DIRECTIONAL, "position": (-10, 0, 0), "target": (0, 0, 0), "color": (0.8, 1.0, 0.8), "intensity": 0.3},
             "right":  {"type": LightType.DIRECTIONAL, "position": (10, 0, 0), "target": (0, 0, 0), "color": (1.0, 0.8, 0.8), "intensity": 0.3},
-            "top":    {"type": LightType.DIRECTIONAL, "position": (0, 0, 10), "target": (0, 0, 0), "color": (0.9, 0.9, 1.0), "intensity": 0.3},
+            # "top":    {"type": LightType.DIRECTIONAL, "position": (0, 0, 10), "target": (0, 0, 0), "color": (0.9, 0.9, 1.0), "intensity": 0.3},
             "bottom": {"type": LightType.DIRECTIONAL, "position": (0, 0, -10), "target": (0, 0, 0), "color": (1.0, 0.9, 0.8), "intensity": 0.3},
         }
         # Create and add lights to the renderer
@@ -148,6 +147,7 @@ class Application:
         self.imgui_manager.process_inputs()
 
     def update(self):
+        self.mouse.process_input()
         self.keyboard.process_input()
 
     def render(self):
