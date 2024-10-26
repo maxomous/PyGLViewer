@@ -49,17 +49,21 @@ uniform int numLights;
 uniform vec3 viewPos;
 
 vec3 calcLight(Light light, vec3 normal, vec3 fragPos, vec3 viewDir) {
+    if (light.type == 0) {  // Ambient light
+        return light.color * light.intensity;
+    }
+    
     vec3 lightDir;
     float attenuation = 1.0;
 
-    if (light.type == 0) {  // Directional light
+    if (light.type == 1) {  // Directional light
         lightDir = normalize(-light.direction);
     } else {
         lightDir = normalize(light.position - fragPos);
         float distance = length(light.position - fragPos);
         attenuation = 1.0 / (light.attenuation.x + light.attenuation.y * distance + light.attenuation.z * distance * distance);
 
-        if (light.type == 2) {  // Spot light
+        if (light.type == 3) {  // Spot light
             float theta = dot(lightDir, normalize(-light.direction));
             if (theta <= cos(light.cutoff)) {
                 return vec3(0.0);

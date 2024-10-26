@@ -28,7 +28,7 @@ from light import Light, LightType
 from renderer import Renderer, BufferType
 from geometry import Geometry
 
-ENABLE_DOCKING = False  # Set this to False to disable docking
+ENABLE_DOCKING = True  # Set this to False to disable docking
 
 class Application:
     def __init__(self, width, height, title):
@@ -87,41 +87,54 @@ class Application:
     
     def init_renderer(self):
         self.renderer = Renderer()
-        
+        segments = 32  # Define segments here for consistent use
 
-        self.renderer.add_point((1,1,1), Color.RED, point_size=5.0)
-        self.renderer.add_line((2,1,1), (2,2,2), Color.RED, line_width=5.0)
-        
-        self.renderer.add_grid(10, 1, Color.GRAY)#, translate=(1, 1, 0), rotate=(0, 0, np.pi/4), scale=(2, 2, 1))
+        # Add grid and axis
+        self.renderer.add_grid(10, 1, Color.GRAY)
+        self.renderer.add_axis(size=3.0)
 
-        # self.renderer.add_grid(grid_data['vertices'], grid_data['indices'], Color.WHITE)
-        self.renderer.add_axis(scale=(3.0, 3.0, 3.0), line_width=3.0)
-        
-        segments = 32
-        self.renderer.add_circle(position=(1, 2, 0), radius=1.0, segments=segments, color=Color.GREEN, show_body=False, show_wireframe=True, line_width=3.0)
-        self.renderer.add_circle(position=(3, 2, 0), radius=0.5, segments=segments, color=Color.GREEN, show_body=False, show_wireframe=True)
-        self.renderer.add_cube(Color.RED, translate=(-1, 0, 0), scale=(0.5, 0.5, 0.5), buffer_type=BufferType.Dynamic, show_wireframe=True)
-        self.renderer.add_cube(Color.GREEN, translate=(0, 0, 0), scale=(0.5, 0.5, 0.5), buffer_type=BufferType.Dynamic, show_wireframe=True)
-        self.renderer.add_cube(Color.BLUE, translate=(1, 0, 0), scale=(0.5, 0.5, 0.5), buffer_type=BufferType.Dynamic, show_wireframe=True)
-        self.renderer.add_cube(Color.rgb(255, 165, 0), translate=(0, 1, 0), scale=(0.5, 0.5, 0.5), buffer_type=BufferType.Dynamic, show_wireframe=True)
-        self.renderer.add_cube(Color.YELLOW, translate=(0, 0, 1), scale=(0.5, 0.5, 0.5), buffer_type=BufferType.Dynamic, show_wireframe=True)
-        self.renderer.add_cone(Color.rgb(255, 165, 0), segments=segments, translate=(5, 0, 0), scale=(0.5, 0.5, 0.5), show_wireframe=True)
-        self.renderer.add_cylinder(Color.WHITE, segments=segments, translate=(2, 0, 0), scale=(0.5, 0.5, 0.5), show_wireframe=True)
-        self.renderer.add_sphere(translate=(3,0,0), radius=0.5, stacks=16, sectors=16, color=Color.WHITE)
+        # Row 1
+        self.renderer.add_point((-4, 4, 1), Color.RED, point_size=5.0)
+        self.renderer.add_line((-2, 4, 0), (-2, 4, 1), Color.RED, line_width=5.0)
+        self.renderer.add_triangle((0, 4.5, 0), (-0.5, 3.5, 0), (0.5, 3.5, 0), Color.BLUE)
+        self.renderer.add_rectangle((2, 4), 1, 1, Color.GREEN, show_wireframe=True)
+        self.renderer.add_circle(position=(4, 4, 0), radius=0.5, segments=segments, color=Color.GREEN, show_body=False, line_width=3.0)
+
+        # Row 2
+        self.renderer.add_circle(position=(-4, 2, 0), radius=0.5, segments=segments, color=Color.GREEN)
+        self.renderer.add_cube(Color.RED, translate=(-2, 2, 0.5), scale=(0.5, 0.5, 0.5), rotate=(np.pi/4, np.pi/4, 0), buffer_type=BufferType.Dynamic)
+        self.renderer.add_cone(Color.rgb(255, 165, 0), segments=segments, translate=(0, 2, 0.5), scale=(0.5, 0.5, 0.5))
+        self.renderer.add_cylinder(Color.WHITE, segments=segments, translate=(2, 2, 0.5), scale=(0.5, 0.5, 0.5))
+        self.renderer.add_sphere(translate=(4, 2, 0.5), radius=0.25, subdivisions=4, color=Color.WHITE)
+
+        # Row 3
+        self.renderer.add_cube(Color.YELLOW, translate=(-4, 0, 0.5), scale=(0.5, 0.5, 0.5), buffer_type=BufferType.Dynamic)
+        self.renderer.add_arrow((-2, 0, 0), (-2, 0, 1), shaft_radius=0.3, head_radius=0.5, head_length=0.3, color=Color.RED)
+
+
         self.init_lights()
 
     def init_lights(self):
         lights = {  
-            # Slightly warm color
-            "main": { "type": LightType.DIRECTIONAL, "position": (10, 10, 10), "target": (0, 0, 0), "color": (1.0, 0.95, 0.8),"intensity": 0.5},
-            "main2": { "type": LightType.DIRECTIONAL, "position": (-10, -10, 10), "target": (0, 0, 0), "color": (1.0, 0.95, 0.8),"intensity": 0.5},
-            "ambient": { "type": LightType.DIRECTIONAL, "direction": (0, 0, -1),  "color": (0.2, 0.2, 0.3), "intensity": 0.6 },
-            "front":  {"type": LightType.DIRECTIONAL, "position": (0, 10, 0), "target": (0, 0, 0), "color": (0.9, 0.9, 1.0), "intensity": 0.3},
-            "back":   {"type": LightType.DIRECTIONAL, "position": (0, -10, 0), "target": (0, 0, 0), "color": (1.0, 0.9, 0.8), "intensity": 0.3},
-            "left":   {"type": LightType.DIRECTIONAL, "position": (-10, 0, 0), "target": (0, 0, 0), "color": (0.8, 1.0, 0.8), "intensity": 0.3},
-            "right":  {"type": LightType.DIRECTIONAL, "position": (10, 0, 0), "target": (0, 0, 0), "color": (1.0, 0.8, 0.8), "intensity": 0.3},
-            # "top":    {"type": LightType.DIRECTIONAL, "position": (0, 0, 10), "target": (0, 0, 0), "color": (0.9, 0.9, 1.0), "intensity": 0.3},
-            "bottom": {"type": LightType.DIRECTIONAL, "position": (0, 0, -10), "target": (0, 0, 0), "color": (1.0, 0.9, 0.8), "intensity": 0.3},
+            "main": {
+                "type": LightType.DIRECTIONAL, 
+                "position": (10, 10, 10), 
+                "target": (0, 0, 0), 
+                "color": (1.0, 0.95, 0.8),
+                "intensity": 0.4
+            },
+            "ambient": {
+                "type": LightType.AMBIENT, 
+                "color": (1, 1, 1), 
+                "intensity": 0.7
+            },
+            "fill": {
+                "type": LightType.DIRECTIONAL, 
+                "position": (-5, 5, -5), 
+                "target": (0, 0, 0), 
+                "color": (0.8, 0.9, 1.0), 
+                "intensity": 0.3
+            }
         }
         # Create and add lights to the renderer
         for fill_light_data in lights.values():
@@ -200,7 +213,7 @@ class Application:
 
 
 if __name__ == "__main__":
-    app = Application(800, 600, "Third Person Camera")
+    app = Application(1280, 720, "Third Person Camera")
     if app.init():
         app.run()
 

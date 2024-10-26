@@ -1,6 +1,6 @@
 from OpenGL.GL import *
 import numpy as np
-from geometry import Geometry
+from geometry import Geometry, Vertex
 from color import Color
 from shaders import Shader, basic_vertex_shader, basic_fragment_shader
 from gl_objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, RenderObject
@@ -95,17 +95,17 @@ class Renderer:
         line = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
         return [line]
 
-    def add_triangle(self, p1, p2, p3, color, line_width=1.0, shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=False, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
+    def add_triangle(self, p1, p2, p3, color, line_width=1.0, shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=True, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
         triangle_body = triangle_wireframe = None
         if show_body:
             geometry = Geometry.create_triangle(p1, p2, p3, color).transform(translate, rotate, scale)
             triangle_body = self.add_object(geometry, buffer_type, shader, GL_TRIANGLES)
         if show_wireframe:
-            geometry = Geometry.create_triangle(p1, p2, p3, self.wireframe_color).transform(translate, rotate, scale)
+            geometry = Geometry.create_triangle_wireframe(p1, p2, p3, self.wireframe_color).transform(translate, rotate, scale)
             triangle_wireframe = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
         return [triangle_body, triangle_wireframe]
 
-    def add_rectangle(self, position, width, height, color, line_width=1.0, shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=False, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
+    def add_rectangle(self, position, width, height, color, line_width=1.0, shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=True, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
         rectangle_body = rectangle_wireframe = None
         if show_body:
             geometry = Geometry.create_rectangle(position[0], position[1], width, height, color).transform(translate, rotate, scale)
@@ -116,7 +116,7 @@ class Renderer:
         return [rectangle_body, rectangle_wireframe]
         
 
-    def add_circle(self, position, radius, segments, color, line_width=1.0, shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=False, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
+    def add_circle(self, position, radius, segments, color, line_width=1.0, shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=True, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
         circle_body = circle_wireframe = None
         if show_body:
             geometry = Geometry.create_circle(position, radius, segments, color).transform(translate, rotate, scale)
@@ -126,7 +126,7 @@ class Renderer:
             circle_wireframe = self.add_object(geometry, buffer_type, shader, GL_LINE_LOOP, line_width=line_width)
         return [circle_body, circle_wireframe]
 
-    def add_cube(self, color, line_width=1.0, shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=False, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
+    def add_cube(self, color, line_width=1.0, shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=True, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
         cube_body = cube_wireframe = None
         if show_body:
             geometry = Geometry.create_cube(size=1.0, color=color).transform(translate, rotate, scale)
@@ -136,7 +136,7 @@ class Renderer:
             cube_wireframe = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
         return [cube_body, cube_wireframe]
 
-    def add_cylinder(self, color, segments, line_width=1.0, shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=False, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
+    def add_cylinder(self, color, segments, line_width=1.0, shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=True, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
         cylinder_body = cylinder_wireframe = None
         if show_body:
             geometry = Geometry.create_cylinder(segments, color).transform(translate, rotate, scale)
@@ -146,7 +146,10 @@ class Renderer:
             cylinder_wireframe = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
         return [cylinder_body, cylinder_wireframe]
 
-    def add_cone(self, color, segments, line_width=1.0, shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=False, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
+
+
+
+    def add_cone(self, color, segments, line_width=1.0, shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=True, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
         cone_body = cone_wireframe = None
         if show_body:
             geometry = Geometry.create_cone(segments, color).transform(translate, rotate, scale)
@@ -156,31 +159,33 @@ class Renderer:
             cone_wireframe = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
         return [cone_body, cone_wireframe]
 
-    def add_sphere(self, radius, stacks, sectors, color, shader=None, buffer_type=BufferType.Static, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
-        geometry = Geometry.create_sphere(radius, stacks, sectors, color).transform(translate, rotate, scale)
+    def add_sphere(self, radius, subdivisions, color, shader=None, buffer_type=BufferType.Static, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
+        geometry = Geometry.create_sphere(radius, subdivisions, color).transform(translate, rotate, scale)
         sphere_body = self.add_object(geometry, buffer_type, shader, GL_TRIANGLES)
         return [sphere_body]
 
+    def add_arrow(self, p0, p1, shaft_radius=0.1, head_radius=0.2, head_length=0.4, color=Color.WHITE, segments=16, shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=True, line_width=1.0):
+        body, wireframe = Geometry.create_arrow(p0, p1, color, self.wireframe_color, shaft_radius, head_radius, head_length, segments)
+        arrow_body = self.add_object(body, buffer_type, shader, GL_TRIANGLES) if show_body else None
+        arrow_wireframe = self.add_object(wireframe, buffer_type, shader, GL_LINES, line_width=line_width) if show_wireframe else None
+        return [arrow_body, arrow_wireframe]
+    
+    def add_axis(self, size=1.0, shaft_radius=0.1, head_radius=0.2, head_length=0.4, segments=16, shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=True, line_width=1.0, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):      
+        # Create geometry
+        x_geometry, x_wireframe = Geometry.create_arrow((0,0,0), (size,0,0), (1,0,0), self.wireframe_color, shaft_radius, head_radius, head_length, segments)
+        y_geometry, y_wireframe = Geometry.create_arrow((0,0,0), (0,size,0), (0,1,0), self.wireframe_color, shaft_radius, head_radius, head_length, segments)
+        z_geometry, z_wireframe = Geometry.create_arrow((0,0,0), (0,0,size), (0,0,1), self.wireframe_color, shaft_radius, head_radius, head_length, segments)
+        radius, subdivisions, color = 0.12, 4, Color.BLACK
+        sphere_geometry = Geometry.create_sphere(radius, subdivisions, color)
+        # Transform geometry
+        geometry = (x_geometry + y_geometry + z_geometry + sphere_geometry).transform(translate, rotate, scale)
+        wireframe = (x_wireframe + y_wireframe + z_wireframe).transform(translate, rotate, scale)
+        # Add objects
+        axis_body = self.add_object(geometry, buffer_type, shader, GL_TRIANGLES) if show_body else None
+        axis_wireframe = self.add_object(wireframe, buffer_type, shader, GL_LINES, line_width=line_width) if show_wireframe else None
+        # Return objects
+        return [axis_body, axis_wireframe]
 
-    def add_arrow(self, color=Color.WHITE, wireframe_color=Color.BLACK, segments=16, shader=None, buffer_type=BufferType.Static, show_wireframe=True, line_width=1.0, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
-        arrow_shaft = self.add_cylinder(color, segments, line_width, shader, buffer_type, show_body=True, show_wireframe=show_wireframe, translate=translate, rotate=rotate, scale=scale)
-        
-        # Adjust scale for the cone (arrowhead)
-        cone_scale = list(scale)
-        cone_scale[2] *= 0.2  # Adjust the length of the cone
-        cone_translate = list(translate)
-        cone_translate[2] += scale[2] * 0.9  # Move the cone to the end of the cylinder
-        
-        arrow_head = self.add_cone(color, segments, line_width, shader, buffer_type, show_body=True, show_wireframe=show_wireframe, translate=tuple(cone_translate), rotate=rotate, scale=tuple(cone_scale))
-        
-        return [arrow_shaft, arrow_head]
-
-    def add_axis(self, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), line_width=1.0, shader=None, buffer_type=BufferType.Static):
-        geometry = Geometry.create_line((0,0,0), (1,0,0), Color.RED).transform(translate, rotate, scale)
-        geometry += Geometry.create_line((0,0,0), (0,1,0), Color.GREEN).transform(translate, rotate, scale)
-        geometry += Geometry.create_line((0,0,0), (0,0,1), Color.BLUE).transform(translate, rotate, scale)
-        axes = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
-        return [axes]
 
     def add_grid(self, size, increment, color, line_width=1.0, shader=None, buffer_type=BufferType.Static, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
         geometry = Geometry.create_grid(size, increment, color).transform(translate, rotate, scale)
@@ -188,47 +193,25 @@ class Renderer:
         return [grid]
 
     def add_object(self, geometry_data, buffer_type, shader=None, draw_type=GL_TRIANGLES, line_width=1.0, point_size=1.0):
-        """
-        Add a new object to the scene.
-
-        This method creates a new renderable object from the provided GeometryData and adds it to the scene.
-
-        Parameters:
-        -----------
-        geometry_data : GeometryData
-            An instance of GeometryData containing vertices and indices for the object.
-        buffer_type : int
-            The OpenGL buffer type (e.g., GL_STATIC_DRAW, GL_DYNAMIC_DRAW).
-        shader : Shader, optional
-            The shader program to use for this object. If None, the default shader will be used.
-        draw_type : int, optional
-            The OpenGL draw type (e.g., GL_TRIANGLES, GL_LINES). Defaults to GL_TRIANGLES.
-        line_width : float, optional
-            The width of lines when drawing line-based objects. Defaults to 1.0.
-        point_size : float, optional
-            The size of points when drawing point-based objects. Defaults to 1.0.
-
-        Returns:
-        --------
-        List of RenderObject
-            A list containing the created render object, which has been added to the scene.
-        """
-        
         shader = shader or self.default_shader
-        vb = VertexBuffer(geometry_data.vertices, buffer_type)
+
+        # Interleave position, color, and normal data
+        interleaved_data = np.array([vertex.to_array() for vertex in geometry_data.vertices], dtype=np.float32).flatten()
+        
+        vb = VertexBuffer(interleaved_data, buffer_type)
         ib = IndexBuffer(geometry_data.indices, buffer_type)
         va = VertexArray()
         
-        layout = [
-            {'index': 0, 'size': 3, 'type': GL_FLOAT, 'normalized': GL_FALSE, 'stride': 36, 'offset': 0},
-            {'index': 1, 'size': 3, 'type': GL_FLOAT, 'normalized': GL_FALSE, 'stride': 36, 'offset': 12},
-            {'index': 2, 'size': 3, 'type': GL_FLOAT, 'normalized': GL_FALSE, 'stride': 36, 'offset': 24}
-        ]
-        
-        va.add_buffer(vb, layout)
+        va.add_buffer(vb, Vertex.LAYOUT)
         obj = RenderObject(vb, ib, va, draw_type, shader, line_width, point_size)
         self.objects.append(obj)
         return obj
+
+
+
+
+
+
 
 
 

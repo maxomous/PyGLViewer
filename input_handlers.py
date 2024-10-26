@@ -2,6 +2,8 @@ import imgui
 import glfw
 import numpy as np
 
+# NOTE: Use ImGui instead of glfw to get inputs.
+
 class Mouse:
     def __init__(self, camera):
         self.camera = camera
@@ -77,9 +79,9 @@ class Keyboard:
         if io.keys_down[glfw.KEY_D]:
             self.camera.move("RIGHT", speed)
 
-        if io.keys_down[glfw.KEY_Q]:
+        if io.keys_down[glfw.KEY_KP_ADD]:
             self.camera.zoom(0.1)
-        if io.keys_down[glfw.KEY_E]:
+        if io.keys_down[glfw.KEY_KP_SUBTRACT]:
             self.camera.zoom(-0.1)
 
         if io.keys_down[glfw.KEY_Y]:

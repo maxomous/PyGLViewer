@@ -1,9 +1,10 @@
 import numpy as np
 
 class LightType:
-    DIRECTIONAL = 0
-    POINT = 1
-    SPOT = 2
+    AMBIENT = 0
+    DIRECTIONAL = 1
+    POINT = 2
+    SPOT = 3
 
 class Light:
     def __init__(self, type, position=None, direction=None, target=None, color=(1, 1, 1), intensity=1.0, 
@@ -18,7 +19,7 @@ class Light:
 
         if direction is not None:
             self.direction = np.array(direction, dtype=np.float32)
-        elif self.position is not None and self.target is not None:
+        elif self.position is not None and self.target is not None and self.type != LightType.AMBIENT:
             self.direction = self.calculate_direction()
         else:
             self.direction = None
@@ -34,16 +35,17 @@ class Light:
             'type': self.type,
             'color': self.color,
             'intensity': self.intensity,
-            'attenuation': self.attenuation
         }
-        if self.position is not None:
-            data['position'] = self.position
-        if self.direction is not None:
-            data['direction'] = self.direction
-        if self.cutoff is not None:
-            data['cutoff'] = self.cutoff
+        if self.type != LightType.AMBIENT:
+            data['attenuation'] = self.attenuation
+            if self.position is not None:
+                data['position'] = self.position
+            if self.direction is not None:
+                data['direction'] = self.direction
+            if self.cutoff is not None:
+                data['cutoff'] = self.cutoff
         return data
 
     def update_direction(self):
-        if self.position is not None and self.target is not None:
+        if self.type != LightType.AMBIENT and self.position is not None and self.target is not None:
             self.direction = self.calculate_direction()
