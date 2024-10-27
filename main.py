@@ -73,7 +73,7 @@ class Application:
             font_path = 'C:/Windows/Fonts/arial.ttf'
         
         self.imgui_manager.load_font('large', font_path, 24)
-        self.imgui_manager.load_font('medium', font_path, 18)
+        self.imgui_manager.load_font('medium', font_path, 17)
         self.imgui_manager.load_font('small', font_path, 12)
 
         glfw.set_framebuffer_size_callback(self.window, self.set_frame_size)
@@ -254,10 +254,15 @@ class Application:
                 
             # Sensitivity settings in a tree node
             if imgui.tree_node('Sensitivity'):
-                # Using dictionary-style access for getting/setting values
+                # Calculate width to account for text label
+                text_width = 120  # Adjust this value based on your longest label
+                slider_width = imgui.get_content_region_available()[0] - text_width
+                
+                imgui.push_item_width(slider_width)
                 _, p["base_pan_sensitivity"] = imgui.slider_float('Pan Sensitivity', p["base_pan_sensitivity"], 0.001, 0.1, '%.4f')
                 _, p["base_scroll_sensitivity"] = imgui.slider_float('Scroll Sensitivity', p["base_scroll_sensitivity"], 0.1, 2.0, '%.2f')
                 _, p["rotate_sensitivity"] = imgui.slider_float('Rotate Sensitivity', p["rotate_sensitivity"], 0.01, 0.5, '%.2f')
+                imgui.pop_item_width()
                 imgui.tree_pop()
             
             # Invert controls in a tree node
