@@ -2,7 +2,7 @@ import numpy as np
 import math
 
 class Camera:
-    def __init__(self, position, target, up, distance):
+    def __init__(self, position, target, up, distance, near=0.1, far=100):
         self.position = np.array(position, dtype=np.float32)
         self.target = np.array(target, dtype=np.float32)
         self.up = np.array(up, dtype=np.float32)
@@ -11,6 +11,8 @@ class Camera:
         self.distance = distance
         self.is_orthographic = False
         self.aspect_ratio = None
+        self.near = near
+        self.far = far
         
     def set_aspect_ratio(self, width, height):
         self.aspect_ratio = width / height if height > 0 else 1.0
@@ -48,22 +50,16 @@ class Camera:
         return self.projection
   
     def update_projection(self):
-        
-        near = 0.1
-        far = 1000
-        
         if self.is_orthographic:
             scaled_width = self.distance * self.aspect_ratio / 2
             scaled_height = self.distance * 1 / 2
-            self.projection = self.get_orthographic_projection(-scaled_width, scaled_width, -scaled_height, scaled_height, -far, far) # TODO near, far
+            self.projection = self.get_orthographic_projection(-scaled_width, scaled_width, -scaled_height, scaled_height, -self.far, self.far) # TODO near, far
         else:
             fov = 45.0
             self.projection = self.get_perspective_projection(
-                fov, self.aspect_ratio, near, far
+                fov, self.aspect_ratio, self.near, self.far
             )
 
-
-  
   
     def normalize(self, v):
         norm = np.linalg.norm(v)
@@ -108,26 +104,26 @@ class ThirdPersonCamera(Camera):
 
 
     def update_vectors(self):
-        # if self.is_2d_mode:
-        #     # 2D mode: camera always looks down the negative z-axis
-        #     self.front = np.array([0, 0, -1], dtype=np.float32)
-        #     self.right = np.array([1, 0, 0], dtype=np.float32)
-        #     self.up = np.array([0, 1, 0], dtype=np.float32)
-        #     self.position = np.array([self.target[0], self.target[1], self.distance], dtype=np.float32)
-        # else:
-        # 3D update logic (yaw goes around z)
-        front = np.array([
-            math.cos(math.radians(self.yaw)) * math.cos(math.radians(self.pitch)),
-            math.sin(math.radians(self.yaw)) * math.cos(math.radians(self.pitch)),
-            math.sin(math.radians(self.pitch))
-        ], dtype=np.float32)
-        self.front = self.normalize(front)
-        self.right = self.normalize(np.cross(self.front, self.world_up))
-        self.up = self.normalize(np.cross(self.right, self.front))
-        # Update position for both orthographic and perspective modes
-        
-        # Perspective mode
-        self.position = self.target - self.front * self.distance
+        if self.is_2d_mode:
+            # 2D mode: camera always looks down the negative z-axis
+            self.front = np.array([0, 0, -1], dtype=np.float32)
+            self.right = np.array([1, 0, 0], dtype=np.float32)
+            self.up = np.array([0, 1, 0], dtype=np.float32)
+            self.position = np.array([self.target[0], self.target[1], self.distance], dtype=np.float32)
+        else:
+            # 3D update logic (yaw goes around z)
+            front = np.array([
+                math.cos(math.radians(self.yaw)) * math.cos(math.radians(self.pitch)),
+                math.sin(math.radians(self.yaw)) * math.cos(math.radians(self.pitch)),
+                math.sin(math.radians(self.pitch))
+            ], dtype=np.float32)
+            self.front = self.normalize(front)
+            self.right = self.normalize(np.cross(self.front, self.world_up))
+            self.up = self.normalize(np.cross(self.right, self.front))
+            # Update position for both orthographic and perspective modes
+            
+            # Perspective mode
+            self.position = self.target - self.front * self.distance
         
         # if self.is_orthographic:
         #     # Orthographic mode
@@ -148,8 +144,9 @@ class ThirdPersonCamera(Camera):
     def pan(self, dx, dy, invert=[1, 1]):
         if self.is_2d_mode:
             # 2D panning: move target in x and y directions
+            # Invert dy for 2D mode to match screen coordinates
             self.target[0] += dx * invert[0]
-            self.target[1] += dy * invert[1]
+            self.target[1] -= dy * invert[1] 
         else:
             # 3D panning logic
             right = self.normalize(np.cross(self.front, self.world_up))

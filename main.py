@@ -27,6 +27,7 @@ from input_handlers import Mouse, Keyboard
 from light import Light, LightType
 from renderer import Renderer, BufferType
 from geometry import Geometry
+from parameters import parameters as p
 
 ENABLE_DOCKING = True  # Set this to False to disable docking
 
@@ -42,7 +43,7 @@ class Application:
         self.mouse = None
         self.keyboard = None
         self.imgui_manager = None
-
+        
     def init(self):
         if not glfw.init():
             return False
@@ -53,21 +54,22 @@ class Application:
             return False
         
         glfw.make_context_current(self.window)
-        print(f"OpenGL Version: {glGetString(GL_VERSION).decode()}")
-        print(f"GLSL Version: {glGetString(GL_SHADING_LANGUAGE_VERSION).decode()}")
-        print(f"ImGui Version: {imgui.get_version()}")
+                
+        print(f'OpenGL Version: {glGetString(GL_VERSION).decode()}')
+        print(f'GLSL Version: {glGetString(GL_SHADING_LANGUAGE_VERSION).decode()}')
+        print(f'ImGui Version: {imgui.get_version()}')
         
         self.camera = ThirdPersonCamera(position=(5, 0, 2), target=(0, 0, 0), up=(0, 0, 1), distance=9)
         self.mouse = Mouse(self.camera)
         self.keyboard = Keyboard(self.camera)
         self.init_renderer()
-        self.set_frame_size(self.window, self.width, self.height)
+        self.set_frame_size(self.window, self.width, self.height) # also initialises camera
 
         self.imgui_manager = ImGuiManager(self.window, enable_docking=ENABLE_DOCKING)
         
         font_path = './Fonts/Inter-Light.ttf'
         if not os.path.exists(font_path):
-            print(f"Font file not found: {font_path}")
+            print(f'Font file not found: {font_path}')
             font_path = 'C:/Windows/Fonts/arial.ttf'
         
         self.imgui_manager.load_font('large', font_path, 24)
@@ -86,56 +88,57 @@ class Application:
         self.camera.update_projection()
     
     
-
     def init_renderer(self):
         self.renderer = Renderer()
         segments = 32  # Define segments here for consistent use
 
         # Add grid and axis
         self.renderer.add_grid(10, 1, Color.GRAY)
-        self.renderer.add_axis(size=3.0)
+        self.renderer.add_axis(size=1)
 
-        # Row 1
-        self.renderer.add_point((-4, 4, 1), Color.RED, point_size=5.0)
-        self.renderer.add_line((-2, 4, 0), (-2, 4, 1), Color.RED, line_width=5.0)
-        self.renderer.add_triangle((0, 4.5, 0), (-0.5, 3.5, 0), (0.5, 3.5, 0), Color.BLUE)
-        self.renderer.add_rectangle((2, 4), 1, 1, Color.GREEN, show_wireframe=True)
-        self.renderer.add_circle(position=(4, 4, 0), radius=0.5, segments=segments, color=Color.GREEN, show_body=False, line_width=3.0)
+        # Row 1 (all wireframe with consistent thickness, different colors)
+        point_size = 7.0  # Consistent line thickness for all shapes
+        line_thickness = 3.0  # Consistent line thickness for all shapes
 
-        # Row 2
-        self.renderer.add_circle(position=(-4, 2, 0), radius=0.5, segments=segments, color=Color.GREEN)
-        self.renderer.add_cube(Color.RED, translate=(-2, 2, 0.5), scale=(0.5, 0.5, 0.5), rotate=(np.pi/4, np.pi/4, 0), buffer_type=BufferType.Dynamic)
-        self.renderer.add_cone(Color.rgb(255, 165, 0), segments=segments, translate=(0, 2, 0.5), scale=(0.5, 0.5, 0.5))
-        self.renderer.add_cylinder(Color.WHITE, segments=segments, translate=(2, 2, 0.5), scale=(0.5, 0.5, 0.5))
+        self.renderer.add_point((-4, 4, 0), Color.RED, point_size=point_size)
+        self.renderer.add_line((-2.5, 3.5, 0), (-1.5, 4.5, 0), Color.ORANGE, line_width=line_thickness)
+        self.renderer.add_triangle((0, 4.433, 0), (-0.5, 3.567, 0), (0.5, 3.567, 0), wireframe_color=Color.YELLOW, show_wireframe=True, show_body=False, line_width=line_thickness)
+        self.renderer.add_rectangle((2, 4), 1, 1, wireframe_color=Color.GREEN, show_wireframe=True, show_body=False, line_width=line_thickness)
+        self.renderer.add_circle(position=(4, 4, 0), radius=0.5, segments=segments, wireframe_color=Color.BLUE, show_body=False, line_width=line_thickness)
+
+        # Row 2 (filled shapes)
+        self.renderer.add_circle(position=(-4, 2, 0), radius=0.5, segments=segments, color=Color.GREEN, show_body=True)
+        self.renderer.add_cube(Color.RED, translate=(-2, 2, 0.5), scale=(0.5, 0.5, 0.5), rotate=(np.pi/4, np.pi/4, 0), buffer_type=BufferType.Dynamic, show_body=True)
+        self.renderer.add_cone(Color.rgb(255, 165, 0), segments=segments, translate=(0, 2, 0.5), scale=(0.5, 0.5, 0.5), show_body=True)
+        self.renderer.add_cylinder(Color.WHITE, segments=segments, translate=(2, 2, 0.5), scale=(0.5, 0.5, 0.5), show_body=True)
         self.renderer.add_sphere(translate=(4, 2, 0.5), radius=0.25, subdivisions=4, color=Color.WHITE)
 
-        # Row 3
-        self.renderer.add_cube(Color.YELLOW, translate=(-4, 0, 0.5), scale=(0.5, 0.5, 0.5), buffer_type=BufferType.Dynamic)
-        self.renderer.add_arrow((-2, 0, 0), (-2, 0, 1), shaft_radius=0.3, head_radius=0.5, head_length=0.3, color=Color.RED)
-
+        # Row 3 (filled shapes)
+        self.renderer.add_cube(Color.YELLOW, translate=(-4, 0, 0.5), scale=(0.5, 0.5, 0.5), buffer_type=BufferType.Dynamic, show_body=True)
+        self.renderer.add_arrow((-2.4, -0.4, 0.25), (-1.6, 0.4, 0.75), shaft_radius=0.2, head_radius=0.4, head_length=0.3, color=Color.RED, show_body=True)
 
         self.init_lights()
 
     def init_lights(self):
         lights = {  
-            "main": {
-                "type": LightType.DIRECTIONAL, 
-                "position": (10, 10, 10), 
-                "target": (0, 0, 0), 
-                "color": (1.0, 0.95, 0.8),
-                "intensity": 0.4
+            'main': {
+                'type': LightType.DIRECTIONAL, 
+                'position': (10, 10, 10), 
+                'target': (0, 0, 0), 
+                'color': (1.0, 0.95, 0.8),
+                'intensity': 0.4
             },
-            "ambient": {
-                "type": LightType.AMBIENT, 
-                "color": (1, 1, 1), 
-                "intensity": 0.7
+            'ambient': {
+                'type': LightType.AMBIENT, 
+                'color': (1, 1, 1), 
+                'intensity': 0.7
             },
-            "fill": {
-                "type": LightType.DIRECTIONAL, 
-                "position": (-5, 5, -5), 
-                "target": (0, 0, 0), 
-                "color": (0.8, 0.9, 1.0), 
-                "intensity": 0.3
+            'fill': {
+                'type': LightType.DIRECTIONAL, 
+                'position': (-5, 5, -5), 
+                'target': (0, 0, 0), 
+                'color': (0.8, 0.9, 1.0), 
+                'intensity': 0.3
             }
         }
         # Create and add lights to the renderer
@@ -182,44 +185,131 @@ class Application:
 
         glfw.swap_buffers(self.window)
 
+    def create_imgui_table(self, table_id, headers, rows, flags=0):
+        ''' Add TABLE_ROW_HEADERS to flags to add headers '''
+        if imgui.begin_table(table_id, len(headers), flags):
+            # Setup columns
+            for header in headers:
+                imgui.table_setup_column(header, imgui.TABLE_COLUMN_WIDTH_STRETCH)
+            
+            # Optionally add headers
+            if flags & imgui.TABLE_ROW_HEADERS:
+                imgui.table_headers_row()
+            
+            # Add rows
+            for row in rows:
+                imgui.table_next_row()
+                for cell in row:
+                    imgui.table_next_column()
+                    imgui.text(str(cell))
+            
+            imgui.end_table()
+            return True
+        return False
+
     def render_debug_window(self):
-        imgui.begin("Debug Window")
-        
-        # Camera position and target
-        imgui.text(f"Camera Position: {self.camera.position}")
-        imgui.text(f"Camera Target: {self.camera.target}")
-        
-        # Camera vectors
-        imgui.text(f"Front Vector: {self.camera.front}")
-        imgui.text(f"Up Vector: {self.camera.up}")
-        imgui.text(f"Right Vector: {self.camera.right}")
-        imgui.text(f"World Up Vector: {self.camera.world_up}")
-        
-        # Camera angles and distance
-        imgui.text(f"Yaw: {self.camera.yaw:.2f}, Pitch: {self.camera.pitch:.2f}")
-        imgui.text(f"Camera Distance: {self.camera.distance:.2f}")
-        
-        # Camera modes
-        imgui.text(f"Mode: {'2D' if self.camera.is_2d_mode else '3D'}")
-        imgui.text(f"Projection: {'Orthographic' if self.camera.is_orthographic else 'Perspective'}")
-        
-        # FPS counter
-        imgui.text(f"FPS: {1.0 / glfw.get_time():.1f}")
-        glfw.set_time(0)  # Reset the timer
-        
-        # Mouse sensitivities
-        imgui.text(f"Pan Sensitivity: {self.mouse.pan_sensitivity:.4f}")
-        imgui.text(f"Scroll Sensitivity: {self.mouse.scroll_sensitivity:.4f}")
-        
-        # Toggle buttons
-        if imgui.button("Toggle 2D/3D Mode"):
-            self.camera.toggle_2d_mode()
-            self.camera.update_projection() 
-    
-        if imgui.button("Toggle Projection"):
-            self.camera.toggle_projection()
-            self.camera.update_projection()
-    
+        imgui.begin('Debug Window', flags=imgui.WINDOW_ALWAYS_AUTO_RESIZE)
+
+        if imgui.collapsing_header('Camera', flags=imgui.TREE_NODE_DEFAULT_OPEN)[0]:
+            imgui.indent()
+
+            # Camera Settings
+            if imgui.tree_node('View Mode', flags=imgui.TREE_NODE_DEFAULT_OPEN):
+                changed, _ = imgui.checkbox('2D Mode', self.camera.is_2d_mode)
+                if changed:
+                    self.camera.toggle_2d_mode()
+                    self.camera.update_projection()
+                
+                changed, _ = imgui.checkbox('Orthographic Projection', self.camera.is_orthographic)
+                if changed:
+                    self.camera.toggle_projection()
+                    self.camera.update_projection()
+                imgui.tree_pop()
+                
+            # Camera Information
+            if imgui.tree_node('Information'):
+                
+                self.create_imgui_table(
+                    table_id='camera_info',
+                    headers=['', ''],
+                    rows=[
+                        ('Position',    self.camera.position.round(2)),
+                        ('Target',      self.camera.target.round(2)),
+                        ('Yaw',         f'{self.camera.yaw:.2f}°'),
+                        ('Pitch',       f'{self.camera.pitch:.2f}°'),
+                        ('Distance',    f'{self.camera.distance:.2f}'),
+                        ('Front',       self.camera.front.round(2)),
+                        ('Up',          self.camera.up.round(2)),
+                        ('Right',       self.camera.right.round(2)),
+                        ('World Up',    self.camera.world_up.round(2))
+                    ]
+                )
+                imgui.tree_pop()
+
+            imgui.unindent()
+
+        # Input Settings Section
+        if imgui.collapsing_header('Mouse', flags=imgui.TREE_NODE_DEFAULT_OPEN)[0]:
+            imgui.indent()
+                
+            # Sensitivity settings in a tree node
+            if imgui.tree_node('Sensitivity'):
+                # Using dictionary-style access for getting/setting values
+                _, p["base_pan_sensitivity"] = imgui.slider_float('Pan Sensitivity', p["base_pan_sensitivity"], 0.001, 0.1, '%.4f')
+                _, p["base_scroll_sensitivity"] = imgui.slider_float('Scroll Sensitivity', p["base_scroll_sensitivity"], 0.1, 2.0, '%.2f')
+                _, p["rotate_sensitivity"] = imgui.slider_float('Rotate Sensitivity', p["rotate_sensitivity"], 0.01, 0.5, '%.2f')
+                imgui.tree_pop()
+            
+            # Invert controls in a tree node
+            if imgui.tree_node('Invert'):
+                # Rotate invert
+                invert_yaw_pitch = p["invert_yaw_pitch"]
+                _, yaw = imgui.checkbox('Invert Rotate X', invert_yaw_pitch[0] > 0)
+                _, pitch = imgui.checkbox('Invert Rotate Y', invert_yaw_pitch[1] > 0)
+                p["invert_yaw_pitch"] = [1 if x else -1 for x in (yaw, pitch)]
+                
+                # Pan invert
+                invert_pan = p["invert_pan"]
+                _, pan_x = imgui.checkbox('Invert Pan X', invert_pan[0] > 0)
+                _, pan_y = imgui.checkbox('Invert Pan Y', invert_pan[1] > 0)
+                p["invert_pan"] = [1 if x else -1 for x in (pan_x, pan_y)]
+                
+                # Scroll invert
+                _, scroll = imgui.checkbox('Invert Scroll', p["invert_scroll"] > 0)
+                p["invert_scroll"] = 1 if scroll else -1
+                imgui.tree_pop()
+            
+            imgui.unindent()
+
+        # Performance Section
+        if imgui.collapsing_header('Performance', flags=imgui.TREE_NODE_DEFAULT_OPEN)[0]:
+            imgui.indent()
+            imgui.text(f'FPS: {1.0 / glfw.get_time():.1f}')
+            glfw.set_time(0)  # Reset the timer
+            imgui.unindent()
+
+        # Parameters Section
+        if imgui.collapsing_header('Parameters', flags=imgui.TREE_NODE_DEFAULT_OPEN)[0]:
+            imgui.indent()
+            
+            # Control buttons
+            imgui.push_style_var(imgui.STYLE_FRAME_PADDING, (6, 6))  # Make the buttons larger by increasing padding around text
+            
+            if imgui.button("Reset to Defaults"):
+                p.reset_to_defaults()
+            
+            imgui.same_line()
+            if imgui.button("Save"):
+                p.save()
+            
+            imgui.same_line()
+            if imgui.button("Load"):
+                p.load()
+            
+            imgui.pop_style_var()  # Restore original padding
+            
+            imgui.unindent()
+
         imgui.end()
 
 
@@ -231,7 +321,6 @@ class Application:
         projection = self.camera.get_projection_matrix()
         camera_position = self.camera.position
         
-
         # Update renderer with new matrices and camera position
         self.renderer.set_view_matrix(view_matrix)
         self.renderer.set_projection_matrix(projection)
@@ -241,12 +330,13 @@ class Application:
         self.renderer.draw()
 
     def cleanup(self):
+        p.save() # save parameters to file
         self.imgui_manager.shutdown()
         glfw.terminate()
 
 
-if __name__ == "__main__":
-    app = Application(1280, 720, "Third Person Camera")
+if __name__ == '__main__':
+    app = Application(1280, 720, 'Third Person Camera')
     if app.init():
         app.run()
 

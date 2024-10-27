@@ -125,7 +125,14 @@ class Geometry:
     def create_line(p0, p1, color):
         direction = np.array(p1) - np.array(p0)
         normal = np.cross(direction, [0, 0, 1])
-        normal = normal / np.linalg.norm(normal)
+        norm = np.linalg.norm(normal)
+            
+        if norm > 1e-6:  # If the normal not (close to) zero
+            normal = normal / norm
+        else:  # The line is parallel to z-axis, so we can use any perpendicular vector
+            normal = np.cross(direction, [1, 0, 0])
+            norm = np.linalg.norm(normal)
+        
         vertices = [
             Vertex(p0, color, normal),
             Vertex(p1, color, normal)
