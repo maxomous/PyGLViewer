@@ -82,9 +82,45 @@ class Application:
         glViewport(0, 0, width, height)
         self.width = width
         self.height = height
-        aspect_ratio = self.width / self.height if self.height > 0 else 1.0
-        self.projection = self.camera.get_perspective_projection(45.0, aspect_ratio, 0.1, 100.0)
+        self.update_projection()
     
+    def update_projection(self):
+        
+        aspect = self.width / self.height if self.height > 0 else 1.0
+        near = 0.1
+        far = 1000
+        
+        if self.camera.is_orthographic:
+            # Use a fixed size for orthographic projection
+            size = 10  # Adjust this value to change the visible area
+            left = -size * aspect
+            right = size * aspect
+            bottom = -size
+            top = size
+
+            # # Center the orthographic projection on the camera target
+            # center_x = self.camera.target[0]
+            # center_y = self.camera.target[1]
+            
+            # self.projection = self.camera.get_orthographic_projection(
+            #     left + center_x, right + center_x, 
+            #     bottom + center_y, top + center_y, 
+            #     near, far
+            # )
+            
+            scaled_width = size * aspect / 2
+            scaled_height = size * 1 / 2
+            
+            self.projection = self.camera.get_orthographic_projection(-scaled_width, scaled_width, -scaled_height, scaled_height, -far, far)
+            
+        else:
+            fov = 45.0
+            self.projection = self.camera.get_perspective_projection(
+                fov, aspect, near, far
+            )
+
+
+
     def init_renderer(self):
         self.renderer = Renderer()
         segments = 32  # Define segments here for consistent use
@@ -189,6 +225,15 @@ class Application:
         imgui.text(f"Pan Sensitivity: {self.mouse.pan_sensitivity:.4f}")
         imgui.text(f"Scroll Sensitivity: {self.mouse.scroll_sensitivity:.4f}")
         imgui.text(f"Camera Distance: {self.camera.distance:.2f}")
+        imgui.text(f"Mode: {'2D' if self.camera.is_2d_mode else '3D'}")
+        if imgui.button("Toggle 2D/3D Mode"):
+            self.camera.toggle_2d_mode()
+            self.update_projection() 
+        imgui.text(f"Projection: {'Orthographic' if self.camera.is_orthographic else 'Perspective'}")
+        if imgui.button("Toggle Projection"):
+            self.camera.toggle_projection()
+            self.update_projection()
+        imgui.text(f"Yaw: {self.camera.yaw:.2f}, Pitch: {self.camera.pitch:.2f}")
         imgui.end()
 
 
