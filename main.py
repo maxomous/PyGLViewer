@@ -34,11 +34,11 @@ class Application:
     def __init__(self, width, height, title):
         self.width = width
         self.height = height
+        self.aspect_ratio = None
         self.title = title
         self.window = None
         self.camera = None
         self.renderer = None
-        self.projection = None
         self.mouse = None
         self.keyboard = None
         self.imgui_manager = None
@@ -82,44 +82,10 @@ class Application:
         glViewport(0, 0, width, height)
         self.width = width
         self.height = height
-        self.update_projection()
+        self.camera.set_aspect_ratio(width, height)
+        self.camera.update_projection()
     
-    def update_projection(self):
-        
-        aspect = self.width / self.height if self.height > 0 else 1.0
-        near = 0.1
-        far = 1000
-        
-        if self.camera.is_orthographic:
-            # Use a fixed size for orthographic projection
-            size = 10  # Adjust this value to change the visible area
-            left = -size * aspect
-            right = size * aspect
-            bottom = -size
-            top = size
-
-            # # Center the orthographic projection on the camera target
-            # center_x = self.camera.target[0]
-            # center_y = self.camera.target[1]
-            
-            # self.projection = self.camera.get_orthographic_projection(
-            #     left + center_x, right + center_x, 
-            #     bottom + center_y, top + center_y, 
-            #     near, far
-            # )
-            
-            scaled_width = size * aspect / 2
-            scaled_height = size * 1 / 2
-            
-            self.projection = self.camera.get_orthographic_projection(-scaled_width, scaled_width, -scaled_height, scaled_height, -far, far)
-            
-        else:
-            fov = 45.0
-            self.projection = self.camera.get_perspective_projection(
-                fov, aspect, near, far
-            )
-
-
+    
 
     def init_renderer(self):
         self.renderer = Renderer()
@@ -218,22 +184,42 @@ class Application:
 
     def render_debug_window(self):
         imgui.begin("Debug Window")
+        
+        # Camera position and target
         imgui.text(f"Camera Position: {self.camera.position}")
         imgui.text(f"Camera Target: {self.camera.target}")
+        
+        # Camera vectors
+        imgui.text(f"Front Vector: {self.camera.front}")
+        imgui.text(f"Up Vector: {self.camera.up}")
+        imgui.text(f"Right Vector: {self.camera.right}")
+        imgui.text(f"World Up Vector: {self.camera.world_up}")
+        
+        # Camera angles and distance
+        imgui.text(f"Yaw: {self.camera.yaw:.2f}, Pitch: {self.camera.pitch:.2f}")
+        imgui.text(f"Camera Distance: {self.camera.distance:.2f}")
+        
+        # Camera modes
+        imgui.text(f"Mode: {'2D' if self.camera.is_2d_mode else '3D'}")
+        imgui.text(f"Projection: {'Orthographic' if self.camera.is_orthographic else 'Perspective'}")
+        
+        # FPS counter
         imgui.text(f"FPS: {1.0 / glfw.get_time():.1f}")
         glfw.set_time(0)  # Reset the timer
+        
+        # Mouse sensitivities
         imgui.text(f"Pan Sensitivity: {self.mouse.pan_sensitivity:.4f}")
         imgui.text(f"Scroll Sensitivity: {self.mouse.scroll_sensitivity:.4f}")
-        imgui.text(f"Camera Distance: {self.camera.distance:.2f}")
-        imgui.text(f"Mode: {'2D' if self.camera.is_2d_mode else '3D'}")
+        
+        # Toggle buttons
         if imgui.button("Toggle 2D/3D Mode"):
             self.camera.toggle_2d_mode()
-            self.update_projection() 
-        imgui.text(f"Projection: {'Orthographic' if self.camera.is_orthographic else 'Perspective'}")
+            self.camera.update_projection() 
+    
         if imgui.button("Toggle Projection"):
             self.camera.toggle_projection()
-            self.update_projection()
-        imgui.text(f"Yaw: {self.camera.yaw:.2f}, Pitch: {self.camera.pitch:.2f}")
+            self.camera.update_projection()
+    
         imgui.end()
 
 
@@ -242,11 +228,13 @@ class Application:
 
     def render_3d_scene(self):
         view_matrix = self.camera.get_view_matrix()
+        projection = self.camera.get_projection_matrix()
         camera_position = self.camera.position
+        
 
         # Update renderer with new matrices and camera position
         self.renderer.set_view_matrix(view_matrix)
-        self.renderer.set_projection_matrix(self.projection)
+        self.renderer.set_projection_matrix(projection)
         self.renderer.set_camera_position(camera_position)
 
         # Draw the scene

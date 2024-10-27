@@ -2,32 +2,22 @@ import numpy as np
 import math
 
 class Camera:
-    def __init__(self, position, target, up):
+    def __init__(self, position, target, up, distance):
         self.position = np.array(position, dtype=np.float32)
         self.target = np.array(target, dtype=np.float32)
         self.up = np.array(up, dtype=np.float32)
         self.yaw = 72.0  # Horizontal rotation
         self.pitch = -27.0  # Vertical rotation
-
-            # m_Proj = glm::perspective(glm::radians(m_FOV), aspectRatio, m_Near, m_Far);
-    def get_orthographic_projection(self, left, right, bottom, top, near, far):
-       
-        # Calculate matrix elements
-        m00 = 2 / (right - left)
-        m11 = 2 / (top - bottom)
-        m22 = -2 / (far - near)
-        m03 = -(right + left) / (right - left)
-        m13 = -(top + bottom) / (top - bottom)
-        m23 = -(far + near) / (far - near)
+        self.distance = distance
+        self.is_orthographic = False
+        self.aspect_ratio = None
         
-        # Create the matrix
-        return np.array([
-            [m00,  0.0,  0.0, m03],
-            [0.0,  m11,  0.0, m13],
-            [0.0,  0.0,  m22, m23],
-            [0.0,  0.0,  0.0, 1.0]
-        ], dtype=np.float32)
-            
+    def set_aspect_ratio(self, width, height):
+        self.aspect_ratio = width / height if height > 0 else 1.0
+    
+        
+    @staticmethod
+    def get_orthographic_projection(left, right, bottom, top, near, far):           
         return np.array([
             [2 / (right - left), 0, 0, -(right + left) / (right - left)],
             [0, 2 / (top - bottom), 0, -(top + bottom) / (top - bottom)],
@@ -35,7 +25,8 @@ class Camera:
             [0, 0, 0, 1]
         ], dtype=np.float32)
         
-    def get_perspective_projection(self, fov, aspect, near, far):
+    @staticmethod
+    def get_perspective_projection(fov, aspect, near, far):
         f = 1 / math.tan(math.radians(fov) / 2)
         return np.array([
             [f / aspect, 0, 0, 0],
@@ -44,44 +35,7 @@ class Camera:
             [0, 0, (2 * far * near) / (near - far), 0]
         ], dtype=np.float32)
         
-    def look_at(self, eye, target, up):
-        # Calculate the forward vector (z-axis)
-        f = np.array(target) - np.array(eye)
-        f = f / np.linalg.norm(f)
-
-        # Calculate the right vector (x-axis)
-        s = np.cross(f, up)
-        s = s / np.linalg.norm(s)
-
-        # Calculate the up vector (y-axis)
-        u = np.cross(s, f)
-
-        # Create a 4x4 view matrix
-        view_matrix = np.identity(4)
-        view_matrix[0, :3] = s
-        view_matrix[1, :3] = u
-        view_matrix[2, :3] = -f
-        view_matrix[0, 3] = -np.dot(s, eye)
-        view_matrix[1, 3] = -np.dot(u, eye)
-        view_matrix[2, 3] = np.dot(f, eye)
-
-        return view_matrix
-
     def get_view_matrix(self):
-        # matrix = self.look_at(self.position, self.target, self.up)
-        # print(f'view matrix: {matrix}')
-        # return matrix
-        # if self.is_orthographic:
-        #     return self.lookAt(self.position, self.target, self.up)
-        #     # return self.lookAt(self.position, self.target, self.up)
-        #     # For orthographic, use a simpler view matrix
-        #     return np.array([
-        #         [1, 0, 0, -self.position[0]],
-        #         [0, 1, 0, -self.position[1]],
-        #         [0, 0, 1, -self.position[2]],
-        #         [0, 0, 0, 1]
-        #     ], dtype=np.float32)
-        # else:
         # View matrix calculation
         return np.array([
             [self.right[0], self.up[0], -self.front[0], 0],
@@ -89,13 +43,34 @@ class Camera:
             [self.right[2], self.up[2], -self.front[2], 0],
             [-np.dot(self.right, self.position), -np.dot(self.up, self.position), np.dot(self.front, self.position), 1]
         ], dtype=np.float32)
- 
- 
+  
+    def get_projection_matrix(self):
+        return self.projection
+  
+    def update_projection(self):
+        
+        near = 0.1
+        far = 1000
+        
+        if self.is_orthographic:
+            scaled_width = self.distance * self.aspect_ratio / 2
+            scaled_height = self.distance * 1 / 2
+            self.projection = self.get_orthographic_projection(-scaled_width, scaled_width, -scaled_height, scaled_height, -far, far) # TODO near, far
+        else:
+            fov = 45.0
+            self.projection = self.get_perspective_projection(
+                fov, self.aspect_ratio, near, far
+            )
+
+
+  
+  
     def normalize(self, v):
         norm = np.linalg.norm(v)
         if norm == 0: 
             return v
         return v / norm
+
 
 # class FirstPersonCamera(Camera):
 #     def __init__(self, position, target, up):
@@ -123,33 +98,13 @@ class Camera:
 
 class ThirdPersonCamera(Camera):
     def __init__(self, position, target, up, distance):
-        super().__init__(position, target, up)
-        self.distance = distance
+        super().__init__(position, target, up, distance)
         self.world_up = np.array(up, dtype=np.float32)
         self.is_2d_mode = False
-        self.is_orthographic = False
         self.update_vectors()
+        # self.update_projection() # aspect needs to be set first
 
 
-
-    # // calculates the front vector from the Camera's (updated) Euler Angles
-    # void Camera_CentreObject::updateCameraVectors()
-    # { 
-    #     // yaw goes around z
-    #     glm::vec3 pos;
-    #     pos.x = cos(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
-    #     pos.y = sin(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
-    #     pos.z = sin(glm::radians(m_Pitch)); 
-        
-    #     // Re-calculate the Front, Right and Up vector
-    #     m_Front = glm::normalize(pos);
-    #     m_Right = glm::normalize(glm::cross(m_Front, m_WorldUp));  // normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
-    #     m_Up = glm::normalize(glm::cross(m_Right, m_Front));
-        
-    #     // Calculate the camera position
-    #     m_Position = (m_Zoom * pos) + m_Centre;
-    # }
-    
 
 
     def update_vectors(self):
@@ -160,7 +115,7 @@ class ThirdPersonCamera(Camera):
         #     self.up = np.array([0, 1, 0], dtype=np.float32)
         #     self.position = np.array([self.target[0], self.target[1], self.distance], dtype=np.float32)
         # else:
-        # 3D update logic
+        # 3D update logic (yaw goes around z)
         front = np.array([
             math.cos(math.radians(self.yaw)) * math.cos(math.radians(self.pitch)),
             math.sin(math.radians(self.yaw)) * math.cos(math.radians(self.pitch)),
@@ -169,8 +124,17 @@ class ThirdPersonCamera(Camera):
         self.front = self.normalize(front)
         self.right = self.normalize(np.cross(self.front, self.world_up))
         self.up = self.normalize(np.cross(self.right, self.front))
-        # self.position = self.target - self.front * self.distance
-        self.position = front * self.distance + self.target
+        # Update position for both orthographic and perspective modes
+        
+        # Perspective mode
+        self.position = self.target - self.front * self.distance
+        
+        # if self.is_orthographic:
+        #     # Orthographic mode
+        #     self.position = front * self.distance + self.target
+        # else:
+        #     # Perspective mode
+        #     self.position = self.target - self.front * self.distance
 
     def rotate(self, yaw_offset, pitch_offset, invert=[1, 1]):
         if not self.is_2d_mode:
@@ -194,10 +158,10 @@ class ThirdPersonCamera(Camera):
         self.update_vectors()
 
     def zoom(self, offset):
-        # Zoom behavior is the same for both 2D and 3D modes
         self.distance = max(1.0, min(20.0, self.distance - offset))
         self.update_vectors()
-
+        self.update_projection()
+        
     def toggle_2d_mode(self):
         self.is_2d_mode = not self.is_2d_mode
         self.is_orthographic = self.is_2d_mode
@@ -235,8 +199,4 @@ class ThirdPersonCamera(Camera):
 
     def toggle_projection(self):
         self.is_orthographic = not self.is_orthographic
-        if self.is_orthographic:
-            # Adjust camera position for orthographic view
-            self.position = self.target + np.array([0, 0, self.distance], dtype=np.float32)
         self.update_vectors()
-
