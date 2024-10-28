@@ -1,7 +1,7 @@
 {
-  "rotate_sensitivity": 0.10000000149011612,
-  "base_pan_sensitivity": 0.013500000350177288,
-  "base_scroll_sensitivity": 0.6000000238418579,
+  "rotate_sensitivity": 0.1,
+  "base_pan_sensitivity": 0.0135,
+  "base_scroll_sensitivity": 0.6,
   "invert_pan": [
     -1,
     -1

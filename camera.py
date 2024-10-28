@@ -2,8 +2,8 @@ import numpy as np
 import math
 
 class Camera:
-    def __init__(self, position, target, up, distance, near=0.1, far=100):
-        self.position = np.array(position, dtype=np.float32)
+    def __init__(self, target, up, distance, near=0.1, far=100):
+        self.position = np.array((0,0,0), dtype=np.float32) # set in update_vectors
         self.target = np.array(target, dtype=np.float32)
         self.up = np.array(up, dtype=np.float32)
         self.yaw = 72.0  # Horizontal rotation
@@ -93,8 +93,8 @@ class Camera:
 
 
 class ThirdPersonCamera(Camera):
-    def __init__(self, position, target, up, distance):
-        super().__init__(position, target, up, distance)
+    def __init__(self, target, up, distance):
+        super().__init__(target, up, distance)
         self.world_up = np.array(up, dtype=np.float32)
         self.is_2d_mode = False
         self.update_vectors()
