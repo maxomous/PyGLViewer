@@ -13,8 +13,15 @@ class ImGuiManager:
     def init_imgui(self):
         imgui.create_context()
         io = imgui.get_io()
+    
+        # Check if docking is available
+        if not hasattr(imgui, 'CONFIG_DOCKING_ENABLE'):
+            print("Warning: Docking is not available in this version of imgui")
+            self.enable_docking = False
+        # Enable docking
         if self.enable_docking:
             io.config_flags |= imgui.CONFIG_DOCKING_ENABLE
+        
         self.imgui_renderer = GlfwRenderer(self.window)
         # Set ImGui style
         style = imgui.get_style()

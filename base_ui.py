@@ -1,5 +1,5 @@
 import imgui
-from ui_helpers import UIHelpers
+from imgui_widgets import ImGuiWidgets
 
 def render_camera_section(camera):
     if imgui.collapsing_header('Camera', flags=imgui.TREE_NODE_DEFAULT_OPEN)[0]:
@@ -62,7 +62,7 @@ def render_camera_section(camera):
         imgui.pop_style_color()
         
         if imgui.tree_node('Information'):
-            UIHelpers.create_table(
+            ImGuiWidgets.create_table(
                 'camera_info',
                 ['', ''],
                 [

@@ -1,19 +1,38 @@
+"""
+Core geometry module providing classes for creating and manipulating 3D primitives.
+Includes vertex data structures, geometry containers, and shape factory methods.
+"""
+
 import numpy as np
 from OpenGL.GL import *
 from color import Color
 
 class Vertex:
-    SIZE = 9  # Total number of floats per vertex (3 for position, 3 for color, 3 for normal)
-    STRIDE = SIZE * 4  # Stride in bytes (4 bytes per float)
+    """
+    Represents a vertex in 3D space with position, color, and normal attributes.
+    Provides memory layout information for OpenGL vertex buffer organization.
+    Each vertex contains position (xyz), color (rgb), and normal (xyz) data.
+    
+    Attributes:
+        position (np.array): 3D position vector (x, y, z)
+        color (np.array): RGB color values (r, g, b)
+        normal (np.array): Normal vector (nx, ny, nz)
+    """
+    # Total floats per vertex: 3 (position) + 3 (color) + 3 (normal)
+    SIZE = 9
+    # Byte stride (4 bytes per float)
+    STRIDE = SIZE * 4
 
+    # Byte offsets for each attribute
     POSITION_OFFSET = 0
-    COLOR_OFFSET = 3 * 4  # 3 floats * 4 bytes per float
-    NORMAL_OFFSET = 6 * 4  # 6 floats * 4 bytes per float
+    COLOR_OFFSET = 3 * 4    # Start after position (3 floats)
+    NORMAL_OFFSET = 6 * 4   # Start after color (6 floats)
 
+    # Vertex attribute layout for OpenGL
     LAYOUT = [
-        {'index': 0, 'size': 3, 'type': GL_FLOAT, 'normalized': GL_FALSE, 'stride': STRIDE, 'offset': POSITION_OFFSET},
-        {'index': 1, 'size': 3, 'type': GL_FLOAT, 'normalized': GL_FALSE, 'stride': STRIDE, 'offset': COLOR_OFFSET},
-        {'index': 2, 'size': 3, 'type': GL_FLOAT, 'normalized': GL_FALSE, 'stride': STRIDE, 'offset': NORMAL_OFFSET}
+        {'index': 0, 'size': 3, 'type': GL_FLOAT, 'normalized': GL_FALSE, 'stride': STRIDE, 'offset': POSITION_OFFSET},  # Position
+        {'index': 1, 'size': 3, 'type': GL_FLOAT, 'normalized': GL_FALSE, 'stride': STRIDE, 'offset': COLOR_OFFSET},    # Color
+        {'index': 2, 'size': 3, 'type': GL_FLOAT, 'normalized': GL_FALSE, 'stride': STRIDE, 'offset': NORMAL_OFFSET}    # Normal
     ]
 
     def __init__(self, position, color, normal):
@@ -23,14 +42,36 @@ class Vertex:
 
     def to_array(self):
         return np.concatenate([self.position, self.color, self.normal])
-
 class GeometryData:
-    
+    """
+    Container for 3D geometry data including vertices and triangle indices.
+    Provides methods for combining and transforming geometric objects.
+
+    Attributes:
+        vertices (list[Vertex]): List of vertices defining the geometry
+        indices (np.array): Triangle indices for rendering
+    """
     def __init__(self, vertices, indices):
+        """
+        Args:
+            vertices (list[Vertex]): List of vertices
+            indices (list[int]): List of indices defining triangles
+        """
         self.vertices = vertices
         self.indices = np.array(indices, dtype=np.uint32)
 
     def __add__(self, other):
+        """Combine two geometries into a single geometry.
+        
+        Args:
+            other (GeometryData): Geometry to combine with this one
+        
+        Returns:
+            GeometryData: Combined geometry with adjusted indices
+            
+        Raises:
+            TypeError: If other is not a GeometryData instance
+        """
         if not isinstance(other, GeometryData):
             raise TypeError("Can only add GeometryData to GeometryData")
 
@@ -47,6 +88,16 @@ class GeometryData:
         return GeometryData(combined_vertices, combined_indices)
 
     def transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
+        """Apply transformation to the geometry.
+        
+        Args:
+            translate (tuple): XYZ translation values. Defaults to (0, 0, 0)
+            rotate (tuple): XYZ rotation angles in radians. Defaults to (0, 0, 0)
+            scale (tuple): XYZ scale factors. Defaults to (1, 1, 1)
+        
+        Returns:
+            GeometryData: Self reference for method chaining
+        """
         transform_matrix = GeometryData.transform_matrix(translate, rotate, scale)
         normal_matrix = np.linalg.inv(transform_matrix[:3, :3]).T  # For transforming normals
 
@@ -65,10 +116,15 @@ class GeometryData:
         
     @staticmethod
     def transform_matrix(translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
-        """
-        Create a 4x4 transformation matrix from the current transform parameters.
+        """Create a 4x4 transformation matrix.
         
-        :return: 4x4 numpy array representing the transformation matrix
+        Args:
+            translate (tuple): XYZ translation values. Defaults to (0, 0, 0)
+            rotate (tuple): XYZ rotation angles in radians. Defaults to (0, 0, 0)
+            scale (tuple): XYZ scale factors. Defaults to (1, 1, 1)
+        
+        Returns:
+            np.array: 4x4 transformation matrix
         """
         tx, ty, tz = translate
         rx, ry, rz = rotate
@@ -94,9 +150,23 @@ class GeometryData:
 
 
 class Geometry:
+    """
+    Factory class providing static methods to create various 3D geometric primitives.
+    All shapes are centered at origin unless specified otherwise.
+    Includes both solid and wireframe generation methods.
+    """
     @staticmethod
     def create_grid(size, increment, color):
-        ''' Returns GeometryData for a 3D grid centered at origin '''
+        """Create a grid in the XY plane centered at origin.
+        
+        Args:
+            size (float): Total size of the grid
+            increment (float): Space between grid lines
+            color (tuple): RGB color for the grid lines
+        
+        Returns:
+            GeometryData: Grid geometry with vertices and indices
+        """
         vertices = []
         indices = []
         num_lines = int(size / increment) + 1
@@ -117,12 +187,31 @@ class Geometry:
 
     @staticmethod
     def create_point(position, color):
+        """Create a single point in 3D space.
+        
+        Args:
+            position (tuple): XYZ coordinates of the point
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Point geometry with single vertex
+        """
         vertices = [Vertex(position, color, [0, 0, 1])]
         indices = [0]
         return GeometryData(vertices, indices)
     
     @staticmethod
     def create_line(p0, p1, color):
+        """Create a line segment between two points.
+        
+        Args:
+            p0 (tuple): Start point XYZ coordinates
+            p1 (tuple): End point XYZ coordinates
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Line geometry with two vertices
+        """
         direction = np.array(p1) - np.array(p0)
         normal = np.cross(direction, [0, 0, 1])
         norm = np.linalg.norm(normal)
@@ -142,7 +231,17 @@ class Geometry:
 
     @staticmethod
     def create_triangle(p1, p2, p3, color):
-        ''' Returns GeometryData for a 3D triangle '''
+        """Create a filled triangle from three points.
+        
+        Args:
+            p1 (tuple): First vertex XYZ coordinates
+            p2 (tuple): Second vertex XYZ coordinates
+            p3 (tuple): Third vertex XYZ coordinates
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Triangle geometry with computed normal
+        """
         v1, v2 = np.array(p2) - np.array(p1), np.array(p3) - np.array(p1)
         normal = np.cross(v1, v2)
         normal = normal / np.linalg.norm(normal)
@@ -156,12 +255,33 @@ class Geometry:
 
     @staticmethod
     def create_triangle_wireframe(p1, p2, p3, color):
-        ''' Returns GeometryData for a 3D triangle wireframe '''
+        """Create a triangle wireframe from three points.
+        
+        Args:
+            p1 (tuple): First vertex XYZ coordinates
+            p2 (tuple): Second vertex XYZ coordinates
+            p3 (tuple): Third vertex XYZ coordinates
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Combined line segments forming triangle outline
+        """
         return Geometry.create_line(p1, p2, color) + Geometry.create_line(p2, p3, color) + Geometry.create_line(p3, p1, color)
 
     @staticmethod
     def create_rectangle(x, y, width, height, color):
-        ''' Returns GeometryData for a 2D rectangle '''
+        """Create a 2D rectangle in the XY plane.
+        
+        Args:
+            x (float): Center X coordinate
+            y (float): Center Y coordinate
+            width (float): Total width of rectangle
+            height (float): Total height of rectangle
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Rectangle geometry with two triangles
+        """
         half_w, half_h = width / 2, height / 2
         normal = [0, 0, 1]  # Normal pointing outwards
         vertices = [
@@ -175,7 +295,18 @@ class Geometry:
 
     @staticmethod
     def create_rectangle_wireframe(x, y, width, height, color):
-        ''' Returns GeometryData for a 2D rectangle wireframe '''
+        """Create a 2D rectangle wireframe in the XY plane.
+        
+        Args:
+            x (float): Center X coordinate
+            y (float): Center Y coordinate
+            width (float): Total width of rectangle
+            height (float): Total height of rectangle
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Rectangle outline with four line segments
+        """
         half_w, half_h = width / 2, height / 2
         normal = [0, 0, 1]  # Normal pointing outwards
         vertices = [
@@ -189,7 +320,17 @@ class Geometry:
 
     @staticmethod
     def create_circle(centre, radius, segments, color):
-        ''' Returns GeometryData for a 2D circle '''
+        """Create a filled circle in the XY plane.
+        
+        Args:
+            centre (tuple): XYZ coordinates of circle center
+            radius (float): Circle radius
+            segments (int): Number of segments around circumference
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Circle geometry made of triangular segments
+        """
         normal = [0, 0, 1]  # Normal pointing outwards
         vertices = [Vertex(centre, color, normal)]
         indices = []
@@ -205,7 +346,17 @@ class Geometry:
         
     @staticmethod
     def create_circle_wireframe(centre, radius, segments, color):
-        ''' Returns GeometryData for a 3D circle wireframe '''
+        """Create a circle wireframe.
+        
+        Args:
+            centre (tuple): XYZ coordinates of circle center
+            radius (float): Circle radius
+            segments (int): Number of segments around circumference
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Circle outline made of line segments
+        """
         normal = [0, 0, 1]  # Normal pointing outwards
         vertices = []
         indices = []
@@ -219,7 +370,15 @@ class Geometry:
 
     @staticmethod
     def create_cube(size, color):
-        ''' Returns GeometryData for a 3D cube '''
+        """Create a cube centered at origin.
+        
+        Args:
+            size (float): Length of cube edges
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Cube geometry with six faces
+        """
         s = size / 2
         vertices = [
             # Front face
@@ -267,7 +426,15 @@ class Geometry:
 
     @staticmethod
     def create_cube_wireframe(size, color):
-        ''' Returns GeometryData for a 3D cube wireframe '''
+        """Create a cube wireframe centered at origin.
+        
+        Args:
+            size (float): Length of cube edges
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Cube outline with 12 edges
+        """
         s = size / 2
         x, y, z = (0,0,0)
         normal = [0, 0, 1]  # Normal pointing outwards
@@ -292,7 +459,18 @@ class Geometry:
 
     @staticmethod
     def create_cylinder(segments, color):
-        ''' Returns GeometryData for a 3D cylinder along Z-axis '''
+        """Create a cylinder along the Z-axis.
+        
+        Args:
+            segments (int): Number of segments around circumference
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Combined cylinder body and caps
+        
+        Raises:
+            AssertionError: If segments < 3
+        """
         vertices = []
         indices = []
 
@@ -328,14 +506,33 @@ class Geometry:
 
     @staticmethod
     def create_cylinder_wireframe(segments, color):
-        ''' Returns GeometryData for a 3D cylinder wireframe along Z-axis '''
+        """Create a cylinder wireframe along the Z-axis.
+        
+        Args:
+            segments (int): Number of segments around circumference
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Combined wireframe for cylinder outline
+        """
         
         bottom = Geometry.create_circle_wireframe(centre=(0,0,0), radius=0.5, segments=segments, color=color)
         top = Geometry.create_circle_wireframe(centre=(0,0,1), radius=0.5, segments=segments, color=color)
         return bottom + top
     @staticmethod
     def create_cone(segments, color):
-        ''' Returns GeometryData for a 3D cone along Z-axis '''
+        """Create a cone along the Z-axis.
+        
+        Args:
+            segments (int): Number of segments around base circumference
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Combined cone body and base
+        
+        Raises:
+            AssertionError: If segments <= 2 or color length != 3
+        """
         assert isinstance(segments, int) and segments > 2, "segments must be an integer greater than 2"
         assert len(color) == 3, "color must be a tuple of 3 values"
         
@@ -369,12 +566,29 @@ class Geometry:
 
     @staticmethod
     def create_cone_wireframe(segments, color):
-        ''' Returns GeometryData for a 3D cone wireframe along Z-axis '''
+        """Create a cone wireframe along the Z-axis.
+        
+        Args:
+            segments (int): Number of segments around base circumference
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Wireframe outline of cone
+        """
         return Geometry.create_circle_wireframe(centre=(0,0,0), radius=0.5, segments=segments, color=color)
 
     @staticmethod
     def create_sphere(radius, subdivisions, color):
-        ''' Returns GeometryData for a 3D sphere using icosahedron subdivision '''
+        """Create a sphere using icosahedron subdivision.
+        
+        Args:
+            radius (float): Sphere radius
+            subdivisions (int): Number of subdivision iterations
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Sphere geometry with normalized vertices
+        """
         vertices = []
         indices = []
 
@@ -424,7 +638,21 @@ class Geometry:
 
     @staticmethod
     def create_arrow(p0, p1, color, wireframe_color=(1,1,1), shaft_radius=0.1, head_radius=0.2, head_length=0.4, segments=16):
-        ''' Returns GeometryData for a 3D arrow from p0 to p1 '''
+        """Create a 3D arrow from p0 to p1.
+        
+        Args:
+            p0 (tuple): Start point XYZ coordinates
+            p1 (tuple): End point XYZ coordinates
+            color (tuple): RGB color values for filled geometry
+            wireframe_color (tuple): RGB color values for wireframe. Defaults to white
+            shaft_radius (float): Radius of arrow shaft. Defaults to 0.1
+            head_radius (float): Radius of arrow head. Defaults to 0.2
+            head_length (float): Length of arrow head. Defaults to 0.4
+            segments (int): Number of segments for circular parts. Defaults to 16
+        
+        Returns:
+            list: [GeometryData for filled arrow, GeometryData for wireframe]
+        """
         p0, p1 = np.array(p0), np.array(p1)
         direction = p1 - p0
         length = np.linalg.norm(direction)
@@ -453,6 +681,16 @@ class Geometry:
     
     @staticmethod
     def calculate_transform(p0, p1, cross_section=(1, 1)):
+        """Calculate transformation for aligning geometry between two points.
+        
+        Args:
+            p0 (tuple): Start point XYZ coordinates
+            p1 (tuple): End point XYZ coordinates
+            cross_section (tuple): XY scale factors. Defaults to (1, 1)
+        
+        Returns:
+            tuple: (translation, rotation, scale) transformation parameters
+        """
         # Convert inputs to numpy arrays
         p0, p1 = np.array(p0), np.array(p1)
 
@@ -483,8 +721,16 @@ class Geometry:
     
     @staticmethod
     def normalize(v):
-        norm = np.linalg.norm(v)
-        return [x / norm for x in v] if norm != 0 else v
+        """Normalize a vector to unit length.
+        
+        Args:
+            v (list/tuple): Vector to normalize
+        
+        Returns:
+            list: Normalized vector, or original if zero length
+        """
+        length = np.linalg.norm(v)
+        return [x / length for x in v] if length != 0 else v
 
 
 

@@ -15,6 +15,7 @@ class Application(BaseApplication):
         self.init_lights()
 
     def init_geometry(self):
+        """Create the geometric objects in the scene."""
         # Settings
         segments = 32
         point_size = 7.0
@@ -43,6 +44,12 @@ class Application(BaseApplication):
         self.renderer.add_arrow((-2.4, -0.4, 0.25), (-1.6, 0.4, 0.75), shaft_radius=0.2, head_radius=0.4, head_length=0.3, color=Color.RED, show_body=True)
 
     def init_lights(self):
+        """Initialize lighting setup for the scene.
+        Creates and adds three lights:
+        - Main directional light from top-right
+        - Ambient light for base illumination
+        - Fill directional light from opposite side
+        """
         lights = {  
             'main': {
                 'type': LightType.DIRECTIONAL, 
@@ -68,6 +75,13 @@ class Application(BaseApplication):
             self.renderer.add_light(Light(**light_data))
 
     def render_debug_window(self):
+        """Render the debug UI window.
+        Displays various debug information including:
+        - Camera settings
+        - Mouse state
+        - Performance metrics
+        - Adjustable parameters
+        """
         imgui.begin('Debug Window', flags=imgui.WINDOW_ALWAYS_AUTO_RESIZE)
         
         render_camera_section(self.camera)
@@ -78,11 +92,15 @@ class Application(BaseApplication):
         imgui.end()
 
     def render_ui(self):
-        """Called by BaseApplication.render()"""
+        """Render UI elements."""
         imgui.show_demo_window()
         self.render_debug_window()
 
 if __name__ == '__main__':
+    """
+    Application entry point. Sets up window, camera, and fonts 
+    before starting the render loop.
+    """
     
     # Font configuration
     fonts = {
@@ -110,9 +128,10 @@ if __name__ == '__main__':
             'distance': 10
         },
         fonts=fonts,
-        default_font='arial-medium'
+        default_font='arial-medium',
+        enable_docking=True
     )
     
     if app.init():
         app.init_scene()
-        app.run()
+        app.render_loop()

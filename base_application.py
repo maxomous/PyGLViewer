@@ -8,7 +8,7 @@ from timer import Timer  # Import the Timer class
 import os
 
 class BaseApplication:
-    def __init__(self, width, height, title, camera_settings, fonts, default_font):
+    def __init__(self, width, height, title, camera_settings, fonts, default_font, enable_docking=True):
         self.width = width
         self.height = height
         self.title = title
@@ -23,6 +23,7 @@ class BaseApplication:
         self.camera_settings = camera_settings
         self.fonts = fonts
         self.default_font = default_font
+        self.enable_docking = enable_docking
 
     def init(self):
         if not self._init_glfw():
@@ -56,7 +57,7 @@ class BaseApplication:
         self.set_frame_size(self.window, self.width, self.height)
 
     def _init_imgui(self):
-        self.imgui_manager = ImGuiManager(self.window, enable_docking=True)
+        self.imgui_manager = ImGuiManager(self.window, enable_docking=self.enable_docking)
         self._load_fonts()
 
     def _load_fonts(self):
@@ -70,7 +71,7 @@ class BaseApplication:
         self.camera.set_aspect_ratio(width, height)
         self.camera.update_projection()
 
-    def run(self):
+    def render_loop(self):
         while not glfw.window_should_close(self.window):
             self.process_frame()
         self.cleanup()
