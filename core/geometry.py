@@ -5,7 +5,7 @@ Includes vertex data structures, geometry containers, and shape factory methods.
 
 import numpy as np
 from OpenGL.GL import *
-from color import Color
+from utils.color import Color
 
 class Vertex:
     """

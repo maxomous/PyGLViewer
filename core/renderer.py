@@ -1,10 +1,10 @@
 from OpenGL.GL import *
 import numpy as np
-from geometry import Geometry, Vertex
-from color import Color
-from shaders import Shader, basic_vertex_shader, basic_fragment_shader
-from gl_objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, RenderObject
-from geometry import GeometryData
+from core.geometry import Geometry, Vertex
+from utils.color import Color
+from gl.shaders import Shader, basic_vertex_shader, basic_fragment_shader
+from gl.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, RenderObject
+from core.geometry import GeometryData
 
 
 

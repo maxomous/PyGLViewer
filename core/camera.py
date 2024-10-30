@@ -2,6 +2,24 @@ import numpy as np
 import math
 
 class Camera:
+    """Base camera class providing core camera functionality.
+    
+    Args:
+        target (tuple): Target point to look at
+        up (tuple): Up vector for camera orientation
+        distance (float): Distance from target
+        near (float): Near clipping plane distance
+        far (float): Far clipping plane distance
+    
+    Attributes:
+        position (np.array): Camera position in world space
+        target (np.array): Point camera is looking at
+        up (np.array): Camera's up vector
+        yaw (float): Horizontal rotation angle in degrees
+        pitch (float): Vertical rotation angle in degrees
+        is_orthographic (bool): Whether using orthographic projection
+    """
+
     def __init__(self, target, up, distance, near=0.1, far=100):
         self.position = np.array((0,0,0), dtype=np.float32) # set in update_vectors
         self.target = np.array(target, dtype=np.float32)
@@ -15,11 +33,27 @@ class Camera:
         self.far = far
         
     def set_aspect_ratio(self, width, height):
+        """Set camera aspect ratio based on viewport dimensions.
+        
+        Args:
+            width (int): Viewport width
+            height (int): Viewport height
+        """
         self.aspect_ratio = width / height if height > 0 else 1.0
     
         
     @staticmethod
-    def get_orthographic_projection(left, right, bottom, top, near, far):           
+    def get_orthographic_projection(left, right, bottom, top, near, far):
+        """Create orthographic projection matrix.
+        
+        Args:
+            left, right (float): Left/right clipping planes
+            bottom, top (float): Bottom/top clipping planes
+            near, far (float): Near/far clipping planes
+        
+        Returns:
+            np.array: 4x4 orthographic projection matrix
+        """
         return np.array([
             [2 / (right - left), 0, 0, -(right + left) / (right - left)],
             [0, 2 / (top - bottom), 0, -(top + bottom) / (top - bottom)],
@@ -29,6 +63,16 @@ class Camera:
         
     @staticmethod
     def get_perspective_projection(fov, aspect, near, far):
+        """Create perspective projection matrix.
+        
+        Args:
+            fov (float): Field of view in degrees
+            aspect (float): Aspect ratio (width/height)
+            near, far (float): Near/far clipping planes
+        
+        Returns:
+            np.array: 4x4 perspective projection matrix
+        """
         f = 1 / math.tan(math.radians(fov) / 2)
         return np.array([
             [f / aspect, 0, 0, 0],
@@ -38,6 +82,11 @@ class Camera:
         ], dtype=np.float32)
         
     def get_view_matrix(self):
+        """Get the view matrix for the current camera position.
+        
+        Returns:
+            np.array: 4x4 view matrix
+        """
         # View matrix calculation
         return np.array([
             [self.right[0], self.up[0], -self.front[0], 0],
@@ -47,9 +96,18 @@ class Camera:
         ], dtype=np.float32)
   
     def get_projection_matrix(self):
+        """Get the current projection matrix.
+        
+        Returns:
+            np.array: 4x4 projection matrix (orthographic or perspective)
+        """
         return self.projection
   
     def update_projection(self):
+        """Update projection matrix based on current camera settings.
+        
+        Updates orthographic or perspective projection based on is_orthographic flag.
+        """
         if self.is_orthographic:
             scaled_width = self.distance * self.aspect_ratio / 2
             scaled_height = self.distance * 1 / 2
@@ -62,6 +120,14 @@ class Camera:
 
   
     def normalize(self, v):
+        """Normalize a vector to unit length.
+        
+        Args:
+            v (np.array): Vector to normalize
+        
+        Returns:
+            np.array: Normalized vector, or original if zero length
+        """
         norm = np.linalg.norm(v)
         if norm == 0: 
             return v
@@ -93,6 +159,22 @@ class Camera:
 
 
 class ThirdPersonCamera(Camera):
+    """Third-person camera that orbits around a target point.
+    
+    Supports both 2D and 3D viewing modes with orthographic/perspective projection.
+    
+    Args:
+        target (tuple): Target point to orbit around
+        up (tuple): World up vector
+        distance (float): Orbit distance from target
+    
+    Attributes:
+        world_up (np.array): Fixed world up vector
+        is_2d_mode (bool): Whether in 2D top-down mode
+        front (np.array): Camera forward vector
+        right (np.array): Camera right vector
+    """
+
     def __init__(self, target, up, distance):
         super().__init__(target, up, distance)
         self.world_up = np.array(up, dtype=np.float32)
@@ -104,6 +186,7 @@ class ThirdPersonCamera(Camera):
 
 
     def update_vectors(self):
+        """Update camera orientation vectors and position based on current state."""
         if self.is_2d_mode:
             # 2D mode: camera always looks down the negative z-axis
             self.front = np.array([0, 0, -1], dtype=np.float32)
@@ -120,19 +203,18 @@ class ThirdPersonCamera(Camera):
             self.front = self.normalize(front)
             self.right = self.normalize(np.cross(self.front, self.world_up))
             self.up = self.normalize(np.cross(self.right, self.front))
-            # Update position for both orthographic and perspective modes
-            
-            # Perspective mode
+            # Update position
             self.position = self.target - self.front * self.distance
-        
-        # if self.is_orthographic:
-        #     # Orthographic mode
-        #     self.position = front * self.distance + self.target
-        # else:
-        #     # Perspective mode
-        #     self.position = self.target - self.front * self.distance
+    
 
     def rotate(self, yaw_offset, pitch_offset, invert=[1, 1]):
+        """Rotate camera around target (3D mode only).
+        
+        Args:
+            yaw_offset (float): Horizontal rotation change
+            pitch_offset (float): Vertical rotation change
+            invert (list): Inversion flags for yaw/pitch
+        """
         if not self.is_2d_mode:
             invert_yaw, invert_pitch = invert
             self.yaw += yaw_offset * 2 * invert_yaw
@@ -142,6 +224,13 @@ class ThirdPersonCamera(Camera):
             self.update_vectors()
 
     def pan(self, dx, dy, invert=[1, 1]):
+        """Pan camera parallel to view plane.
+        
+        Args:
+            dx (float): Horizontal pan amount
+            dy (float): Vertical pan amount
+            invert (list): Inversion flags for x/y movement
+        """
         if self.is_2d_mode:
             # 2D panning: move target in x and y directions
             # Invert dy for 2D mode to match screen coordinates
@@ -155,11 +244,17 @@ class ThirdPersonCamera(Camera):
         self.update_vectors()
 
     def zoom(self, offset):
+        """Adjust distance from target.
+        
+        Args:
+            offset (float): Change in distance
+        """
         self.distance = max(1.0, min(20.0, self.distance - offset))
         self.update_vectors()
         self.update_projection()
         
     def toggle_2d_mode(self):
+        """Switch between 2D top-down and 3D orbital modes."""
         self.is_2d_mode = not self.is_2d_mode
         self.is_orthographic = self.is_2d_mode
         if self.is_2d_mode:
@@ -170,6 +265,12 @@ class ThirdPersonCamera(Camera):
         self.update_vectors()
 
     def move(self, direction, speed):
+        """Move camera target in specified direction.
+        
+        Args:
+            direction (str): Movement direction ("FORWARD", "BACKWARD", "LEFT", "RIGHT")
+            speed (float): Movement speed
+        """
         if self.is_2d_mode:
             # In 2D mode, only allow movement in the XY plane
             if direction == "FORWARD":
@@ -195,5 +296,6 @@ class ThirdPersonCamera(Camera):
         self.update_vectors()
 
     def toggle_projection(self):
+        """Toggle between orthographic and perspective projection."""
         self.is_orthographic = not self.is_orthographic
         self.update_vectors()

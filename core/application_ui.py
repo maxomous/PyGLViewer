@@ -1,7 +1,14 @@
 import imgui
-from imgui_widgets import ImGuiWidgets
+from gui.imgui_widgets import ImGuiWidgets
 
-def render_camera_section(camera):
+def render_ui_camera(camera):
+    """Render camera control panel.
+    
+    Includes:
+    - 2D/3D mode toggle buttons
+    - Orthographic/Perspective projection toggle buttons
+    - Detailed camera information table
+    """
     if imgui.collapsing_header('Camera', flags=imgui.TREE_NODE_DEFAULT_OPEN)[0]:
         imgui.indent()
 
@@ -78,10 +85,10 @@ def render_camera_section(camera):
                 ]
             )
             imgui.tree_pop()
-
         imgui.unindent()
 
-def render_mouse_section(p):
+def render_ui_mouse(config):
+    """Render mouse settings panel."""
     if imgui.collapsing_header('Mouse', flags=imgui.TREE_NODE_DEFAULT_OPEN)[0]:
         imgui.indent()
             
@@ -90,52 +97,58 @@ def render_mouse_section(p):
             slider_width = imgui.get_content_region_available()[0] - text_width
             
             imgui.push_item_width(slider_width)
-            _, p["base_pan_sensitivity"] = imgui.slider_float('Pan Sensitivity', p["base_pan_sensitivity"], 0.001, 0.1, '%.4f')
-            _, p["base_scroll_sensitivity"] = imgui.slider_float('Scroll Sensitivity', p["base_scroll_sensitivity"], 0.1, 2.0, '%.2f')
-            _, p["rotate_sensitivity"] = imgui.slider_float('Rotate Sensitivity', p["rotate_sensitivity"], 0.01, 0.5, '%.2f')
+            _, config["base_pan_sensitivity"] = imgui.slider_float('Pan Sensitivity', config["base_pan_sensitivity"], 0.001, 0.1, '%.4f')
+            _, config["base_scroll_sensitivity"] = imgui.slider_float('Scroll Sensitivity', config["base_scroll_sensitivity"], 0.1, 2.0, '%.2f')
+            _, config["rotate_sensitivity"] = imgui.slider_float('Rotate Sensitivity', config["rotate_sensitivity"], 0.01, 0.5, '%.2f')
             imgui.pop_item_width()
             imgui.tree_pop()
         
         if imgui.tree_node('Invert'):
-            invert_yaw_pitch = p["invert_yaw_pitch"]
+            invert_yaw_pitch = config["invert_yaw_pitch"]
             _, yaw = imgui.checkbox('Invert Rotate X', invert_yaw_pitch[0] > 0)
             _, pitch = imgui.checkbox('Invert Rotate Y', invert_yaw_pitch[1] > 0)
-            p["invert_yaw_pitch"] = [1 if x else -1 for x in (yaw, pitch)]
+            config["invert_yaw_pitch"] = [1 if x else -1 for x in (yaw, pitch)]
             
-            invert_pan = p["invert_pan"]
+            invert_pan = config["invert_pan"]
             _, pan_x = imgui.checkbox('Invert Pan X', invert_pan[0] > 0)
             _, pan_y = imgui.checkbox('Invert Pan Y', invert_pan[1] > 0)
-            p["invert_pan"] = [1 if x else -1 for x in (pan_x, pan_y)]
+            config["invert_pan"] = [1 if x else -1 for x in (pan_x, pan_y)]
             
-            _, scroll = imgui.checkbox('Invert Scroll', p["invert_scroll"] > 0)
-            p["invert_scroll"] = 1 if scroll else -1
+            _, scroll = imgui.checkbox('Invert Scroll', config["invert_scroll"] > 0)
+            config["invert_scroll"] = 1 if scroll else -1
             imgui.tree_pop()
         
         imgui.unindent()
 
-def render_performance_section(dt):
+def render_ui_performance(dt):
+    """Render performance metrics panel.
+    
+    Args:
+        dt (float): Delta time between frames
+    """
     if imgui.collapsing_header('Performance', flags=imgui.TREE_NODE_DEFAULT_OPEN)[0]:
         imgui.indent()
         fps = 1.0 / dt if dt > 0 else 0.0
         imgui.text(f'FPS: {fps:.1f}')
         imgui.unindent()
 
-def render_parameters_section(p):
-    if imgui.collapsing_header('Parameters', flags=imgui.TREE_NODE_DEFAULT_OPEN)[0]:
+def render_ui_config(config):
+    """Render configuration panel to save/load configuration."""
+    if imgui.collapsing_header('Configuration', flags=imgui.TREE_NODE_DEFAULT_OPEN)[0]:
         imgui.indent()
         
         imgui.push_style_var(imgui.STYLE_FRAME_PADDING, (6, 6))
         
         if imgui.button("Reset to Defaults"):
-            p.reset_to_defaults()
+            config.reset_to_defaults()
         
         imgui.same_line()
         if imgui.button("Save"):
-            p.save()
+            config.save()
         
         imgui.same_line()
         if imgui.button("Load"):
-            p.load()
+            config.load()
         
         imgui.pop_style_var()
         
