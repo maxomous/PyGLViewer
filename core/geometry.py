@@ -42,22 +42,23 @@ class Vertex:
 
     def to_array(self):
         return np.concatenate([self.position, self.color, self.normal])
+
 class GeometryData:
     """
-    Container for 3D geometry data including vertices and triangle indices.
+    Container for 3D geometry data including vertices and indices.
     Provides methods for combining and transforming geometric objects.
 
     Attributes:
         vertices (list[Vertex]): List of vertices defining the geometry
-        indices (np.array): Triangle indices for rendering
+        indices (np.array): Indices of the vertices to render
     """
     def __init__(self, vertices, indices):
         """
         Args:
             vertices (list[Vertex]): List of vertices
-            indices (list[int]): List of indices defining triangles
+            indices (list[int]): List of indices
         """
-        self.vertices = vertices
+        self.vertices = np.array(vertices, dtype=Vertex)
         self.indices = np.array(indices, dtype=np.uint32)
 
     def __add__(self, other):
@@ -87,6 +88,10 @@ class GeometryData:
 
         return GeometryData(combined_vertices, combined_indices)
 
+    def interleaved_vertices(self):
+        """Return interleaved vertex data (position, color, normal) as a flattened numpy array."""
+        return np.array([vertex.to_array() for vertex in self.vertices], dtype=np.float32).flatten()
+    
     def transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
         """Apply transformation to the geometry.
         
@@ -147,7 +152,6 @@ class GeometryData:
         ])
 
         return transform
-
 
 class Geometry:
     """
@@ -636,6 +640,7 @@ class Geometry:
 
         return GeometryData(vertex_objects, indices)
 
+            
     @staticmethod
     def create_arrow(p0, p1, color, wireframe_color=(1,1,1), shaft_radius=0.1, head_radius=0.2, head_length=0.4, segments=16):
         """Create a 3D arrow from p0 to p1.
@@ -645,9 +650,8 @@ class Geometry:
             p1 (tuple): End point XYZ coordinates
             color (tuple): RGB color values for filled geometry
             wireframe_color (tuple): RGB color values for wireframe. Defaults to white
-            shaft_radius (float): Radius of arrow shaft. Defaults to 0.1
-            head_radius (float): Radius of arrow head. Defaults to 0.2
-            head_length (float): Length of arrow head. Defaults to 0.4
+            dimensions : ArrowDimensions, optional
+                Arrow dimensions object
             segments (int): Number of segments for circular parts. Defaults to 16
         
         Returns:
@@ -659,7 +663,7 @@ class Geometry:
         
         if length == 0:
             return GeometryData([], [])  # Return empty geometry if p0 and p1 are the same
-
+    
         unit_direction = direction / length
         pHead = p1 - unit_direction * head_length
 

@@ -9,12 +9,12 @@ class BufferType:
     Stream = GL_STREAM_DRAW
 
 class Buffer:
-    """Base class for OpenGL buffer objects."""
-    def __init__(self, data, buffer_type, target):
+    """Base class for OpenGL buffer objects. Set size when using a dynamic / stream buffer."""
+    def __init__(self, data, buffer_type, target, size):
         self.id = glGenBuffers(1)
         self.target = target
         self.buffer_type = buffer_type
-        self.size = data.nbytes
+        self.size = size
         self.bind()
         glBufferData(self.target, self.size, data, buffer_type)
 
@@ -31,17 +31,23 @@ class Buffer:
         self.bind()
         glBufferSubData(self.target, offset, data.nbytes, data)
 
-class VertexBuffer(Buffer):
+class VertexBuffer(Buffer): 
+    
     """Vertex buffer object for storing vertex data."""
-    def __init__(self, data, buffer_type):
-        super().__init__(data, buffer_type, GL_ARRAY_BUFFER)
+    def __init__(self, data, buffer_type, size):
+        super().__init__(data, buffer_type, GL_ARRAY_BUFFER, size)
 
 class IndexBuffer(Buffer):
     """Index buffer object for storing index data."""
-    def __init__(self, data, buffer_type):
-        super().__init__(data, buffer_type, GL_ELEMENT_ARRAY_BUFFER)
-        self.count = len(data)
+    def __init__(self, data, buffer_type, size):
+        super().__init__(data, buffer_type, GL_ELEMENT_ARRAY_BUFFER, size)
+        self.count = len(data) if data is not None else 0
 
+    def update_data(self, data, offset=0):
+        """Update the buffer's data."""
+        self.count = len(data) if data is not None else 0
+        super().update_data(data, offset)
+        
 class VertexArray:
     """Vertex array object for managing vertex attribute configurations."""
     def __init__(self):

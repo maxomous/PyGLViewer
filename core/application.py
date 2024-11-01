@@ -9,41 +9,6 @@ from utils.config import Config
 from gui.imgui_manager import ImGuiManager
 
 
-'''your_project/
-├── core/
-│   ├── __init__.py
-│   ├── base_application.py
-│   ├── base_ui.py
-│   ├── imgui_manager.py
-│   └── imgui_widgets.py
-
---- renderer
-│   ├── renderer.py
-│   ├── geometry.py
-│   ├── camera.py
-│   └── light.py
-│   ├── input_handlers.py
-
---- utils
-│   ├── timer.py
-│   ├── config.py
-│   └── color.py
-
-├── gl/
-│   ├── __init__.py
-│   ├── gl_objects.py
-│   └── shaders.py
-│
-├── ui/
-│   ├── __init__.py
-│
-├── config.json
-├── imgui.ini
-├── main.py
-└── README.txt
-'''
-
-
 class Application:
     """Base class for OpenGL applications with ImGui integration.
     
@@ -93,7 +58,7 @@ class Application:
         self.default_font = default_font
         self.enable_docking = enable_docking
 
-    def init(self):
+    def init_core(self):
         """Initialize GLFW, OpenGL context, and application components.
         
         Returns:
@@ -170,28 +135,28 @@ class Application:
         
         Updates timer, handles events, updates state, and renders frame.
         """
+        # Update
         self.timer.update()  # Update the timer to calculate delta time
-        self.handle_events()
-        self.update()
+        self.process_inputs()
+        self.update_scene()
+        # Render
         self.render()
 
-    def handle_events(self):
+    def process_inputs(self):
         """Process input events from GLFW and ImGui."""
         glfw.poll_events()
         self.imgui_manager.process_inputs()
-        self.custom_events()
-
-    def custom_events(self):
-        """Process custom input events.
-        
-        Override in derived class.
-        """
-        pass
-
-    def update(self):
-        """Update application state based on input."""
         self.mouse.process_input()
         self.keyboard.process_input()
+        self.events()
+        
+    def events(self):
+        """Process custom input events specific to your application."""
+        raise NotImplementedError("events() must be implemented in derived class")
+
+    def update_scene(self):
+        """Update scene state called every frame."""
+        raise NotImplementedError("update_scene() must be implemented in derived class")
 
     def render(self):
         """Render frame with UI and 3D scene.

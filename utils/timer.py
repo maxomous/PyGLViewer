@@ -6,11 +6,11 @@ class Timer:
     def __init__(self):
         """Initialize timer with current GLFW time."""
         self.previous = glfw.get_time()
-        self.current = glfw.get_time()
+        self.time = glfw.get_time()
         self.dt = 0.0
 
     def update(self):
         """Update timer and calculate delta time between frames."""
-        self.current = glfw.get_time()
-        self.dt = self.current - self.previous
-        self.previous = self.current
+        self.time = glfw.get_time()
+        self.dt = self.time - self.previous
+        self.previous = self.time

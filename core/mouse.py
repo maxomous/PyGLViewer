@@ -28,6 +28,7 @@ class Mouse:
 
     @property
     def pan_sensitivity(self):
+        """Calculate pan sensitivity based on camera distance."""
         return self.config["mouse.base_pan_sensitivity"] * (self.camera.distance / 10) 
     
     @property

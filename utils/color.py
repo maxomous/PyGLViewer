@@ -1,4 +1,5 @@
 class Color:
+    """Common color constants."""
     BLACK = (0.0, 0.0, 0.0)
     WHITE = (1.0, 1.0, 1.0)
     RED = (1.0, 0.0, 0.0)

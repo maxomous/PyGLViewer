@@ -1,14 +1,29 @@
 from core.application import Application
-from core.application_ui import render_ui_camera, render_ui_mouse, render_ui_performance, render_ui_config
+from core.renderer import Renderer
+from core.application_ui import render_ui
+from OpenGL.GL import *
 import imgui
 import glfw
 import numpy as np
+from core.geometry import Geometry
 from core.light import Light, LightType
 from gl.objects import BufferType
 from utils.color import Color
-from utils.config import Config
+from utils.config import Config   
 
 class ExampleApplication(Application):
+    
+    def init(self):
+        self.init_ui()
+        self.init_variables()
+        self.init_scene()
+    
+    def init_ui(self):
+        """Initialize UI elements."""
+        imgui.get_style().colors[imgui.COLOR_HEADER] = (0, 0, 0, 0)
+        # imgui.get_style().colors[imgui.COLOR_HEADER_HOVERED] = (0, 0, 0, 0)
+        # imgui.get_style().colors[imgui.COLOR_HEADER_ACTIVE] = (0, 0, 0, 0)
+
     def init_variables(self):
         """Variables added to config are saved in a JSON file and can be loaded/saved at runtime"""
         # Register variable - value will be read from config file if it exists else default value will be used
@@ -24,31 +39,38 @@ class ExampleApplication(Application):
     def init_geometry(self):
         """Create the geometric objects in the scene."""
         # Settings
-        segments = 32 # n segments for circular shapes
-        point_size = 7.0
-        line_thickness = 3.0
+        self.renderer.default_point_size = 5.0
+        self.renderer.default_line_thickness = 3.0
+        self.renderer.default_segments = 32
         
         # Grid and axis
         self.renderer.add_grid(10, 1, Color.GRAY, translate=(0, 0, -0.01)) # Move grid slightly below z=0 to avoid z-fighting
         self.renderer.add_axis(size=1)
         
         # Row 1 - Wireframe Shapes
-        self.renderer.add_point((-4, 4, 0), Color.RED, point_size=point_size)
-        self.renderer.add_line((-2.5, 3.5, 0), (-1.5, 4.5, 0), Color.ORANGE, line_width=line_thickness)
-        self.renderer.add_triangle((0, 4.433, 0), (-0.5, 3.567, 0), (0.5, 3.567, 0), wireframe_color=Color.YELLOW, show_wireframe=True, show_body=False, line_width=line_thickness)
-        self.renderer.add_rectangle((2, 4), 1, 1, wireframe_color=Color.GREEN, show_wireframe=True, show_body=False, line_width=line_thickness)
-        self.renderer.add_circle(position=(4, 4, 0), radius=0.5, segments=segments, wireframe_color=Color.BLUE, show_body=False, line_width=line_thickness)
+        self.renderer.add_point((-4, 4, 0), Color.RED, point_size=10)
+        self.renderer.add_line((-2.5, 3.5, 0), (-1.5, 4.5, 0), Color.ORANGE)
+        self.renderer.add_triangle((0, 4.433, 0), (-0.5, 3.567, 0), (0.5, 3.567, 0), wireframe_color=Color.YELLOW, show_body=False, line_width=10)
+        self.renderer.add_rectangle((2, 4), 1, 1, wireframe_color=Color.GREEN, show_body=False)
+        self.renderer.add_circle(position=(4, 4, 0), radius=0.5, wireframe_color=Color.BLUE, show_body=False)
 
         # Row 2 - Filled Shapes
-        self.renderer.add_circle(position=(-4, 2, 0), radius=0.5, segments=segments, color=Color.GREEN, show_body=True)
-        self.renderer.add_cube(Color.RED, translate=(-2, 2, 0.5), scale=(0.5, 0.5, 0.5), rotate=(np.pi/4, np.pi/4, 0), buffer_type=BufferType.Dynamic, show_body=True)
-        self.renderer.add_cone(Color.rgb(255, 165, 0), segments=segments, translate=(0, 2, 0.5), scale=(0.5, 0.5, 0.5), show_body=True)
-        self.renderer.add_cylinder(Color.WHITE, segments=segments, translate=(2, 2, 0.5), scale=(0.5, 0.5, 0.5), show_body=True)
-        self.renderer.add_sphere(translate=(4, 2, 0.5), radius=0.25, subdivisions=4, color=Color.WHITE)
+        self.renderer.add_circle(position=(-4, 2, 0), radius=0.5, color=Color.GREEN)
+        # self.renderer.add_cube(Color.RED, translate=(-2, 2, 0.5), scale=(0.5, 0.5, 0.5), rotate=(np.pi/4, np.pi/4, 0), buffer_type=BufferType.Dynamic)
+        self.renderer.add_cone(Color.rgb(255, 165, 0), segments=5, translate=(0, 2, 0.5), scale=(0.5, 0.5, 0.5))
+        self.renderer.add_cylinder(Color.WHITE, translate=(2, 2, 0.5), scale=(0.5, 0.5, 0.5))
+        self.renderer.add_sphere(translate=(4, 2, 0.5), radius=0.25, subdivisions=1, color=Color.WHITE)
+        self.renderer.add_sphere(translate=(4, 0, 0.5), radius=0.25, subdivisions=4, color=Color.WHITE)
 
         # Row 3 - Filled Shapes
-        self.renderer.add_cube(Color.YELLOW, translate=(-4, 0, 0.5), scale=(0.5, 0.5, 0.5), buffer_type=BufferType.Dynamic, show_body=True)
-        self.renderer.add_arrow((-2.4, -0.4, 0.25), (-1.6, 0.4, 0.75), shaft_radius=0.2, head_radius=0.4, head_length=0.3, color=Color.RED, show_body=True)
+        arrow_size = self.renderer.ArrowDimensions(shaft_radius=0.2, head_radius=0.4, head_length=0.3)
+        self.renderer.add_arrow((-2.4, -0.4, 0.25), (-1.6, 0.4, 0.75), arrow_size, color=Color.RED)
+
+        # TODO: Add dynamic buffer size
+
+        self.rotating_cube = self.renderer.add_blank_object(vertices_size=1000, indices_size=1000, draw_type=GL_TRIANGLES, buffer_type=BufferType.Stream)
+        self.rotating_cube_wireframe = self.renderer.add_blank_object(vertices_size=1000, indices_size=1000, draw_type=GL_LINES, buffer_type=BufferType.Stream)
+
 
     def init_lights(self):
         """Initialize lighting setup for the scene.
@@ -81,7 +103,34 @@ class ExampleApplication(Application):
         for light_data in lights.values():
             self.renderer.add_light(Light(**light_data))
 
-    def custom_events(self):
+    def update_scene(self):
+        # TODO: clear old?
+        # TODO: Make ObjectCollection to store multiple objects OR multiple geometries???
+        """Update scene state called every frame."""
+
+        time = self.timer.time
+        rotation_angle = time * 2 * np.pi  # full rotation per second
+        translation_angle = (time * 2 * np.pi) / 4  # quarter speed translation
+        translation = 2 * np.sin(translation_angle)
+        
+        rotating_cube = Geometry.create_cube(size=1.0, color=Color.YELLOW) \
+            .transform(translate=(0, 0, 0.5), rotate=(0, 0, rotation_angle / 4), scale=(0.5, 0.5, 0.5)) \
+            .transform(translate=(0, 0, translation))
+            
+        rotating_cube_wireframe = Geometry.create_cube_wireframe(size=1.0, color=Color.BLACK) \
+            .transform(translate=(0, 0, 0.5), rotate=(0, 0, rotation_angle / 4), scale=(0.501, 0.501, 0.501)) \
+            .transform(translate=(0, 0, translation))
+            
+        # Update vertex data
+        self.rotating_cube[0].update_vertex_data(rotating_cube.interleaved_vertices())
+        self.rotating_cube[0].update_index_data(rotating_cube.indices) # TODO: maybe just first frame
+        
+        # Update vertex data
+        self.rotating_cube_wireframe[0].update_vertex_data(rotating_cube_wireframe.interleaved_vertices())
+        self.rotating_cube_wireframe[0].update_index_data(rotating_cube_wireframe.indices) # TODO: maybe just first frame
+        
+        
+    def events(self):
         """Process custom input events specific to your application."""
         io = imgui.get_io()
         # If ImGui is capturing input, do not process further
@@ -93,10 +142,7 @@ class ExampleApplication(Application):
         
         # Example: Check mouse button states
         if io.mouse_down[glfw.MOUSE_BUTTON_LEFT]:
-            print("Left mouse button pressed!")
-        
-        # Example: Get cursor position
-        print(io.mouse_pos)
+            print(f"Left mouse button clicked: {io.mouse_pos}")
 
     def render_debug_window(self):
         """Render the debug UI window.
@@ -107,12 +153,7 @@ class ExampleApplication(Application):
         - Adjustable parameters
         """
         imgui.begin('Debug Window', flags=imgui.WINDOW_ALWAYS_AUTO_RESIZE)
-        
-        render_ui_camera(self.camera)
-        render_ui_mouse(self.config)
-        render_ui_performance(self.timer.dt) # TODO replace with imgui
-        render_ui_config(self.config)
-
+        render_ui(self.camera, self.config, self.timer, self.imgui_manager)
         imgui.end()
 
     def render_ui(self):
@@ -129,8 +170,9 @@ if __name__ == '__main__':
     # Font configuration
     fonts = {
         'arial-large': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 24 },
-        'arial-medium': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 17 },
-        'arial-small': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 12 }
+        'arial-medium': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 16 },
+        'arial-small': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 12 },
+        'arial_rounded_mt_bold-medium': { 'path': 'C:/Windows/Fonts/ARLRDBD.TTF', 'size': 15 },
     }
     
     # Create application with settings
@@ -148,7 +190,6 @@ if __name__ == '__main__':
         enable_docking=True
     )
     
-    if app.init():
-        app.init_variables()
-        app.init_scene()
+    if app.init_core():
+        app.init()
         app.main_loop()
