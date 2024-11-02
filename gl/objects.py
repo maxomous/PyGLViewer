@@ -1,6 +1,7 @@
-from OpenGL.GL import *
+from typing import Dict, Any
 import ctypes
 import numpy as np
+from OpenGL.GL import *
 from utils.transform import Transform
 
 class BufferType:
@@ -80,7 +81,6 @@ class VertexArray:
             )
 
 
-
 class RenderObject:
     """Represents a renderable object with vertex, index buffers, and shader."""
     def __init__(self, vb, ib, va, draw_type, shader, line_width=1.0, point_size=1.0):
@@ -104,3 +104,4 @@ class RenderObject:
     def set_transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
         """Set the transform matrix - Will scale, rotate and translate the object, in that order."""
         self.model_matrix = Transform(translate, rotate, scale).transform_matrix().T # Transpose to convert row-major to column-major
+
