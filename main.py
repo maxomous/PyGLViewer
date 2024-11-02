@@ -39,8 +39,8 @@ class ExampleApplication(Application):
     def init_geometry(self):
         """Create the geometric objects in the scene."""
         # Settings
-        self.renderer.default_point_size = 5.0
-        self.renderer.default_line_thickness = 3.0
+        self.renderer.default_point_size = 3.0
+        self.renderer.default_line_width = 2.0
         self.renderer.default_segments = 32
         
         # Grid and axis

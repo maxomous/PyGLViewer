@@ -46,9 +46,19 @@ class Transform:
 
         return transform
 
+    def set_translate(self, x, y, z):
+        """Set absolute translation values."""
+        self.translate = np.array([x, y, z], dtype=np.float32)
+        return self
+
     def translate(self, x, y, z):
         """Update position by the given amounts."""
         self.translate += np.array([x, y, z], dtype=np.float32)
+        return self
+
+    def set_rotate(self, x, y, z):
+        """Set absolute rotation values."""
+        self.rotate = np.array([x, y, z], dtype=np.float32)
         return self
 
     def rotate(self, x, y, z):
@@ -61,7 +71,7 @@ class Transform:
         self.scale = np.array([x, y, z], dtype=np.float32)
         return self
 
-    def scale_by(self, x, y, z):
+    def scale(self, x, y, z):
         """Scale relatively by multiplying current scale."""
         self.scale *= np.array([x, y, z], dtype=np.float32)
         return self
