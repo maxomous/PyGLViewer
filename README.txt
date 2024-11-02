@@ -1,19 +1,20 @@
 # PyGLViewer
 
-A Python-based OpenGL viewer with ImGui integration for interactive 3D visualization.
-This project uses GLFW (OpenGL Framework) for window management and OpenGL context creation.
+A Python-based 3D Viewer & GUI.
 
-## Features
-- Modern OpenGL (3.3+) rendering
-- ImGui integration for UI controls
-- Camera controls (orbit, pan, zoom)
-- Configurable input handling
-- Shader-based rendering pipeline
+## Overview
+PyGLViewer handles the boilerplate code of OpenGL, GLFW, and ImGui, to allow you to quickly build 3D applications.
+It includes:
+- OpenGL 3.3+ context creation and management
+- GLFW window setup and event handling
+- ImGui setup and rendering pipeline
+- Camera system (orbit, pan, zoom) implementation
+- Pre-configured shader system with lighting
 
 ## Controls
-- Left click + drag: Rotate camera
-- Middle click/Ctrl + left click: Pan camera
-- Scroll wheel: Zoom
+- Left/middle click + drag: Rotate camera
+- Ctrl + left/middle click + drag: Pan camera
+- Scroll wheel: Zoom in/out
 - WASD: Move camera
 - ESC: Exit application
 

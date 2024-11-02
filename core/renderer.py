@@ -4,7 +4,7 @@ from core.geometry import Geometry, Vertex
 from utils.color import Color
 from gl.shaders import Shader, basic_vertex_shader, basic_fragment_shader
 from gl.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, RenderObject
-from core.geometry import GeometryData
+
 
 
 
@@ -19,6 +19,8 @@ class Renderer:
         self.lights = []
         self.objects = []
         # Set default values or pass arguments to add_x() functions individually
+        self.default_point_size = 1.0
+        self.default_line_width = 1.0
         self.default_segments = 16
         self.default_subdivisions = 4
         self.default_face_color = Color.WHITE
@@ -104,8 +106,7 @@ class Renderer:
             obj.ib.bind()
             
             # Set object-specific uniforms
-            obj.shader.set_uniform("model", obj.model_matrix)
-            
+            obj.shader.set_model_matrix(obj.model_matrix)
             # Set point size / line width
             if obj.draw_type == GL_POINTS:
                 glPointSize(obj.point_size)
@@ -128,7 +129,7 @@ class Renderer:
         glClearColor(0.2, 0.3, 0.3, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    def add_point(self, position, color, point_size=1.0, shader=None, buffer_type=BufferType.Static):
+    def add_point(self, position, color, point_size=None, shader=None, buffer_type=BufferType.Static):
         """Add a point primitive to the scene.
         
         Parameters
@@ -138,7 +139,7 @@ class Renderer:
         color : Color
             Point color
         point_size : float, optional
-            Size in pixels
+            Size in pixels (default is self.default_point_size)
         shader : Shader, optional
             Custom shader
         buffer_type : BufferType, optional
@@ -153,7 +154,7 @@ class Renderer:
         point = self.add_object(geometry, buffer_type, shader, GL_POINTS, point_size=point_size)
         return [point]
 
-    def add_line(self, p0, p1, color, line_width=1.0, shader=None, buffer_type=BufferType.Static, 
+    def add_line(self, p0, p1, color, line_width=None, shader=None, buffer_type=BufferType.Static, 
                 translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
         """Add a line segment between two points.
         
@@ -166,7 +167,7 @@ class Renderer:
         color : Color
             Line color
         line_width : float, optional
-            Width in pixels
+            Width in pixels (default is self.default_line_width)
         shader : Shader, optional
             Custom shader
         buffer_type : BufferType, optional
@@ -187,7 +188,7 @@ class Renderer:
         line = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
         return [line]
 
-    def add_triangle(self, p1, p2, p3, color=None, wireframe_color=None, line_width=1.0, shader=None, 
+    def add_triangle(self, p1, p2, p3, color=None, wireframe_color=None, line_width=None, shader=None, 
                     buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
                     translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
         """Add a triangle defined by three points.
@@ -201,7 +202,7 @@ class Renderer:
         wireframe_color : Color, optional
             Outline color
         line_width : float, optional
-            Outline width
+            Outline width (default is self.default_line_width)
         shader : Shader, optional
             Custom shader
         buffer_type : BufferType, optional
@@ -231,7 +232,7 @@ class Renderer:
             triangle_wireframe = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
         return [triangle_body, triangle_wireframe]
 
-    def add_rectangle(self, position, width, height, color=None, wireframe_color=None, line_width=1.0, 
+    def add_rectangle(self, position, width, height, color=None, wireframe_color=None, line_width=None, 
                      shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
                      translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
         """Add a rectangle in the XY plane.
@@ -249,7 +250,7 @@ class Renderer:
         wireframe_color : Color, optional
             Outline color
         line_width : float, optional
-            Outline width
+            Outline width (default is self.default_line_width)
         shader : Shader, optional
             Custom shader
         buffer_type : BufferType, optional
@@ -278,11 +279,14 @@ class Renderer:
         if show_wireframe:
             # Slightly larger wireframe to prevent z-fighting
             geometry = Geometry.create_rectangle_wireframe(position[0], position[1], width * 1.01, height * 1.01, 
-                                                        wireframe_color or self.default_wireframe_color).transform(translate, rotate, scale)
+                                                        wireframe_color or self.default_wireframe_color)#.transform(translate, rotate, scale)
+            # # Slightly larger wireframe to prevent z-fighting
+            # geometry = Geometry.create_rectangle_wireframe(position[0], position[1], width * 1.01, height * 1.01, 
+            #                                             wireframe_color or self.default_wireframe_color).transform(translate, rotate, scale)
             rectangle_wireframe = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
         return [rectangle_body, rectangle_wireframe]
 
-    def add_circle(self, position, radius, segments=None, color=None, wireframe_color=None, line_width=1.0, 
+    def add_circle(self, position, radius, segments=None, color=None, wireframe_color=None, line_width=None, 
                   shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
                   translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
         """Add a circle in the XY plane.
@@ -300,7 +304,7 @@ class Renderer:
         wireframe_color : Color, optional
             Outline color
         line_width : float, optional
-            Outline width
+            Outline width (default is self.default_line_width)
         shader : Shader, optional
             Custom shader
         buffer_type : BufferType, optional
@@ -324,6 +328,7 @@ class Renderer:
         segments = segments or self.default_segments
         color = color or self.default_face_color
         wireframe_color = wireframe_color or self.default_wireframe_color
+        
         shader = shader or self.default_shader
         circle_body = circle_wireframe = None
         if show_body:
@@ -335,7 +340,7 @@ class Renderer:
             circle_wireframe = self.add_object(geometry, buffer_type, shader, GL_LINE_LOOP, line_width=line_width)
         return [circle_body, circle_wireframe]
 
-    def add_cube(self, color=None, wireframe_color=None, line_width=1.0, shader=None, 
+    def add_cube(self, color=None, wireframe_color=None, line_width=None, shader=None, 
                 buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
                 translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
         """Add a unit cube centered at origin.
@@ -347,7 +352,7 @@ class Renderer:
         wireframe_color : Color, optional
             Outline color
         line_width : float, optional
-            Outline width
+            Outline width (default is self.default_line_width)
         shader : Shader, optional
             Custom shader
         buffer_type : BufferType, optional
@@ -371,6 +376,7 @@ class Renderer:
         color = color or self.default_face_color
         wireframe_color = wireframe_color or self.default_wireframe_color
         shader = shader or self.default_shader
+        
         cube_body = cube_wireframe = None
         if show_body:
             geometry = Geometry.create_cube(size=1.0, color=color).transform(translate, rotate, scale)
@@ -380,7 +386,7 @@ class Renderer:
             cube_wireframe = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
         return [cube_body, cube_wireframe]
 
-    def add_cylinder(self, color=None, wireframe_color=None, segments=None, line_width=1.0, shader=None, 
+    def add_cylinder(self, color=None, wireframe_color=None, segments=None, line_width=None, shader=None, 
                     buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
                     translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
         """Add a unit cylinder centered at origin.
@@ -394,7 +400,7 @@ class Renderer:
         segments : int, optional
             Number of segments around circumference
         line_width : float, optional
-            Outline width
+            Outline width (default is self.default_line_width)
         shader : Shader, optional
             Custom shader
         buffer_type : BufferType, optional
@@ -419,6 +425,7 @@ class Renderer:
         color = color or self.default_face_color
         wireframe_color = wireframe_color or self.default_wireframe_color
         shader = shader or self.default_shader
+        
         cylinder_body = cylinder_wireframe = None
         if show_body:
             geometry = Geometry.create_cylinder(segments, color).transform(translate, rotate, scale)
@@ -428,7 +435,7 @@ class Renderer:
             cylinder_wireframe = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
         return [cylinder_body, cylinder_wireframe]
 
-    def add_cone(self, color=None, wireframe_color=None, segments=16, line_width=1.0, shader=None, 
+    def add_cone(self, color=None, wireframe_color=None, segments=16, line_width=None, shader=None, 
                 buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
                 translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
         """Add a unit cone centered at origin.
@@ -442,7 +449,7 @@ class Renderer:
         segments : int, optional
             Number of segments around circumference
         line_width : float, optional
-            Outline width
+            Outline width (default is self.default_line_width)
         shader : Shader, optional
             Custom shader
         buffer_type : BufferType, optional
@@ -467,6 +474,7 @@ class Renderer:
         color = color or self.default_face_color
         wireframe_color = wireframe_color or self.default_wireframe_color
         shader = shader or self.default_shader
+        
         cone_body = cone_wireframe = None
         if show_body:
             geometry = Geometry.create_cone(segments, color).transform(translate, rotate, scale)
@@ -531,7 +539,7 @@ class Renderer:
 
     def add_arrow(self, p0, p1, arrow_dimensions=None, color=None, wireframe_color=None, segments=None,
                  shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
-                 line_width=1.0):
+                 line_width=None):
         """Add an arrow from p0 to p1 with cylindrical shaft and conical head.
         
         Parameters
@@ -561,7 +569,7 @@ class Renderer:
         show_wireframe : bool, optional
             Show outline
         line_width : float, optional
-            Outline width
+            Outline width (default is self.default_line_width)
 
         Returns
         -------
@@ -574,7 +582,7 @@ class Renderer:
         color = color or self.default_face_color
         wireframe_color = wireframe_color or self.default_wireframe_color
         shader = shader or self.default_shader
-            
+        
         body, wireframe = Geometry.create_arrow(p0, p1, color, wireframe_color, arrow_dimensions.shaft_radius, 
                                                 arrow_dimensions.head_radius, arrow_dimensions.head_length, segments)
         arrow_body = self.add_object(body, buffer_type, shader, GL_TRIANGLES) if show_body else None
@@ -584,7 +592,7 @@ class Renderer:
     def add_axis(self, size=1.0, arrow_dimensions=None, segments=None, 
                 origin_radius=0.035, origin_subdivisions=None, 
                 origin_color=Color.BLACK, wireframe_color=None, shader=None, buffer_type=BufferType.Static, 
-                show_body=True, show_wireframe=True, line_width=1.0, translate=(0,0,0), rotate=(0,0,0), 
+                show_body=True, show_wireframe=True, line_width=None, translate=(0,0,0), rotate=(0,0,0), 
                 scale=(1,1,1)):
         """Add coordinate axis arrows with sphere at origin.
 
@@ -613,7 +621,7 @@ class Renderer:
         show_wireframe : bool, optional
             Show outlines
         line_width : float, optional
-            Outline width
+            Outline width (default is self.default_line_width)
         translate : tuple, optional
             Translation vector (x,y,z)
         rotate : tuple, optional
@@ -645,14 +653,13 @@ class Renderer:
         # Combine and transform geometries
         geometry = (x_geometry + y_geometry + z_geometry + origin_geometry).transform(translate, rotate, scale)
         wireframe = (x_wireframe + y_wireframe + z_wireframe).transform(translate, rotate, scale)
-        
+
         # Create render objects
         axis_body = self.add_object(geometry, buffer_type, shader, GL_TRIANGLES) if show_body else None
         axis_wireframe = self.add_object(wireframe, buffer_type, shader, GL_LINES, line_width=line_width) if show_wireframe else None
         return [axis_body, axis_wireframe]
 
-    def add_grid(self, size, increment, color, line_width=1.0, shader=None, buffer_type=BufferType.Static, 
-                translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
+    def add_grid(self, size, increment, color, line_width=None, shader=None, buffer_type=BufferType.Static, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
         """Add a grid of lines in the XY plane.
 
         Parameters
@@ -664,7 +671,7 @@ class Renderer:
         color : Color
             Grid line color
         line_width : float, optional
-            Grid line width
+            Grid line width (default is self.default_line_width)
         shader : Shader, optional
             Custom shader
         buffer_type : BufferType, optional
@@ -688,7 +695,7 @@ class Renderer:
 
 #TODO: Dynamically increase buffer size
 
-    def add_blank_object(self, vertices_size, indices_size, buffer_type=BufferType.Stream, shader=None, draw_type=GL_TRIANGLES, line_width=1.0, point_size=1.0):
+    def add_blank_object(self, vertices_size, indices_size, buffer_type=BufferType.Stream, shader=None, draw_type=GL_TRIANGLES, line_width=None, point_size=None):
         """Add a blank object for a dynamic / stream buffer.
 
         Parameters
@@ -704,9 +711,9 @@ class Renderer:
         draw_type : GL_enum, optional
             OpenGL primitive type (TRIANGLES, LINES, etc)
         line_width : float, optional
-            Line width
+            Line width (default is self.default_line_width)
         point_size : float, optional
-            Point size
+            Point size (default is self.default_point_size)
 
         Returns
         -------
@@ -717,7 +724,7 @@ class Renderer:
         return [blank]
 
 
-    def add_object(self, geometry_data, buffer_type, shader=None, draw_type=GL_TRIANGLES, line_width=1.0, point_size=1.0, vertices_size=0, indices_size=0):
+    def add_object(self, geometry_data, buffer_type, shader=None, draw_type=GL_TRIANGLES, line_width=None, point_size=None, vertices_size=0, indices_size=0):
         """Create and add a new render object to the scene.
 
         Parameters
@@ -732,7 +739,7 @@ class Renderer:
         draw_type : GL_enum, optional
             OpenGL primitive type (TRIANGLES, LINES, etc)
         line_width : float, optional
-            Width for line primitives
+            Width for line primitives (default is self.default_line_width)
         point_size : float, optional
             Size for point primitives
 
@@ -742,7 +749,7 @@ class Renderer:
             Created render object
         """
         # Interleave position, color, and normal data
-        vertices = geometry_data.interleaved_vertices()
+        vertices = geometry_data.interleave_vertices()
         indices = geometry_data.indices
         vertices_size = vertices.nbytes
         indices_size = indices.nbytes
@@ -751,7 +758,7 @@ class Renderer:
 
 
 
-    def add_object_base(self, vertices, indices, vertices_size, indices_size, buffer_type, shader=None, draw_type=GL_TRIANGLES, line_width=1.0, point_size=1.0):
+    def add_object_base(self, vertices, indices, vertices_size, indices_size, buffer_type, shader=None, draw_type=GL_TRIANGLES, line_width=None, point_size=None):
         """Create and add a new render object to the scene.
 
         Parameters
@@ -771,9 +778,9 @@ class Renderer:
         draw_type : GL_enum, optional
             OpenGL primitive type (TRIANGLES, LINES, etc)
         line_width : float, optional
-            Width for line primitives
+            Width for line primitives (default is self.default_line_width)
         point_size : float, optional
-            Size for point primitives
+            Size for point primitives (default is self.default_point_size)
 
         Returns
         -------
@@ -781,6 +788,9 @@ class Renderer:
             Created render object
         """
         shader = shader or self.default_shader
+        line_width = line_width or self.default_line_width
+        point_size = point_size or self.default_point_size
+
 
         vb = VertexBuffer(vertices, buffer_type, vertices_size)
         ib = IndexBuffer(indices, buffer_type, indices_size)

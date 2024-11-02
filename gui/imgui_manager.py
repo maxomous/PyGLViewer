@@ -50,7 +50,7 @@ class ImGuiManager:
             size (float): Font size in pixels
         """
         if not os.path.exists(path):
-            print(f"Font file not found: {path}")
+            print(f"Warning: Font file not found: {path}")
             return
 
         io = imgui.get_io()
@@ -67,7 +67,7 @@ class ImGuiManager:
         if name in self.fonts:
             imgui.push_font(self.fonts[name])
         else:
-            print(f"Font not found: {name}")
+            print(f"Warning: Font not found: {name}")
 
     def pop_font(self):
         """Pop current font from ImGui font stack."""

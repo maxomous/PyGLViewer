@@ -19,10 +19,11 @@ uniform mat4 view;
 uniform mat4 projection;
 
 void main() {
-    FragPos = vec3(model * vec4(aPos, 1.0));
-    Normal = mat3(transpose(inverse(model))) * aNormal;  // Normal matrix transformation
+    vec4 worldPos = model * vec4(aPos, 1.0);
+    FragPos = worldPos.xyz;
+    Normal = mat3(transpose(inverse(model))) * aNormal;
     Color = aColor;
-    gl_Position = projection * view * vec4(FragPos, 1.0);
+    gl_Position = projection * view * worldPos;
 }
 """
 
@@ -153,7 +154,7 @@ class Shader:
         shader = shaders.compileShader(source, shader_type)
         if not glGetShaderiv(shader, GL_COMPILE_STATUS):
             error = glGetShaderInfoLog(shader).decode()
-            print(f"Shader compilation error: {error}")
+            print(f"Error: Shader compilation failed: {error}")
             raise RuntimeError(f"Shader compilation failed: {error}")
         return shader
 
@@ -168,7 +169,7 @@ class Shader:
         glValidateProgram(self.program)
         if not glGetProgramiv(self.program, GL_VALIDATE_STATUS):
             error = glGetProgramInfoLog(self.program).decode()
-            print(f"Program validation error: {error}")
+            print(f"Error: Program validation failed: {error}")
             raise RuntimeError(f"Program validation failed: {error}")
 
     def use(self):
@@ -194,7 +195,7 @@ class Shader:
         """
         location = glGetUniformLocation(self.program, name)
         if location == -1:
-            print(f"Warning: Uniform '{name}' not found in shader program.")
+            print(f"Error: Uniform '{name}' not found in shader program.")
             return
 
         if isinstance(value, int):

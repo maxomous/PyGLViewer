@@ -1,6 +1,7 @@
 from OpenGL.GL import *
 import ctypes
 import numpy as np
+from utils.transform import Transform
 
 class BufferType:
     """Enumeration of OpenGL buffer types."""
@@ -28,6 +29,8 @@ class Buffer:
 
     def update_data(self, data, offset=0):
         """Update the buffer's data."""
+        if self.buffer_type == BufferType.Static:
+            raise RuntimeError("Cannot update data in a static buffer, use dynamic or stream instead.")
         self.bind()
         glBufferSubData(self.target, offset, data.nbytes, data)
 
@@ -76,6 +79,8 @@ class VertexArray:
                 ctypes.c_void_p(attribute['offset'])
             )
 
+
+
 class RenderObject:
     """Represents a renderable object with vertex, index buffers, and shader."""
     def __init__(self, vb, ib, va, draw_type, shader, line_width=1.0, point_size=1.0):
@@ -88,13 +93,14 @@ class RenderObject:
         self.point_size = point_size
         self.model_matrix = np.identity(4, dtype=np.float32)
 
-    def update_vertex_data(self, data, offset=0):
+    def set_vertex_data(self, data, offset=0):
         """Update the vertex data of this render object."""
         self.vb.update_data(data, offset)
 
-    def update_index_data(self, data, offset=0):
+    def set_index_data(self, data, offset=0):
         """Update the index data of this render object."""
         self.ib.update_data(data, offset)
 
-    def set_model_matrix(self, model_matrix):
-        self.model_matrix = model_matrix
+    def set_transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
+        """Set the transform matrix - Will scale, rotate and translate the object, in that order."""
+        self.model_matrix = Transform(translate, rotate, scale).transform_matrix().T # Transpose to convert row-major to column-major

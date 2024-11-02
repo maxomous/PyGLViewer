@@ -6,6 +6,7 @@ Includes vertex data structures, geometry containers, and shape factory methods.
 import numpy as np
 from OpenGL.GL import *
 from utils.color import Color
+from utils.transform import Transform
 
 class Vertex:
     """
@@ -88,12 +89,12 @@ class GeometryData:
 
         return GeometryData(combined_vertices, combined_indices)
 
-    def interleaved_vertices(self):
-        """Return interleaved vertex data (position, color, normal) as a flattened numpy array."""
+    def interleave_vertices(self):
+        """Return interleaved vertex data as a flattened numpy array. e.g. [x,y,z, r,g,b, nx,ny,nz, x,y,z...]"""
         return np.array([vertex.to_array() for vertex in self.vertices], dtype=np.float32).flatten()
     
     def transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
-        """Apply transformation to the geometry.
+        """Apply transformation to the vertices.
         
         Args:
             translate (tuple): XYZ translation values. Defaults to (0, 0, 0)
@@ -103,56 +104,19 @@ class GeometryData:
         Returns:
             GeometryData: Self reference for method chaining
         """
-        transform_matrix = GeometryData.transform_matrix(translate, rotate, scale)
-        normal_matrix = np.linalg.inv(transform_matrix[:3, :3]).T  # For transforming normals
+        transform = Transform(translate, rotate, scale)
+        normal_matrix = np.linalg.inv(transform.transform_matrix()[:3, :3]).T
 
         for vertex in self.vertices:
             # Transform position
-            position_homogeneous = np.append(vertex.position, 1)
-            transformed_position = np.dot(transform_matrix, position_homogeneous)[:3]
-            vertex.position = transformed_position
-
+            vertex.position = transform.transform_position(vertex.position)
             # Transform normal
-            transformed_normal = np.dot(normal_matrix, vertex.normal)
-            vertex.normal = transformed_normal / np.linalg.norm(transformed_normal)
+            vertex.normal = normal_matrix @ vertex.normal
+            vertex.normal = vertex.normal / np.linalg.norm(vertex.normal)
 
         return self
     
-        
-    @staticmethod
-    def transform_matrix(translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
-        """Create a 4x4 transformation matrix.
-        
-        Args:
-            translate (tuple): XYZ translation values. Defaults to (0, 0, 0)
-            rotate (tuple): XYZ rotation angles in radians. Defaults to (0, 0, 0)
-            scale (tuple): XYZ scale factors. Defaults to (1, 1, 1)
-        
-        Returns:
-            np.array: 4x4 transformation matrix
-        """
-        tx, ty, tz = translate
-        rx, ry, rz = rotate
-        sx, sy, sz = scale
-
-        # Create rotation matrices
-        Rx = np.array([[1, 0, 0], [0, np.cos(rx), -np.sin(rx)], [0, np.sin(rx), np.cos(rx)]])
-        Ry = np.array([[np.cos(ry), 0, np.sin(ry)], [0, 1, 0], [-np.sin(ry), 0, np.cos(ry)]])
-        Rz = np.array([[np.cos(rz), -np.sin(rz), 0], [np.sin(rz), np.cos(rz), 0], [0, 0, 1]])
-
-        # Combine rotations
-        R = Rz @ Ry @ Rx
-
-        # Create transformation matrix
-        transform = np.array([
-            [R[0, 0]*sx, R[0, 1]*sy, R[0, 2]*sz, tx],
-            [R[1, 0]*sx, R[1, 1]*sy, R[1, 2]*sz, ty],
-            [R[2, 0]*sx, R[2, 1]*sy, R[2, 2]*sz, tz],
-            [0, 0, 0, 1]
-        ])
-
-        return transform
-
+    
 class Geometry:
     """
     Factory class providing static methods to create various 3D geometric primitives.

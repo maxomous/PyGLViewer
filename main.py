@@ -51,8 +51,11 @@ class ExampleApplication(Application):
         self.renderer.add_point((-4, 4, 0), Color.RED, point_size=10)
         self.renderer.add_line((-2.5, 3.5, 0), (-1.5, 4.5, 0), Color.ORANGE)
         self.renderer.add_triangle((0, 4.433, 0), (-0.5, 3.567, 0), (0.5, 3.567, 0), wireframe_color=Color.YELLOW, show_body=False, line_width=10)
-        self.renderer.add_rectangle((2, 4), 1, 1, wireframe_color=Color.GREEN, show_body=False)
+
+        self.renderer.add_rectangle((0, 0), 1, 1, wireframe_color=Color.GREEN, show_body=False)
+        
         self.renderer.add_circle(position=(4, 4, 0), radius=0.5, wireframe_color=Color.BLUE, show_body=False)
+
 
         # Row 2 - Filled Shapes
         self.renderer.add_circle(position=(-4, 2, 0), radius=0.5, color=Color.GREEN)
@@ -61,16 +64,15 @@ class ExampleApplication(Application):
         self.renderer.add_cylinder(Color.WHITE, translate=(2, 2, 0.5), scale=(0.5, 0.5, 0.5))
         self.renderer.add_sphere(translate=(4, 2, 0.5), radius=0.25, subdivisions=1, color=Color.WHITE)
         self.renderer.add_sphere(translate=(4, 0, 0.5), radius=0.25, subdivisions=4, color=Color.WHITE)
-
         # Row 3 - Filled Shapes
         arrow_size = self.renderer.ArrowDimensions(shaft_radius=0.2, head_radius=0.4, head_length=0.3)
-        self.renderer.add_arrow((-2.4, -0.4, 0.25), (-1.6, 0.4, 0.75), arrow_size, color=Color.RED)
+        self.renderer.add_arrow((2, -1, 0.25), (1, 4, 0.75), arrow_size, color=Color.RED)
 
-        # TODO: Add dynamic buffer size
-
-        self.rotating_cube = self.renderer.add_blank_object(vertices_size=1000, indices_size=1000, draw_type=GL_TRIANGLES, buffer_type=BufferType.Stream)
-        self.rotating_cube_wireframe = self.renderer.add_blank_object(vertices_size=1000, indices_size=1000, draw_type=GL_LINES, buffer_type=BufferType.Stream)
-
+        # TODO: Dynamically allocate buffer size
+        self.rotating_cube = {   
+            'body': self.renderer.add_blank_object(vertices_size=10000, indices_size=10000, draw_type=GL_TRIANGLES, buffer_type=BufferType.Stream),
+            'wireframe': self.renderer.add_blank_object(vertices_size=10000, indices_size=10000, draw_type=GL_LINES, buffer_type=BufferType.Stream)
+        }
 
     def init_lights(self):
         """Initialize lighting setup for the scene.
@@ -104,30 +106,31 @@ class ExampleApplication(Application):
             self.renderer.add_light(Light(**light_data))
 
     def update_scene(self):
-        # TODO: clear old?
         # TODO: Make ObjectCollection to store multiple objects OR multiple geometries???
         """Update scene state called every frame."""
 
-        time = self.timer.time
-        rotation_angle = time * 2 * np.pi  # full rotation per second
-        translation_angle = (time * 2 * np.pi) / 4  # quarter speed translation
-        translation = 2 * np.sin(translation_angle)
+        # TODO: Update geometry only when required, set the model matrix instead of transforming the geometry
+        cube_geometry = \
+            Geometry.create_cube(size=0.5, color=Color.YELLOW) \
+                .transform(translate=(-1, 0, 0.5), rotate=(0, 0, self.timer.oscillate_angle(speed=0.25))) + \
+            Geometry.create_cube(size=0.5, color=Color.GREEN) \
+                .transform(translate=(1, 0, 0.5), rotate=(0, 0, self.timer.oscillate_angle(speed=0.25)))
         
-        rotating_cube = Geometry.create_cube(size=1.0, color=Color.YELLOW) \
-            .transform(translate=(0, 0, 0.5), rotate=(0, 0, rotation_angle / 4), scale=(0.5, 0.5, 0.5)) \
-            .transform(translate=(0, 0, translation))
-            
-        rotating_cube_wireframe = Geometry.create_cube_wireframe(size=1.0, color=Color.BLACK) \
-            .transform(translate=(0, 0, 0.5), rotate=(0, 0, rotation_angle / 4), scale=(0.501, 0.501, 0.501)) \
-            .transform(translate=(0, 0, translation))
-            
+        # TODO: Sort objects make one combined class
         # Update vertex data
-        self.rotating_cube[0].update_vertex_data(rotating_cube.interleaved_vertices())
-        self.rotating_cube[0].update_index_data(rotating_cube.indices) # TODO: maybe just first frame
+        self.rotating_cube['body'][0].set_vertex_data(cube_geometry.interleave_vertices())
+        self.rotating_cube['body'][0].set_index_data(cube_geometry.indices) # TODO: maybe just first frame
+        self.rotating_cube['body'][0].set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), 0, 0), rotate=(0, 0, self.timer.oscillate_angle(0.5)))
         
-        # Update vertex data
-        self.rotating_cube_wireframe[0].update_vertex_data(rotating_cube_wireframe.interleaved_vertices())
-        self.rotating_cube_wireframe[0].update_index_data(rotating_cube_wireframe.indices) # TODO: maybe just first frame
+        # rotating_cube_wireframe = \
+        #     Geometry.create_cube_wireframe(size=1.0, color=Color.BLACK) \
+        #         .transform(translate=(0, 0, 0.5), rotate=(0, 0, self.timer.oscillate_angle(speed=0.25)), scale=(0.501, 0.501, 0.501)) + \
+        #     Geometry.create_cube_wireframe(size=1.0, color=Color.BLACK) \
+        #         .transform(translate=(0, 0, self.timer.oscillate_translation(amplitude=2, speed=0.25)))
+        
+        # # Update vertex data
+        # self.rotating_cube_wireframe[0].update_vertex_data(rotating_cube_wireframe.interleave_vertices())
+        # self.rotating_cube_wireframe[0].update_index_data(rotating_cube_wireframe.indices) # TODO: maybe just first frame
         
         
     def events(self):
