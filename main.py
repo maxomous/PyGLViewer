@@ -96,9 +96,10 @@ class ExampleApplication(Application):
         self.renderer.add_arrow((-2.4, 1.6, 0.25), (-1.6, 2.4, 0.75), arrow_size, color=Color.RED)
         
         # TODO: Dynamically allocate buffer size
+        # Combine dictionaries (body & wireframe)
         self.rotating_cube = {
-            'body': self.renderer.add_blank_object(vertices_size=10000, indices_size=10000, draw_type=GL_TRIANGLES, buffer_type=BufferType.Stream),
-            'wireframe': self.renderer.add_blank_object(vertices_size=10000, indices_size=10000, draw_type=GL_LINES, buffer_type=BufferType.Stream)
+            **self.renderer.add_blank_object(vertices_size=10000, indices_size=10000, draw_type=GL_TRIANGLES, buffer_type=BufferType.Stream), # body
+            **self.renderer.add_blank_object(vertices_size=10000, indices_size=10000, draw_type=GL_LINES, buffer_type=BufferType.Stream) # wireframe
         }
 
     def update_scene(self):  
@@ -115,21 +116,22 @@ class ExampleApplication(Application):
         
         # TODO: Sort objects make one combined class
         # Update vertex data
-        self.rotating_cube['body'][0].set_vertex_data(rotating_cube_geometry.interleave_vertices())
-        self.rotating_cube['body'][0].set_index_data(rotating_cube_geometry.indices) # TODO: only needed first frame
-        self.rotating_cube['body'][0].set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), 0, 0), rotate=(0, 0, self.timer.oscillate_angle(0.5)))
+        self.rotating_cube['body'].set_vertex_data(rotating_cube_geometry.interleave_vertices())
+        self.rotating_cube['body'].set_index_data(rotating_cube_geometry.indices) # TODO: only needed first frame
+        self.rotating_cube['body'].set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), 0, 0), rotate=(0, 0, self.timer.oscillate_angle(0.5)))
         
         
+        0.
         rotating_cube_wireframe = \
             Geometry.create_cube_wireframe(size=0.5, color=Color.BLACK) \
-                .transform(translate=(-1, 0, 0.5), rotate=(0, 0, self.timer.oscillate_angle(speed=0.5))) + \
+                .transform(translate=(-1, 0, 0.5), rotate=(0, 0, self.timer.oscillate_angle(speed=0.5)), scale=(1.0001, 1.0001, 1.0001)) + \
             Geometry.create_cube_wireframe(size=0.5, color=Color.BLACK) \
-                .transform(translate=(1, 0, 0.5), rotate=(0, 0, self.timer.oscillate_angle(speed=0.5)))
+                .transform(translate=(1, 0, 0.5), rotate=(0, 0, self.timer.oscillate_angle(speed=0.5)), scale=(1.0001, 1.0001, 1.0001))
         
         # Update vertex data
-        self.rotating_cube['wireframe'][0].set_vertex_data(rotating_cube_wireframe.interleave_vertices())
-        self.rotating_cube['wireframe'][0].set_index_data(rotating_cube_wireframe.indices) # TODO: only needed first frame
-        self.rotating_cube['wireframe'][0].set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), 0, 0), rotate=(0, 0, self.timer.oscillate_angle(0.5)))
+        self.rotating_cube['line'].set_vertex_data(rotating_cube_wireframe.interleave_vertices())
+        self.rotating_cube['line'].set_index_data(rotating_cube_wireframe.indices) # TODO: only needed first frame
+        self.rotating_cube['line'].set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), 0, 0), rotate=(0, 0, self.timer.oscillate_angle(0.5)))
         
         
         

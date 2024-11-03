@@ -147,12 +147,12 @@ class Renderer:
 
         Returns
         -------
-        list
-            List containing the point object
+        dict
+            Dictionary containing "point" render object
         """
         geometry = Geometry.create_point(position, color)
         point = self.add_object(geometry, buffer_type, shader, GL_POINTS, point_size=point_size)
-        return [point]
+        return {"point": point}
 
     def add_line(self, p0, p1, color, line_width=None, shader=None, buffer_type=BufferType.Static, 
                 translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
@@ -181,12 +181,12 @@ class Renderer:
 
         Returns
         -------
-        list
-            List containing the line object
+        dict
+            Dictionary containing "line" render object
         """
         geometry = Geometry.create_line(p0, p1, color).transform(translate, rotate, scale)
         line = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
-        return [line]
+        return {"line": line}
 
     def add_triangle(self, p1, p2, p3, color=None, wireframe_color=None, line_width=None, shader=None, 
                     buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
@@ -220,8 +220,8 @@ class Renderer:
 
         Returns
         -------
-        list
-            [triangle_body, triangle_wireframe] objects
+        dict
+            Dictionary containing "body" and "wireframe" render objects
         """
         triangle_body = triangle_wireframe = None
         if show_body:
@@ -230,7 +230,10 @@ class Renderer:
         if show_wireframe:
             geometry = Geometry.create_triangle_wireframe(p1, p2, p3, wireframe_color or self.default_wireframe_color).transform(translate, rotate, scale)
             triangle_wireframe = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
-        return [triangle_body, triangle_wireframe]
+        return {
+            "body": triangle_body,
+            "wireframe": triangle_wireframe
+        }
 
     def add_rectangle(self, position, width, height, color=None, wireframe_color=None, line_width=None, 
                      shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
@@ -268,8 +271,8 @@ class Renderer:
 
         Returns
         -------
-        list
-            [rectangle_body, rectangle_wireframe] objects
+        dict
+            Dictionary containing "body" and "wireframe" render objects
         """
         rectangle_body = rectangle_wireframe = None
         if show_body:
@@ -284,7 +287,10 @@ class Renderer:
             # geometry = Geometry.create_rectangle_wireframe(position[0], position[1], width * 1.01, height * 1.01, 
             #                                             wireframe_color or self.default_wireframe_color).transform(translate, rotate, scale)
             rectangle_wireframe = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
-        return [rectangle_body, rectangle_wireframe]
+        return {
+            "body": rectangle_body,
+            "wireframe": rectangle_wireframe
+        }
 
     def add_circle(self, position, radius, segments=None, color=None, wireframe_color=None, line_width=None, 
                   shader=None, buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
@@ -322,8 +328,8 @@ class Renderer:
 
         Returns
         -------
-        list
-            [circle_body, circle_wireframe] objects
+        dict
+            Dictionary containing "body" and "wireframe" render objects
         """
         segments = segments or self.default_segments
         color = color or self.default_face_color
@@ -338,7 +344,10 @@ class Renderer:
             # Slightly larger wireframe to prevent z-fighting
             geometry = Geometry.create_circle_wireframe(position, radius * 1.01, segments, wireframe_color).transform(translate, rotate, scale)
             circle_wireframe = self.add_object(geometry, buffer_type, shader, GL_LINE_LOOP, line_width=line_width)
-        return [circle_body, circle_wireframe]
+        return {
+            "body": circle_body,
+            "wireframe": circle_wireframe
+        }
 
     def add_cube(self, color=None, wireframe_color=None, line_width=None, shader=None, 
                 buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
@@ -370,8 +379,8 @@ class Renderer:
 
         Returns
         -------
-        list
-            [cube_body, cube_wireframe] objects
+        dict
+            Dictionary containing "body" and "wireframe" render objects
         """
         color = color or self.default_face_color
         wireframe_color = wireframe_color or self.default_wireframe_color
@@ -384,7 +393,10 @@ class Renderer:
         if show_wireframe:
             geometry = Geometry.create_cube_wireframe(size=1.0, color=wireframe_color).transform(translate, rotate, scale)
             cube_wireframe = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
-        return [cube_body, cube_wireframe]
+        return {
+            "body": cube_body,
+            "wireframe": cube_wireframe
+        }
 
     def add_cylinder(self, color=None, wireframe_color=None, segments=None, line_width=None, shader=None, 
                     buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
@@ -418,8 +430,8 @@ class Renderer:
 
         Returns
         -------
-        list
-            [cylinder_body, cylinder_wireframe] objects
+        dict
+            Dictionary containing "body" and "wireframe" render objects
         """
         segments = segments or self.default_segments
         color = color or self.default_face_color
@@ -433,7 +445,10 @@ class Renderer:
         if show_wireframe:
             geometry = Geometry.create_cylinder_wireframe(segments, wireframe_color).transform(translate, rotate, scale)
             cylinder_wireframe = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
-        return [cylinder_body, cylinder_wireframe]
+        return {
+            "body": cylinder_body,
+            "wireframe": cylinder_wireframe
+        }
 
     def add_cone(self, color=None, wireframe_color=None, segments=16, line_width=None, shader=None, 
                 buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
@@ -467,8 +482,8 @@ class Renderer:
 
         Returns
         -------
-        list
-            [cone_body, cone_wireframe] objects
+        dict
+            Dictionary containing "body" and "wireframe" render objects
         """
         segments = segments or self.default_segments
         color = color or self.default_face_color
@@ -482,7 +497,10 @@ class Renderer:
         if show_wireframe:
             geometry = Geometry.create_cone_wireframe(segments, wireframe_color).transform(translate, rotate, scale)
             cone_wireframe = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
-        return [cone_body, cone_wireframe]
+        return {
+            "body": cone_body,
+            "wireframe": cone_wireframe
+        }
 
     def add_sphere(self, radius, subdivisions=4, color=None, shader=None, buffer_type=BufferType.Static, 
                   translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
@@ -515,10 +533,9 @@ class Renderer:
         subdivisions = subdivisions or self.default_subdivisions
         color = color or self.default_face_color
         shader = shader or self.default_shader
-        geometry = Geometry.create_sphere(radius, subdivisions, 
-                                        color).transform(translate, rotate, scale)
+        geometry = Geometry.create_sphere(radius, subdivisions, color).transform(translate, rotate, scale)
         sphere_body = self.add_object(geometry, buffer_type, shader, GL_TRIANGLES)
-        return [sphere_body]
+        return {"body": sphere_body}
 
     class ArrowDimensions:
         """Stores dimensions for arrow geometry.
@@ -573,8 +590,8 @@ class Renderer:
 
         Returns
         -------
-        list
-            [arrow_body, arrow_wireframe] objects
+        dict
+            Dictionary containing "body" and "wireframe" render objects
         """
 
         segments = segments or self.default_segments
@@ -587,7 +604,10 @@ class Renderer:
                                                 arrow_dimensions.head_radius, arrow_dimensions.head_length, segments)
         arrow_body = self.add_object(body, buffer_type, shader, GL_TRIANGLES) if show_body else None
         arrow_wireframe = self.add_object(wireframe, buffer_type, shader, GL_LINES, line_width=line_width) if show_wireframe else None
-        return [arrow_body, arrow_wireframe]
+        return {
+            "body": arrow_body,
+            "wireframe": arrow_wireframe
+        }
 
     def add_axis(self, size=1.0, arrow_dimensions=None, segments=None, 
                 origin_radius=0.035, origin_subdivisions=None, 
@@ -657,7 +677,10 @@ class Renderer:
         # Create render objects
         axis_body = self.add_object(geometry, buffer_type, shader, GL_TRIANGLES) if show_body else None
         axis_wireframe = self.add_object(wireframe, buffer_type, shader, GL_LINES, line_width=line_width) if show_wireframe else None
-        return [axis_body, axis_wireframe]
+        return {
+            "body": axis_body,
+            "wireframe": axis_wireframe
+        }
 
     def add_grid(self, size, increment, color, line_width=None, shader=None, buffer_type=BufferType.Static, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1)):
         """Add a grid of lines in the XY plane.
@@ -685,12 +708,12 @@ class Renderer:
 
         Returns
         -------
-        list
-            List containing the grid object
+        dict
+            Dictionary containing "line" render object
         """
         geometry = Geometry.create_grid(size, increment, color).transform(translate, rotate, scale)
         grid = self.add_object(geometry, buffer_type, shader, GL_LINES, line_width=line_width)
-        return [grid]
+        return {"line": grid}
 
 
 #TODO: Dynamically increase buffer size
@@ -717,11 +740,11 @@ class Renderer:
 
         Returns
         -------
-        list
-            List containing the blank object
+        dict
+            Dictionary containing either "body" (for GL_TRIANGLES) or "line" render object
         """        
         blank = self.add_object_base(None, None, vertices_size, indices_size, buffer_type, shader, draw_type, line_width, point_size)
-        return [blank]
+        return {"body": blank} if draw_type == GL_TRIANGLES else {"line": blank}
 
 
     def add_object(self, geometry_data, buffer_type, shader=None, draw_type=GL_TRIANGLES, line_width=None, point_size=None, vertices_size=0, indices_size=0):
