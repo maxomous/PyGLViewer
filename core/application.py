@@ -7,7 +7,7 @@ from core.renderer import Renderer
 from utils.timer import Timer
 from utils.config import Config
 from gui.imgui_manager import ImGuiManager
-
+import time
 
 class Application:
     """Base class for OpenGL applications with ImGui integration.
@@ -57,7 +57,7 @@ class Application:
         self.fonts = fonts
         self.default_font = default_font
         self.enable_docking = enable_docking
-
+        
     def init_core(self):
         """Initialize GLFW, OpenGL context, and application components.
         
@@ -79,12 +79,24 @@ class Application:
         if not glfw.init():
             return False
 
+        # Request OpenGL 3.3 core profile
+        glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
+        glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
+        glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+        
+        # Enable vsync
+        glfw.window_hint(glfw.DOUBLEBUFFER, True)
+
         self.window = glfw.create_window(self.width, self.height, self.title, None, None)
         if not self.window:
             glfw.terminate()    
             return False
         
         glfw.make_context_current(self.window)
+        
+        # Enable vsync (1 = enable, 0 = disable)
+        glfw.swap_interval(1)
+        # Set frame size callback
         glfw.set_framebuffer_size_callback(self.window, self.set_frame_size)
         return True
 
@@ -141,6 +153,7 @@ class Application:
         self.update_scene()
         # Render
         self.render()
+        
 
     def process_inputs(self):
         """Process input events from GLFW and ImGui."""

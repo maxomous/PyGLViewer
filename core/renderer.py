@@ -1,9 +1,10 @@
 from OpenGL.GL import *
 import numpy as np
-from core.geometry import Geometry, Vertex
+from core.geometry import Geometry, Vertex, GeometryData
 from utils.color import Color
 from gl.shaders import Shader, basic_vertex_shader, basic_fragment_shader
 from gl.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, RenderObject
+from renderer.batch_renderer import BatchRenderer, BatchType
 
 
 
@@ -35,6 +36,9 @@ class Renderer:
         self.projection_matrix = None
         self.camera_position = None
         self.lights_need_update = True
+        
+        # Add batch renderer
+        self.batch_renderer = BatchRenderer()
     
     def set_view_matrix(self, view_matrix):
         """Update camera view matrix if changed.
@@ -94,36 +98,50 @@ class Renderer:
         self.lights_need_update = True
 
     def draw(self):
-        """Render all objects in the scene.
+        """Render all objects in the scene using batch rendering.
         
         Updates lights and renders each object with its shader and render settings.
         Resets OpenGL state after rendering.
         """
         self.update_lights()
+        
+        # Set matrices in batch renderer
+        self.batch_renderer.view_matrix = self.view_matrix
+        self.batch_renderer.projection_matrix = self.projection_matrix
+        self.batch_renderer.camera_position = self.camera_position
+        
+        # Begin new batch
+        self.batch_renderer.begin()
+        
+        # Submit all objects to batch
         for obj in self.objects:
-            obj.shader.use()
-            obj.va.bind()
-            obj.ib.bind()
-            
-            # Set object-specific uniforms
-            obj.shader.set_model_matrix(obj.model_matrix)
-            # Set point size / line width
-            if obj.draw_type == GL_POINTS:
-                glPointSize(obj.point_size)
-            elif obj.draw_type in (GL_LINES, GL_LINE_LOOP, GL_LINE_STRIP):
-                glLineWidth(obj.line_width)
-            
-            glDrawElements(obj.draw_type, obj.ib.count, GL_UNSIGNED_INT, None)
-            
-            obj.va.unbind()
-            obj.ib.unbind()
-
+            if not self.batch_renderer.submit(
+                geometry_data=obj.geometry,  # Pass the geometry data
+                shader=obj.shader,
+                draw_type=obj.draw_type,
+                transform=obj.model_matrix,
+                line_width=obj.line_width,
+                point_size=obj.point_size
+            ):
+                # If batch is full, flush and start new batch
+                self.batch_renderer.flush()
+                self.batch_renderer.submit(
+                    geometry_data=obj.geometry,
+                    shader=obj.shader,
+                    draw_type=obj.draw_type,
+                    transform=obj.model_matrix,
+                    line_width=obj.line_width,
+                    point_size=obj.point_size
+                )
+        
+        # Flush any remaining geometry
+        if self.batch_renderer.stats.vertex_count > 0:
+            self.batch_renderer.flush()
+        
         # Reset to default state
         glEnable(GL_DEPTH_TEST)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-        glLineWidth(1.0)
-        glPointSize(1.0)
-        
+
     def clear(self):
         """Clear the framebuffer with a dark teal background."""
         glClearColor(0.2, 0.3, 0.3, 1.0)
@@ -747,39 +765,32 @@ class Renderer:
         return {"body": blank} if draw_type == GL_TRIANGLES else {"line": blank}
 
 
-    def add_object(self, geometry_data, buffer_type, shader=None, draw_type=GL_TRIANGLES, line_width=None, point_size=None, vertices_size=0, indices_size=0):
-        """Create and add a new render object to the scene.
+    def add_object(self, geometry_data, buffer_type, shader=None, draw_type=GL_TRIANGLES, line_width=None, point_size=None):
+        """Create and add a new render object."""
+        shader = shader or self.default_shader
+        line_width = line_width or self.default_line_width
+        point_size = point_size or self.default_point_size
 
-        Parameters
-        ----------
-        geometry_data : GeometryData
-            Vertex and index data for the object
-            Set to None for dynamic / stream buffer
-        buffer_type : BufferType
-            Static or Dynamic buffer
-        shader : Shader, optional
-            Custom shader program
-        draw_type : GL_enum, optional
-            OpenGL primitive type (TRIANGLES, LINES, etc)
-        line_width : float, optional
-            Width for line primitives (default is self.default_line_width)
-        point_size : float, optional
-            Size for point primitives
-
-        Returns
-        -------
-        RenderObject
-            Created render object
-        """
-        # Interleave position, color, and normal data
-        vertices = geometry_data.interleave_vertices()
-        indices = geometry_data.indices
-        vertices_size = vertices.nbytes
-        indices_size = indices.nbytes
+        print(f"Debug: Creating RenderObject with geometry type: {type(geometry_data)}")
         
-        return self.add_object_base(vertices, indices, vertices_size, indices_size, buffer_type, shader, draw_type, line_width, point_size)
+        # Ensure geometry_data is a GeometryData instance
+        if not isinstance(geometry_data, GeometryData):
+            print("Warning: Converting geometry data to GeometryData")
+            if hasattr(geometry_data, 'vertices') and hasattr(geometry_data, 'indices'):
+                geometry_data = GeometryData(geometry_data.vertices, geometry_data.indices)
+            else:
+                raise ValueError("Invalid geometry data format")
 
-
+        obj = RenderObject(
+            geometry=geometry_data,
+            shader=shader,
+            draw_type=draw_type,
+            line_width=line_width,
+            point_size=point_size
+        )
+        
+        self.objects.append(obj)
+        return obj
 
     def add_object_base(self, vertices, indices, vertices_size, indices_size, buffer_type, shader=None, draw_type=GL_TRIANGLES, line_width=None, point_size=None):
         """Create and add a new render object to the scene.
@@ -814,16 +825,45 @@ class Renderer:
         line_width = line_width or self.default_line_width
         point_size = point_size or self.default_point_size
 
-
-        vb = VertexBuffer(vertices, buffer_type, vertices_size)
-        ib = IndexBuffer(indices, buffer_type, indices_size)
-        va = VertexArray()
+        # For dynamic/stream buffers, create a blank geometry
+        if vertices is None:
+            geometry = GeometryData([], [])
+            geometry.buffer_size = (vertices_size, indices_size)
+        else:
+            # Convert flat arrays back to geometry data
+            vertex_count = len(vertices) // Vertex.SIZE
+            vertices = [Vertex(
+                position=vertices[i:i+3],
+                color=vertices[i+3:i+6],
+                normal=vertices[i+6:i+9]
+            ) for i in range(0, len(vertices), Vertex.SIZE)]
+            geometry = GeometryData(vertices, indices)
+            
+        # vb = VertexBuffer(vertices, buffer_type, vertices_size)
+        # ib = IndexBuffer(indices, buffer_type, indices_size)
+        # va = VertexArray()
         
-        va.add_buffer(vb, Vertex.LAYOUT)
-        obj = RenderObject(vb, ib, va, draw_type, shader, line_width, point_size)
-         
+        # va.add_buffer(vb, Vertex.LAYOUT)
+        # obj = RenderObject(vb, ib, va, draw_type, shader, line_width, point_size)
+        
+        obj = RenderObject(
+            geometry=geometry,
+            shader=shader,
+            draw_type=draw_type,
+            line_width=line_width,
+            point_size=point_size
+        )
+        
         self.objects.append(obj)
         return obj
+
+    def get_stats(self):
+        """Get rendering statistics."""
+        return {
+            'draw_calls': self.batch_renderer.stats.draw_calls,
+            'vertex_count': self.batch_renderer.stats.vertex_count,
+            'index_count': self.batch_renderer.stats.index_count
+        }
 
 
 

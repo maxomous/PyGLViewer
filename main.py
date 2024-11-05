@@ -4,7 +4,7 @@ import glfw
 import numpy as np
 from core.application import Application
 from core.renderer import Renderer
-from core.application_ui import render_ui
+from core.application_ui import render_core_ui
 from core.geometry import Geometry
 from core.light import Light, LightType
 from utils.color import Color
@@ -29,7 +29,7 @@ class ExampleApplication(Application):
         """Variables added to config are saved in a JSON file and can be loaded/saved at runtime"""
         # Register variable - value will be read from config file if it exists else default value will be used
         self.config.add("variable 1", 0.001, "Description of variable 1")
-        # Set variable
+        # Variables can be set like this
         self.config["variable 1"] = 0.002 
         
     def init_lights(self):
@@ -121,7 +121,7 @@ class ExampleApplication(Application):
         self.rotating_cube['body'].set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), 0, 0), rotate=(0, 0, self.timer.oscillate_angle(0.5)))
         
         
-        0.
+
         rotating_cube_wireframe = \
             Geometry.create_cube_wireframe(size=0.5, color=Color.BLACK) \
                 .transform(translate=(-1, 0, 0.5), rotate=(0, 0, self.timer.oscillate_angle(speed=0.5)), scale=(1.0001, 1.0001, 1.0001)) + \
@@ -149,22 +149,20 @@ class ExampleApplication(Application):
         if io.mouse_down[glfw.MOUSE_BUTTON_LEFT]:
             print(f"Left mouse button clicked: {io.mouse_pos}")
 
-    def render_debug_window(self):
-        """Render the debug UI window.
-        Displays various debug information including:
-        - Camera settings
-        - Mouse state
-        - Performance metrics
-        - Adjustable parameters
-        """
-        imgui.begin('Debug Window', flags=imgui.WINDOW_ALWAYS_AUTO_RESIZE)
-        render_ui(self.camera, self.config, self.timer, self.imgui_manager)
+    def render_ui_window(self):
+        """Render the example UI window."""
+        imgui.begin('Example Window', flags=imgui.WINDOW_ALWAYS_AUTO_RESIZE)
+        render_core_ui(self.camera, self.config, self.timer, self.imgui_manager)
+                
+        # Add ImGui stats window
+        imgui.text(self.renderer.batch_renderer.get_stats_string())
+        
         imgui.end()
 
     def render_ui(self):
         """Render UI elements."""
         imgui.show_demo_window()
-        self.render_debug_window()
+        self.render_ui_window()
 
 if __name__ == '__main__':
     """

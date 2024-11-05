@@ -2,7 +2,7 @@ import imgui
 from gui.imgui_widgets import ImGuiWidgets
 
 
-def render_ui(camera, config, timer, imgui_manager):
+def render_core_ui(camera, config, timer, imgui_manager):
     """Render UI panels."""
     imgui_manager.push_font('arial_rounded_mt_bold-medium')
     
