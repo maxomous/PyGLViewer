@@ -151,11 +151,16 @@ class BatchRenderer:
         self.vertex_count = len(vertex_data)
         self.index_count = len(index_data)
         
+        # Check buffer limits
+        if self.vertex_count > self.max_vertices:
+            raise RuntimeError(f"Vertex buffer overflow: {self.vertex_count} > {self.max_vertices}")
+        if self.index_count > self.max_indices:
+            raise RuntimeError(f"Index buffer overflow: {self.index_count} > {self.max_indices}")
+    
         # Update buffers
         self.vertex_buffer.update_data(vertex_data.astype(np.float32))
         self.index_buffer.update_data(index_data.astype(np.uint32))
         self.index_buffer.count = len(index_data)
-        
         
 
     def render(self, view_matrix: np.ndarray, projection_matrix: np.ndarray, 
@@ -229,10 +234,91 @@ class BatchRenderer:
     
 
     def get_stats(self):
-        """Get rendering statistics."""
+        """Get comprehensive rendering statistics.
+        
+        Returns
+        -------
+        dict
+            Dictionary containing various rendering statistics including:
+            - Basic render stats (draw calls, vertex/index counts)
+            - Buffer sizes and usage
+            - Batch information
+            - Memory usage
+        """
+        # Calculate batch stats
+        batch_stats = {}
+        total_objects = 0
+        for batch_key, objects in self.batches.items():
+            batch_objects = len(objects)
+            total_objects += batch_objects
+            
+            # Parse batch key for type info
+            if '_lw' in batch_key:
+                draw_type, line_width = batch_key.split('_lw')
+                batch_stats[batch_key] = {
+                    'draw_type': draw_type,
+                    'line_width': float(line_width),
+                    'object_count': batch_objects
+                }
+            elif '_ps' in batch_key:
+                draw_type, point_size = batch_key.split('_ps')
+                batch_stats[batch_key] = {
+                    'draw_type': draw_type,
+                    'point_size': float(point_size),
+                    'object_count': batch_objects
+                }
+            else:
+                batch_stats[batch_key] = {
+                    'draw_type': batch_key,
+                    'object_count': batch_objects
+                }
+
+        # Calculate buffer usage
+        vertex_buffer_size = self.max_vertices * self.vertex_size
+        vertex_buffer_used = self.vertex_count * self.vertex_size
+        vertex_buffer_usage = (vertex_buffer_used / vertex_buffer_size) * 100 if vertex_buffer_size > 0 else 0
+
+        index_buffer_size = self.max_indices * np.dtype(np.uint32).itemsize
+        index_buffer_used = self.index_count * np.dtype(np.uint32).itemsize
+        index_buffer_usage = (index_buffer_used / index_buffer_size) * 100 if index_buffer_size > 0 else 0
+
         return {
+            # Render statistics
             'draw_calls': self.draw_calls,
             'vertex_count': self.vertex_count,
-            'index_count': self.index_count
+            'index_count': self.index_count,
+            'total_objects': total_objects,
+            
+            # Buffer information
+            'vertex_buffer': {
+                'size_bytes': vertex_buffer_size,
+                'used_bytes': vertex_buffer_used,
+                'usage_percent': vertex_buffer_usage,
+                'max_vertices': self.max_vertices,
+                'current_vertices': self.vertex_count
+            },
+            'index_buffer': {
+                'size_bytes': index_buffer_size,
+                'used_bytes': index_buffer_used,
+                'usage_percent': index_buffer_usage,
+                'max_indices': self.max_indices,
+                'current_indices': self.index_count
+            },
+            
+            # Memory usage
+            'total_buffer_size_mb': (vertex_buffer_size + index_buffer_size) / (1024 * 1024),
+            'total_buffer_used_mb': (vertex_buffer_used + index_buffer_used) / (1024 * 1024),
+            
+            # Batch information
+            'batch_count': len(self.batches),
+            'batches': batch_stats,
+            
+            # Vertex format
+            'vertex_size_bytes': self.vertex_size,
+            'vertex_attributes': {
+                'position': {'size': 3, 'type': 'float', 'offset': 0},
+                'color': {'size': 3, 'type': 'float', 'offset': 3 * 4},  # 4 bytes per float
+                'normal': {'size': 3, 'type': 'float', 'offset': 6 * 4}
+            }
         }
 

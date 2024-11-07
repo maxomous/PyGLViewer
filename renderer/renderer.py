@@ -36,7 +36,7 @@ class Renderer:
         self.projection_matrix = None
         self.camera_position = None
         # Add batch renderer
-        self.batch_renderer = BatchRenderer()
+        self.batch_renderer = BatchRenderer(max_vertices=15000, max_indices=45000)
     
     def add_light(self, light):
         """Add a light source to the scene.
@@ -65,9 +65,6 @@ class Renderer:
             camera_position,
             lights
         )
-        
-        # Clean up batch
-        self.batch_renderer.clear() # TODO: Is this needed?
 
         # Reset to default state
         glEnable(GL_DEPTH_TEST)
