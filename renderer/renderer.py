@@ -739,5 +739,13 @@ class Renderer:
         self.objects.append(obj)
         return obj
 
+    def get_stats(self):
+        """Get rendering statistics."""
+        return {
+            'draw_calls': self.batch_renderer.stats.draw_calls,
+            'vertex_count': self.batch_renderer.stats.vertex_count,
+            'index_count': self.batch_renderer.stats.index_count
+        }
+
 
 

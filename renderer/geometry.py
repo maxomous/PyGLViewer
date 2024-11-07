@@ -44,6 +44,15 @@ class Vertex:
     def to_array(self):
         return np.concatenate([self.position, self.color, self.normal])
 
+    @staticmethod
+    def from_array(data, offset=0):
+        """Create vertex from flat array data."""
+        return Vertex(
+            position=data[offset:offset+3],
+            color=data[offset+3:offset+6],
+            normal=data[offset+6:offset+9]
+        )
+
 class GeometryData:
     """
     Container for 3D geometry data including vertices and indices.
@@ -61,7 +70,10 @@ class GeometryData:
         """
         self.vertices = np.array(vertices, dtype=Vertex)
         self.indices = np.array(indices, dtype=np.uint32)
-
+        self.vertex_count = len(vertices)
+        self.index_count = len(indices)
+        self.dirty = True  # Track if geometry needs GPU update
+        
     def __add__(self, other):
         """Combine two geometries into a single geometry.
         
@@ -87,12 +99,46 @@ class GeometryData:
         # Combine indices
         combined_indices = np.concatenate((self.indices, adjusted_other_indices))
 
-        return GeometryData(combined_vertices, combined_indices)
+        result = GeometryData(combined_vertices, combined_indices)
+        result.dirty = True
+        return result
 
     def interleave_vertices(self):
         """Return interleaved vertex data as a flattened numpy array. e.g. [x,y,z, r,g,b, nx,ny,nz, x,y,z...]"""
         return np.array([vertex.to_array() for vertex in self.vertices], dtype=np.float32).flatten()
     
+    def get_vertex_data(self):
+        """Get flattened vertex data for batch rendering."""
+        if not hasattr(self, '_cached_vertex_data'):
+            self._cached_vertex_data = self.interleave_vertices()
+        return self._cached_vertex_data
+        
+    def get_index_data(self):
+        """Get index data for batch rendering."""
+        return self.indices
+
+    def update_vertices(self, data):
+        """Update vertex data."""
+        if isinstance(data, np.ndarray):
+            vertex_count = len(data) // Vertex.SIZE
+            vertices = []
+            for i in range(vertex_count):
+                idx = i * Vertex.SIZE
+                vertices.append(Vertex(
+                    position=data[idx:idx+3],
+                    color=data[idx+3:idx+6],
+                    normal=data[idx+6:idx+9]
+                ))
+            self.vertices = np.array(vertices, dtype=Vertex)
+        else:
+            self.vertices = np.array(data, dtype=Vertex)
+        self.vertex_count = len(self.vertices)
+
+    def update_indices(self, data):
+        """Update index data."""
+        self.indices = np.array(data, dtype=np.uint32)
+        self.index_count = len(self.indices)
+
     def transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
         """Apply transformation to the vertices.
         
@@ -104,6 +150,9 @@ class GeometryData:
         Returns:
             GeometryData: Self reference for method chaining
         """
+        if all(v == 0 for v in translate) and all(v == 0 for v in rotate) and all(v == 1 for v in scale):
+            return self
+
         transform = Transform(translate, rotate, scale)
         normal_matrix = np.linalg.inv(transform.transform_matrix()[:3, :3]).T
 
@@ -114,7 +163,16 @@ class GeometryData:
             vertex.normal = normal_matrix @ vertex.normal
             vertex.normal = vertex.normal / np.linalg.norm(vertex.normal)
 
+        self.dirty = True
         return self
+    
+    def clone(self):
+        """Create a deep copy of this geometry."""
+        return GeometryData(
+            [Vertex(v.position.copy(), v.color.copy(), v.normal.copy()) 
+             for v in self.vertices],
+            self.indices.copy()
+        )
     
     
 class Geometry:

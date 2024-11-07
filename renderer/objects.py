@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 import ctypes
 import numpy as np
 from OpenGL.GL import *
@@ -37,8 +37,11 @@ class Buffer:
         self.bind()
         glBufferSubData(self.target, offset, data.nbytes, data)
 
-class VertexBuffer(Buffer): 
-    
+    def __del__(self):
+        """Clean up buffer when object is destroyed."""
+        glDeleteBuffers(1, [self.id])
+
+class VertexBuffer(Buffer):
     """Vertex buffer object for storing vertex data."""
     def __init__(self, data, buffer_type, size):
         super().__init__(data, buffer_type, GL_ARRAY_BUFFER, size)
@@ -53,7 +56,7 @@ class IndexBuffer(Buffer):
         """Update the buffer's data."""
         self.count = len(data) if data is not None else 0
         super().update_data(data, offset)
-        
+
 class VertexArray:
     """Vertex array object for managing vertex attribute configurations."""
     def __init__(self):
@@ -74,11 +77,11 @@ class VertexArray:
         for attribute in layout:
             glEnableVertexAttribArray(attribute['index'])
             glVertexAttribPointer(
-                attribute['index'], 
-                attribute['size'], 
-                attribute['type'], 
-                attribute['normalized'], 
-                attribute['stride'], 
+                attribute['index'],
+                attribute['size'],
+                attribute['type'],
+                attribute['normalized'],
+                attribute['stride'],
                 ctypes.c_void_p(attribute['offset'])
             )
 
