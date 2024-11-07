@@ -3,69 +3,11 @@ import numpy as np
 from OpenGL.GL import *
 from renderer.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, RenderObject
 from renderer.shaders import Shader, basic_vertex_shader, basic_fragment_shader  
-# TODO:
-#     This should be from Vertex
-#         # Create VAO with standard layout
-#         self.vao = VertexArray()
-#         self.vao.add_buffer(self.vertex_buffer, [
-#             {'index': 0, 'size': 3, 'type': GL_FLOAT, 'normalized': False, 
-#              'stride': vertex_size, 'offset': 0},  # position
-#             {'index': 1, 'size': 3, 'type': GL_FLOAT, 'normalized': False,
-#              'stride': vertex_size, 'offset': 12},  # color
-#             {'index': 2, 'size': 3, 'type': GL_FLOAT, 'normalized': False,
-#              'stride': vertex_size, 'offset': 24}   # normal
-#         ])
 
-
-# these shouold be inside batch renderer
-
-#             # Get shader and draw type from first object
-#             shader = objects[0].shader
-#             draw_type = objects[0].draw_type
-
-
-# replace 36
-#                     glDrawArrays(draw_type, 0, obj.vb.size // 36)  # 36 = 9 floats * 4 bytes
-#   
-#   interleave_vertices() replace with vertices?
-# any shutdown functions
     
-    
-    
-#     More recent TODOS:
 
-
-# find: VertexBuffer(
-
-
-#         # self.vb.update_data(data, offset)
-#         # self.ib.update_data(data, offset)
-
-
-# update RenderObject( to remove shader param
-
-
-#     # TODO: Do we need offset??    
-#     def set_vertex_data(self, data, offset=0):
-
-
-
-# was         now
-# self.vb == batch_renderer.vertex_buffer  # Shared vertex buffer for batch
-# self.ib == batch_renderer.index_buffer  # Shared index buffer for batch
-# self.va == batch_renderer.vao  # Shared vertex array for attribute layout
-      
-            
-# check all of these are being used:
-# class RenderObject:
-#         self.vertex_data = vertex_data
-#         self.index_data = index_data
-#         self.draw_type = draw_type
-#         self.line_width = line_width
-#         self.point_size = point_size
-#         self.model_matrix = np.identity(4, dtype=np.float32)
-    
-    
+    #     # TODO: handle buffer_type for static and stream
+    # def add_object_base(self, vertices, indices, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None):
     
     
     
@@ -89,26 +31,52 @@ class BatchRenderer:
         # Batch storage
         self.batches: Dict[str, List[RenderObject]] = {}
         
-        # Buffer for batched data
-        vertex_size = (3 + 3 + 3) * 4  # pos(3) + color(3) + normal(3) in float32
+        # Calculate vertex size: 3 (pos) + 3 (color) + 3 (normal) = 9 floats
+        self.vertex_size = 9 * np.dtype(np.float32).itemsize  # Size in bytes
+        
+        # Create buffers with initial size
         self.vertex_buffer = VertexBuffer(
             None,
             BufferType.Dynamic,
-            max_vertices * vertex_size
+            max_vertices * self.vertex_size
         )
         
         self.index_buffer = IndexBuffer(
             None,
             BufferType.Dynamic,
-            max_indices * 4  # uint32 indices
+            max_indices * np.dtype(np.uint32).itemsize
         )
         
         # Create VAO with standard layout
         self.vao = VertexArray()
         self.vao.add_buffer(self.vertex_buffer, [
-            {'index': 0, 'size': 3, 'type': GL_FLOAT, 'normalized': False, 'stride': vertex_size, 'offset': 0},  # position
-            {'index': 1, 'size': 3, 'type': GL_FLOAT, 'normalized': False, 'stride': vertex_size, 'offset': 12},  # color
-            {'index': 2, 'size': 3, 'type': GL_FLOAT, 'normalized': False, 'stride': vertex_size, 'offset': 24}   # normal
+            # Position attribute (location=0)
+            {
+                'index': 0,
+                'size': 3,
+                'type': GL_FLOAT,
+                'normalized': False,
+                'stride': self.vertex_size,
+                'offset': 0
+            },
+            # Color attribute (location=1)
+            {
+                'index': 1,
+                'size': 3,
+                'type': GL_FLOAT,
+                'normalized': False,
+                'stride': self.vertex_size,
+                'offset': 3 * np.dtype(np.float32).itemsize
+            },
+            # Normal attribute (location=2)
+            {
+                'index': 2,
+                'size': 3,
+                'type': GL_FLOAT,
+                'normalized': False,
+                'stride': self.vertex_size,
+                'offset': 6 * np.dtype(np.float32).itemsize
+            }
         ])
         
         # Batch statistics
@@ -131,14 +99,65 @@ class BatchRenderer:
         render_object : RenderObject
             The render object to batch
         """
-        # Create batch key based on shader and draw type
-        batch_key = f"{render_object.shader.program}_{render_object.draw_type}"
+        # Create batch key based on draw type and line/point size
+        batch_key = f"{render_object.draw_type}"
+        
+        # Add line width to key if it's a line type
+        if render_object.draw_type in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP):
+            batch_key += f"_lw{render_object.line_width}"
+        # Add point size to key if it's a point type
+        elif render_object.draw_type == GL_POINTS:
+            batch_key += f"_ps{render_object.point_size}"
         
         if batch_key not in self.batches:
             self.batches[batch_key] = []
             
         self.batches[batch_key].append(render_object)
     
+    def update_buffers(self):
+        """Update the batch buffers with the combined vertex and index data."""
+        combined_vertices = []
+        combined_indices = []
+        vertex_offset = 0
+        
+        # First pass: collect all vertex and index data
+        for objects in self.batches.values():
+            for obj in objects:
+                if obj.vertex_data is None or obj.index_data is None:
+                    continue
+                    
+                # Get number of vertices (vertex_data shape should be (N, 9) where N is number of vertices)
+                vertex_data = obj.vertex_data.reshape(-1, 9)  # Reshape to ensure correct format
+                num_vertices = len(vertex_data)
+                
+                # Add vertices
+                combined_vertices.append(vertex_data)
+                
+                # Offset indices and add them
+                indices = obj.index_data + vertex_offset
+                combined_indices.append(indices)
+                
+                # Update offset for next object
+                vertex_offset += num_vertices
+        
+        if not combined_vertices or not combined_indices:
+            return
+            
+        # Combine all data
+        vertex_data = np.concatenate(combined_vertices)
+        index_data = np.concatenate(combined_indices)
+        
+        # Update statistics
+        self.vertex_count = len(vertex_data)
+        self.index_count = len(index_data)
+        
+        # Update buffers
+        self.vertex_buffer.update_data(vertex_data.astype(np.float32))
+        self.index_buffer.update_data(index_data.astype(np.uint32))
+        self.index_buffer.count = len(index_data)
+        
+        
+
     def render(self, view_matrix: np.ndarray, projection_matrix: np.ndarray, 
              camera_pos: np.ndarray, lights: Optional[List] = None):
         """Render all batched objects.
@@ -154,72 +173,66 @@ class BatchRenderer:
         lights : Optional[List]
             List of lights in the scene
         """
+        # Skip if no objects to render
+        if not self.batches:
+            return
+            
+        # Update buffers once for all batches
+        self.update_buffers()
+        
+        # Bind VAO and shader
+        self.vao.bind()
+        self.shader.use()
+        
+        # Set shared uniforms
+        self.shader.set_view_matrix(view_matrix)
+        self.shader.set_projection_matrix(projection_matrix)
+        self.shader.set_view_position(camera_pos)
+        if lights:
+            self.shader.set_light_uniforms(lights)
+            
+        # Draw each batch separately
+        index_offset = 0
         for batch_key, objects in self.batches.items():
             if not objects:
                 continue
+                
+            # Get draw type from first object
+            draw_type = objects[0].draw_type
             
-            # Bind shader and set shared uniforms
-            self.shader.use()
-            self.shader.set_view_matrix(view_matrix)
-            self.shader.set_projection_matrix(projection_matrix)
-            self.shader.set_view_position(camera_pos)
-            
-            if lights:
-                self.shader.set_light_uniforms(lights)
-            
-            # Bind VAO
-            self.vao.bind()
-            
-            # Combine vertex and index data for this batch
-            combined_vertices = []
-            combined_indices = []
-            base_vertex = 0
-            
+            # Set line width or point size if needed
+            if draw_type in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP):
+                glLineWidth(objects[0].line_width)
+            elif draw_type == GL_POINTS:
+                glPointSize(objects[0].point_size)
+                
+            # Draw each object in the batch
             for obj in objects:
-                if obj.vertex_data is None:
-                    continue
-                    WE DONT WANT TO DO TRANFORM IN SHADER FOR BATCH RENDERING
-                # Transform vertices by model matrix
-                vertices = obj.vertex_data.reshape(-1, 9)  # Reshape to (N, 9) for pos,color,normal
-                positions = np.column_stack([vertices[:, 0:3], np.ones(len(vertices))])
-                transformed_positions = (positions @ obj.model_matrix)[:, 0:3]
-                vertices[:, 0:3] = transformed_positions
-                
-                # Add vertices and indices to batch
-                combined_vertices.append(vertices.flatten())
-                combined_indices.extend((obj.index_data + base_vertex) if obj.index_data is not None else [])
-                base_vertex += len(obj.vertex_data.reshape(-1, 9))
-            
-            if not combined_vertices or not combined_indices:
-                continue
-                
-            # TODO: handle none on first go? 
-                
-            # Update batch buffers
-            if combined_vertices:
-                self.vertex_buffer.update_data(np.concatenate(combined_vertices))
-            if combined_indices:
-                self.index_buffer.update_data(np.concatenate(combined_indices))
-        
-            
-            # Render each object in batch
-            for obj in objects:
+                # Set model matrix for this object
                 self.shader.set_model_matrix(obj.model_matrix)
                 
-                # Set line width or point size if needed
-                if obj.draw_type in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP):
-                    glLineWidth(obj.line_width)
-                elif obj.draw_type == GL_POINTS:
-                    glPointSize(obj.point_size)
-                sd
-                # Draw the object
-                if obj.ib is not None:
-                    glDrawElements(obj.draw_type, obj.ib.count, GL_UNSIGNED_INT, None)
-                else:
-                    # Assuming triangles if no index buffer
-                    glDrawArrays(obj.draw_type, 0, obj.vb.size // 36)  # 36 = 9 floats * 4 bytes
+                # Calculate number of indices for this object
+                num_indices = len(obj.index_data)
                 
+                # Draw the object
+                glDrawElements(
+                    draw_type,
+                    num_indices,
+                    GL_UNSIGNED_INT,
+                    ctypes.c_void_p(index_offset * 4)  # 4 bytes per uint32
+                )
+                
+                index_offset += num_indices
                 self.draw_calls += 1
-            
-            self.vao.unbind()
+                
+        self.vao.unbind()
     
+
+    def get_stats(self):
+        """Get rendering statistics."""
+        return {
+            'draw_calls': self.draw_calls,
+            'vertex_count': self.vertex_count,
+            'index_count': self.index_count
+        }
+

@@ -153,7 +153,6 @@ class Application:
         self.update_scene()
         # Render
         self.render_core()
-        self.render()
         
 
     def process_inputs(self):
@@ -211,6 +210,38 @@ class Application:
         
         Saves configuration, shuts down ImGui and terminates GLFW.
         """
-        self.config.save()  
-        self.imgui_manager.shutdown()
-        glfw.terminate()
+        # Clean up renderer resources first
+        if self.renderer:
+            self.renderer.shutdown()
+            
+        # Save config
+        if self.config:
+            self.config.save()
+        
+        # Clean up ImGui
+        if self.imgui_manager:
+            self.imgui_manager.shutdown()
+            
+        # Clean up GLFW
+        if glfw.get_current_context():
+            glfw.destroy_window(self.window)
+            glfw.terminate()
+
+    def cleanup(self):
+        """Clean up resources before application exit."""
+        try:
+            # Save config
+            if self.config:
+                self.config.save()
+                
+            # Clean up ImGui
+            if self.imgui_manager:
+                self.imgui_manager.shutdown()
+                
+            # Clean up GLFW
+            if glfw.get_current_context():
+                glfw.destroy_window(self.window)
+                glfw.terminate()
+                
+        except Exception as e:
+            print(f"Error during cleanup: {e}") 

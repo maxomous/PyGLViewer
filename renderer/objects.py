@@ -31,15 +31,32 @@ class Buffer:
         glBindBuffer(self.target, 0)
 
     def update_data(self, data, offset=0):
-        """Update the buffer's data."""
+        """Update the buffer's data. Reallocates if data is larger than current size."""
         if self.buffer_type == BufferType.Static:
             raise RuntimeError("Cannot update data in a static buffer, use dynamic or stream instead.")
+        
+        data_size = data.nbytes
+        
+        # If new data is larger than current buffer, reallocate
+        if data_size > self.size:
+            self.bind()
+            # Allocate new buffer with new size (maybe add some extra space for future growth)
+            new_size = data_size * 2  # Double the size for future growth
+            glBufferData(self.target, new_size, None, self.buffer_type)  # Allocate new size
+            self.size = new_size
+        
         self.bind()
-        glBufferSubData(self.target, offset, data.nbytes, data)
+        glBufferSubData(self.target, offset, data_size, data)
+
+    def shutdown(self):
+        """Clean up buffer."""
+        if hasattr(self, 'id'):
+            glDeleteBuffers(1, [self.id])
+            self.id = None
 
     def __del__(self):
-        """Clean up buffer when object is destroyed."""
-        glDeleteBuffers(1, [self.id])
+        """Ensure cleanup on deletion."""
+        self.shutdown()
 
 class VertexBuffer(Buffer):
     """Vertex buffer object for storing vertex data."""
@@ -85,51 +102,43 @@ class VertexArray:
                 ctypes.c_void_p(attribute['offset'])
             )
 
+    def shutdown(self):
+        """Clean up VAO."""
+        if hasattr(self, 'vao'):
+            glDeleteVertexArrays(1, [self.vao])
+            self.vao = None
+
+    def __del__(self):
+        """Ensure cleanup on deletion."""
+        self.shutdown()
+
 class RenderObject:
     """Represents a renderable object with vertex, index buffers, and shader."""
     def __init__(self, vertex_data, index_data, draw_type, line_width=1.0, point_size=1.0):
-        self.vertex_data = vertex_data
-        self.index_data = index_data
+        # Ensure vertex_data is a numpy array with the correct shape
+        self.vertex_data = vertex_data if vertex_data is None else np.array(vertex_data, dtype=np.float32)
+        # Ensure index_data is a numpy array
+        self.index_data = index_data if index_data is None else np.array(index_data, dtype=np.uint32)
         self.draw_type = draw_type
         self.line_width = line_width
         self.point_size = point_size
         self.model_matrix = np.identity(4, dtype=np.float32)
 
-    # TODO: Do we need offset??
-    
-    def set_vertex_data(self, data, offset=0):
+    def set_vertex_data(self, data):
         """Update the vertex data of this render object."""
-        self.vertex_data = data
+        self.vertex_data = np.array(data, dtype=np.float32)
 
-    def set_index_data(self, data, offset=0):
+    def set_index_data(self, data):
         """Update the index data of this render object."""
-        self.index_data = data
+        self.index_data = np.array(data, dtype=np.uint32)
 
     def set_transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
         """Set the transform matrix - Will scale, rotate and translate the object, in that order."""
         self.model_matrix = Transform(translate, rotate, scale).transform_matrix().T # Transpose to convert row-major to column-major
 
-
-# class RenderObject:
-#     """Represents a renderable object with vertex, index buffers, and shader."""
-#     def __init__(self, vb, ib, va, draw_type, shader, line_width=1.0, point_size=1.0):
-#         self.vb = vb
-#         self.ib = ib
-#         self.va = va
-#         self.shader = shader
-#         self.draw_type = draw_type
-#         self.line_width = line_width
-#         self.point_size = point_size
-#         self.model_matrix = np.identity(4, dtype=np.float32)
-
-#     def set_vertex_data(self, data, offset=0):
-#         """Update the vertex data of this render object."""
-#         self.vb.update_data(data, offset)
-
-#     def set_index_data(self, data, offset=0):
-#         """Update the index data of this render object."""
-#         self.ib.update_data(data, offset)
-
-#     def set_transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
-#         """Set the transform matrix - Will scale, rotate and translate the object, in that order."""
-#         self.model_matrix = Transform(translate, rotate, scale).transform_matrix().T # Transpose to convert row-major to column-major
+    def shutdown(self):
+        """Clean up resources associated with this render object."""
+        # Clear data references
+        self.vertex_data = None
+        self.index_data = None
+        self.model_matrix = None

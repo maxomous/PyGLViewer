@@ -19,22 +19,6 @@ class Vertex:
         color (np.array): RGB color values (r, g, b)
         normal (np.array): Normal vector (nx, ny, nz)
     """
-    # Total floats per vertex: 3 (position) + 3 (color) + 3 (normal)
-    SIZE = 9
-    # Byte stride (4 bytes per float)
-    STRIDE = SIZE * 4
-
-    # Byte offsets for each attribute
-    POSITION_OFFSET = 0
-    COLOR_OFFSET = 3 * 4    # Start after position (3 floats)
-    NORMAL_OFFSET = 6 * 4   # Start after color (6 floats)
-
-    # Vertex attribute layout for OpenGL
-    LAYOUT = [
-        {'index': 0, 'size': 3, 'type': GL_FLOAT, 'normalized': GL_FALSE, 'stride': STRIDE, 'offset': POSITION_OFFSET},  # Position
-        {'index': 1, 'size': 3, 'type': GL_FLOAT, 'normalized': GL_FALSE, 'stride': STRIDE, 'offset': COLOR_OFFSET},    # Color
-        {'index': 2, 'size': 3, 'type': GL_FLOAT, 'normalized': GL_FALSE, 'stride': STRIDE, 'offset': NORMAL_OFFSET}    # Normal
-    ]
 
     def __init__(self, position, color, normal):
         self.position = np.array(position, dtype=np.float32)
@@ -103,17 +87,11 @@ class GeometryData:
         result.dirty = True
         return result
 
-    def interleave_vertices(self):
+    def get_vertices(self):
         """Return interleaved vertex data as a flattened numpy array. e.g. [x,y,z, r,g,b, nx,ny,nz, x,y,z...]"""
         return np.array([vertex.to_array() for vertex in self.vertices], dtype=np.float32).flatten()
-    
-    def get_vertex_data(self):
-        """Get flattened vertex data for batch rendering."""
-        if not hasattr(self, '_cached_vertex_data'):
-            self._cached_vertex_data = self.interleave_vertices()
-        return self._cached_vertex_data
-        
-    def get_index_data(self):
+
+    def get_indices(self):
         """Get index data for batch rendering."""
         return self.indices
 

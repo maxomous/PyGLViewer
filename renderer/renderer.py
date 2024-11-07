@@ -638,7 +638,7 @@ class Renderer:
 
 #TODO: Dynamically increase buffer size
 
-    def add_blank_object(self, vertices_size, indices_size, buffer_type=BufferType.Stream, draw_type=GL_TRIANGLES, line_width=None, point_size=None):
+    def add_blank_object(self, buffer_type=BufferType.Stream, draw_type=GL_TRIANGLES, line_width=None, point_size=None):
         """Add a blank object for a dynamic / stream buffer.
 
         Parameters
@@ -661,11 +661,11 @@ class Renderer:
         dict
             Dictionary containing either "body" (for GL_TRIANGLES) or "line" render object
         """        
-        blank = self.add_object_base(None, None, vertices_size, indices_size, buffer_type, draw_type, line_width, point_size)
+        blank = self.add_object_base(None, None, buffer_type, draw_type, line_width, point_size)
         return {"body": blank} if draw_type == GL_TRIANGLES else {"line": blank}
 
 
-    def add_object(self, geometry_data, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None, vertices_size=0, indices_size=0):
+    def add_object(self, geometry_data, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None):
         """Create and add a new render object to the scene.
 
         Parameters
@@ -688,16 +688,13 @@ class Renderer:
             Created render object
         """
         # Interleave position, color, and normal data
-        vertices = geometry_data.interleave_vertices()
-        indices = geometry_data.indices
-        vertices_size = vertices.nbytes
-        indices_size = indices.nbytes
+        vertices = geometry_data.get_vertices()
+        indices = geometry_data.get_indices()
         
-        return self.add_object_base(vertices, indices, vertices_size, indices_size, buffer_type, draw_type, line_width, point_size)
+        return self.add_object_base(vertices, indices, buffer_type, draw_type, line_width, point_size)
 
 
-
-    def add_object_base(self, vertices, indices, vertices_size, indices_size, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None):
+    def add_object_base(self, vertices, indices, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None):
         """Create and add a new render object to the scene.
 
         Parameters
@@ -727,25 +724,27 @@ class Renderer:
         
         line_width = line_width or self.default_line_width
         point_size = point_size or self.default_point_size
-
-
-        # vb = VertexBuffer(vertices, buffer_type, vertices_size)
-        # ib = IndexBuffer(indices, buffer_type, indices_size)
-        # va = VertexArray()
         
-        va.add_buffer(vb, Vertex.LAYOUT)
-        obj = RenderObject(vb, ib, va, draw_type, line_width, point_size)
+        
+        # TODO: handle buffer_type for static and stream
+        
+        obj = RenderObject(vertices, indices, draw_type, line_width, point_size)
          
         self.objects.append(obj)
         return obj
 
-    def get_stats(self):
-        """Get rendering statistics."""
-        return {
-            'draw_calls': self.batch_renderer.stats.draw_calls,
-            'vertex_count': self.batch_renderer.stats.vertex_count,
-            'index_count': self.batch_renderer.stats.index_count
-        }
-
-
+    def shutdown(self):
+        """Clean up all renderer resources."""
+        # Clean up batch renderer
+        if self.batch_renderer:
+            self.batch_renderer.shutdown()
+            
+        # Clean up any individual render objects
+        for obj in self.objects:
+            if obj:
+                obj.shutdown()
+                
+        self.objects.clear()
+        self.lights.clear()
+    
 
