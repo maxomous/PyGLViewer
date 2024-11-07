@@ -125,10 +125,9 @@ class Shader:
         RuntimeError
             If shader compilation or program linking fails
         """
-        self.program = shaders.compileProgram(
-            self.compile_shader(vertex_shader, GL_VERTEX_SHADER),
-            self.compile_shader(fragment_shader, GL_FRAGMENT_SHADER)
-        )
+        self.vertex_shader = self.compile_shader(vertex_shader, GL_VERTEX_SHADER)
+        self.fragment_shader = self.compile_shader(fragment_shader, GL_FRAGMENT_SHADER)
+        self.program = shaders.compileProgram(self.vertex_shader, self.fragment_shader)
         self.validate_program()
 
     def compile_shader(self, source, shader_type):
@@ -274,3 +273,19 @@ class Shader:
             3D camera position vector
         """
         self.set_uniform("viewPos", view_position)
+
+    def cleanup(self):
+        """Delete shader program and individual shaders."""
+        if self.program:
+            glDeleteProgram(self.program)
+            self.program = None
+        if self.vertex_shader:
+            glDeleteShader(self.vertex_shader)
+            self.vertex_shader = None
+        if self.fragment_shader:
+            glDeleteShader(self.fragment_shader)
+            self.fragment_shader = None
+
+    def __del__(self):
+        """Ensure shader resources are cleaned up."""
+        self.cleanup()

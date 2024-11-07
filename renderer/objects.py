@@ -4,6 +4,8 @@ import numpy as np
 from OpenGL.GL import *
 from utils.transform import Transform
 
+
+
 class BufferType:
     """Enumeration of OpenGL buffer types."""
     Static = GL_STATIC_DRAW
@@ -80,28 +82,51 @@ class VertexArray:
                 ctypes.c_void_p(attribute['offset'])
             )
 
-
 class RenderObject:
     """Represents a renderable object with vertex, index buffers, and shader."""
-    def __init__(self, vb, ib, va, draw_type, shader, line_width=1.0, point_size=1.0):
-        self.vb = vb
-        self.ib = ib
-        self.va = va
+    def __init__(self, vertex_data, index_data, draw_type, line_width=1.0, point_size=1.0):
+        self.vertex_data = vertex_data
+        self.index_data = index_data
         self.draw_type = draw_type
-        self.shader = shader
         self.line_width = line_width
         self.point_size = point_size
         self.model_matrix = np.identity(4, dtype=np.float32)
 
+    # TODO: Do we need offset??
+    
     def set_vertex_data(self, data, offset=0):
         """Update the vertex data of this render object."""
-        self.vb.update_data(data, offset)
+        self.vertex_data = data
 
     def set_index_data(self, data, offset=0):
         """Update the index data of this render object."""
-        self.ib.update_data(data, offset)
+        self.index_data = data
 
     def set_transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
         """Set the transform matrix - Will scale, rotate and translate the object, in that order."""
         self.model_matrix = Transform(translate, rotate, scale).transform_matrix().T # Transpose to convert row-major to column-major
 
+
+# class RenderObject:
+#     """Represents a renderable object with vertex, index buffers, and shader."""
+#     def __init__(self, vb, ib, va, draw_type, shader, line_width=1.0, point_size=1.0):
+#         self.vb = vb
+#         self.ib = ib
+#         self.va = va
+#         self.shader = shader
+#         self.draw_type = draw_type
+#         self.line_width = line_width
+#         self.point_size = point_size
+#         self.model_matrix = np.identity(4, dtype=np.float32)
+
+#     def set_vertex_data(self, data, offset=0):
+#         """Update the vertex data of this render object."""
+#         self.vb.update_data(data, offset)
+
+#     def set_index_data(self, data, offset=0):
+#         """Update the index data of this render object."""
+#         self.ib.update_data(data, offset)
+
+#     def set_transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
+#         """Set the transform matrix - Will scale, rotate and translate the object, in that order."""
+#         self.model_matrix = Transform(translate, rotate, scale).transform_matrix().T # Transpose to convert row-major to column-major

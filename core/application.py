@@ -3,7 +3,7 @@ from OpenGL.GL import *
 from core.camera import ThirdPersonCamera
 from core.keyboard import Keyboard
 from core.mouse import Mouse
-from core.renderer import Renderer
+from renderer.renderer import Renderer
 from utils.timer import Timer
 from utils.config import Config
 from gui.imgui_manager import ImGuiManager
@@ -140,7 +140,7 @@ class Application:
         self.process_inputs()
         self.update_scene()
         # Render
-        self.render()
+        self.render_core()
 
     def process_inputs(self):
         """Process input events from GLFW and ImGui."""
@@ -158,7 +158,7 @@ class Application:
         """Update scene state called every frame."""
         raise NotImplementedError("update_scene() must be implemented in derived class")
 
-    def render(self):
+    def render_core(self):
         """Render frame with UI and 3D scene.
         
         Handles ImGui frame setup, font management, and buffer swapping.
@@ -190,10 +190,7 @@ class Application:
         projection = self.camera.get_projection_matrix()
         camera_position = self.camera.position
         
-        self.renderer.set_view_matrix(view_matrix)
-        self.renderer.set_projection_matrix(projection)
-        self.renderer.set_camera_position(camera_position)
-        self.renderer.draw()
+        self.renderer.draw(view_matrix, projection, camera_position, self.renderer.lights)
 
     def cleanup(self):
         """Clean up resources before application exit.

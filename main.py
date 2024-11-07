@@ -3,13 +3,13 @@ import imgui
 import glfw
 import numpy as np
 from core.application import Application
-from core.renderer import Renderer
+from renderer.renderer import Renderer
 from core.application_ui import render_ui
-from core.geometry import Geometry
+from renderer.geometry import Geometry
 from core.light import Light, LightType
 from utils.color import Color
 from utils.config import Config   
-from gl.objects import BufferType
+from renderer.objects import BufferType
 
 class ExampleApplication(Application):
     
@@ -121,7 +121,6 @@ class ExampleApplication(Application):
         self.rotating_cube['body'].set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), 0, 0), rotate=(0, 0, self.timer.oscillate_angle(0.5)))
         
         
-        0.
         rotating_cube_wireframe = \
             Geometry.create_cube_wireframe(size=0.5, color=Color.BLACK) \
                 .transform(translate=(-1, 0, 0.5), rotate=(0, 0, self.timer.oscillate_angle(speed=0.5)), scale=(1.0001, 1.0001, 1.0001)) + \
