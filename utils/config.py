@@ -33,11 +33,11 @@ class Config:
         if self._config_file.exists():
             try:
                 with open(self._config_file, 'r') as f:
-                    stored_data = json.load(f)
+                    self._stored_data = json.load(f)
                     # Update registered configuration with stored values
                     for name in self._config:
-                        if name in stored_data:
-                            self._config[name] = stored_data[name]
+                        if name in self._stored_data:
+                            self._config[name] = self._stored_data[name]
             except json.JSONDecodeError:
                 print(f"Warning: Could not load configuration from {self._config_file}")
 

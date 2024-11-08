@@ -108,7 +108,7 @@ class Application:
         )
         self.mouse = Mouse(self.camera, self.config)  # Pass parameters instance
         self.keyboard = Keyboard(self.camera)
-        self.renderer = Renderer()
+        self.renderer = Renderer(self.config)
         self.set_frame_size(self.window, self.width, self.height)
 
     def _init_imgui(self):

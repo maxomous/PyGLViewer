@@ -2,19 +2,20 @@ import imgui
 from gui.imgui_widgets import ImGuiWidgets
 
 
-def render_core_ui(camera, config, timer, imgui_manager):
+def render_core_ui(camera, renderer, config, timer, imgui_manager):
     """Render UI panels."""
     imgui_manager.push_font('arial_rounded_mt_bold-medium')
     
     sections = [
-        ('CAMERA', render_ui_camera, [camera]),
-        ('MOUSE', render_ui_mouse, [config]),
-        ('PERFORMANCE', render_ui_performance, [timer.dt]),
-        ('CONFIGURATION', render_ui_config, [config])
+        ('CAMERA', render_ui_camera, [camera], imgui.TREE_NODE_DEFAULT_OPEN),
+        ('MOUSE', render_ui_mouse, [config], imgui.TREE_NODE_DEFAULT_OPEN),
+        ('PERFORMANCE', render_ui_performance, [timer.dt], imgui.TREE_NODE_DEFAULT_OPEN),
+        ('RENDERER', render_ui_renderer, [renderer, config], imgui.TREE_NODE_DEFAULT_OPEN),
+        ('CONFIGURATION', render_ui_config, [config], imgui.TREE_NODE_DEFAULT_OPEN),
     ]
     
-    for title, func, args in sections:
-        if imgui.collapsing_header(title, flags=imgui.TREE_NODE_DEFAULT_OPEN)[0]:
+    for title, func, args, flags in sections:
+        if imgui.collapsing_header(title, flags=flags)[0]:
             imgui_manager.push_font('arial-medium')
             imgui.indent()
             func(*args)
@@ -145,6 +146,27 @@ def render_ui_performance(dt):
     fps = 1.0 / dt if dt > 0 else 0.0
     imgui.text(f'FPS: {fps:.1f}')
 
+def render_ui_renderer(renderer, config):
+    """Render renderer settings panel."""
+    print(config["background_colour"])
+    # Changed to use a single array of RGB values (each from 0-1)
+    _, config["background_colour"] = imgui.color_edit3("Background Colour", *config["background_colour"])
+    
+    # Add ImGui stats window
+    if imgui.tree_node('Stats'):
+        stats = renderer.batch_renderer.get_stats()
+        for key, value in stats.items():
+            if isinstance(value, dict):
+                for k, v in value.items():
+                    if isinstance(v, dict):
+                        for k2, v2 in v.items():
+                            imgui.text(f"{key}.{k}.{k2}: {v2}")
+                    else:
+                        imgui.text(f"{key}.{k}: {v}")
+            else:
+                imgui.text(f"{key}: {value}")
+        imgui.tree_pop()
+        
 def render_ui_config(config):
     """Render configuration panel to save/load configuration."""
     imgui.push_style_var(imgui.STYLE_FRAME_PADDING, (6, 6))

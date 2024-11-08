@@ -106,32 +106,34 @@ class ExampleApplication(Application):
         # TODO: Make ObjectCollection to store multiple objects OR multiple geometries???
         """Update scene state called every frame."""
 
+        rotate_geometry = (0, 0, self.timer.oscillate_angle(speed=0.6))
+        rotate_object = (0, 0, self.timer.oscillate_angle(speed=0.5))
 
         # TODO: Update geometry only when required, set the model matrix instead of transforming the geometry
         rotating_cube_geometry = \
             Geometry.create_cube(size=0.5, color=Color.YELLOW) \
-                .transform(translate=(-1, 0, 0.5), rotate=(0, 0, self.timer.oscillate_angle(speed=0.5))) + \
+                .transform(translate=(-1, 0, 0.5), rotate=rotate_geometry) + \
             Geometry.create_cube(size=0.5, color=Color.GREEN) \
-                .transform(translate=(1, 0, 0.5), rotate=(0, 0, self.timer.oscillate_angle(speed=0.5)))
+                .transform(translate=(1, 0, 0.5), rotate=rotate_geometry)
+
         
         # TODO: Sort objects make one combined class
         # Update vertex data
         self.rotating_cube['body'].set_vertex_data(rotating_cube_geometry.get_vertices())
         self.rotating_cube['body'].set_index_data(rotating_cube_geometry.get_indices()) # TODO: only needed first frame
-        self.rotating_cube['body'].set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), 0, 0), rotate=(0, 0, self.timer.oscillate_angle(0.5)))
-        
+        self.rotating_cube['body'].set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), 0, 0), rotate=rotate_object)
         
 
         rotating_cube_wireframe = \
             Geometry.create_cube_wireframe(size=0.5, color=Color.BLACK) \
-                .transform(translate=(-1, 0, 0.5), rotate=(0, 0, self.timer.oscillate_angle(speed=0.5)), scale=(1.0001, 1.0001, 1.0001)) + \
+                .transform(translate=(-1, 0, 0.5), rotate=rotate_geometry, scale=(1.0001, 1.0001, 1.0001)) + \
             Geometry.create_cube_wireframe(size=0.5, color=Color.BLACK) \
-                .transform(translate=(1, 0, 0.5), rotate=(0, 0, self.timer.oscillate_angle(speed=0.5)), scale=(1.0001, 1.0001, 1.0001))
+                .transform(translate=(1, 0, 0.5), rotate=rotate_geometry, scale=(1.0001, 1.0001, 1.0001))
         
         # Update vertex data
         self.rotating_cube['line'].set_vertex_data(rotating_cube_wireframe.get_vertices())
         self.rotating_cube['line'].set_index_data(rotating_cube_wireframe.get_indices()) # TODO: only needed first frame
-        self.rotating_cube['line'].set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), 0, 0), rotate=(0, 0, self.timer.oscillate_angle(0.5)))
+        self.rotating_cube['line'].set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), 0, 0), rotate=rotate_object)
         
         
         
@@ -151,14 +153,9 @@ class ExampleApplication(Application):
 
     def render_ui_window(self):
         """Render the example UI window."""
-        imgui.begin('Example Window', flags=imgui.WINDOW_ALWAYS_AUTO_RESIZE)
-        render_core_ui(self.camera, self.config, self.timer, self.imgui_manager)
+        imgui.begin('Example Window', flags=imgui.WINDOW_HORIZONTAL_SCROLLING_BAR)
+        render_core_ui(self.camera, self.renderer, self.config, self.timer, self.imgui_manager)
                 
-        # Add ImGui stats window
-        stats = self.renderer.batch_renderer.get_stats()
-        for key, value in stats.items():
-            imgui.text(f"{key}: {value}")
-        
         imgui.end()
 
     def render_ui(self):

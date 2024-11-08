@@ -5,9 +5,14 @@ from utils.color import Color
 from renderer.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, RenderObject
 from renderer.batch_renderer import BatchRenderer
 from typing import Dict, List
+from utils.config import Config
 
-
-
+# 1 1 1
+# 0 1 1
+# 0 0 1
+# 1 0 1
+# 1 0 0
+# 1 1 0
 
 class Renderer:
     """OpenGL renderer for managing 3D objects, lights, and scene rendering.
@@ -15,10 +20,13 @@ class Renderer:
     Handles creation and rendering of geometric objects,
     lighting setup, and camera transformations.
     """
-    def __init__(self):
+    def __init__(self, config):
         """Initialize renderer with default settings and OpenGL state."""
         self.lights = []
         self.objects = []
+        # Config file 
+        config.add("background_colour", [0.21987, 0.34362, 0.40084], "Background colour")
+        self.config = config
         # Set default values or pass arguments to add_x() functions individually
         self.default_point_size = 1.0
         self.default_line_width = 1.0
@@ -27,7 +35,6 @@ class Renderer:
         self.default_face_color = Color.WHITE
         self.default_wireframe_color = Color.BLACK
         self.default_arrow_dimensions = Renderer.ArrowDimensions(shaft_radius=0.03, head_radius=0.06, head_length=0.1)
-
         # Initialize OpenGL state
         glEnable(GL_DEPTH_TEST)      # Enable depth testing
         glEnable(GL_CULL_FACE)       # Enable back-face culling
@@ -74,7 +81,8 @@ class Renderer:
 
     def clear(self):
         """Clear the framebuffer with a dark teal background."""
-        glClearColor(0.2, 0.3, 0.3, 1.0)
+        r, g, b = self.config["background_colour"]
+        glClearColor(r, g, b, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
     def add_point(self, position, color, point_size=None, buffer_type=BufferType.Static):

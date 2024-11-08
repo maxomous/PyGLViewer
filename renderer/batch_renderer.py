@@ -84,7 +84,7 @@ class BatchRenderer:
         self.vertex_count = 0
         self.index_count = 0
         
-        self.debug = True
+        self.debug = False
     
     def clear(self):
         """Begin a new batch."""
@@ -225,6 +225,8 @@ class BatchRenderer:
                 
             # Draw each object in the batch
             for i, obj in enumerate(objects):
+                if obj.vertex_data is None or obj.index_data is None:
+                    continue
                 # Set model matrix for this object
                 self.shader.set_model_matrix(obj.model_matrix)
                 
