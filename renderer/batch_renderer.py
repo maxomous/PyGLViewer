@@ -83,6 +83,8 @@ class BatchRenderer:
         self.draw_calls = 0
         self.vertex_count = 0
         self.index_count = 0
+        
+        self.debug = True
     
     def clear(self):
         """Begin a new batch."""
@@ -181,9 +183,15 @@ class BatchRenderer:
         # Skip if no objects to render
         if not self.batches:
             return
-            
+        
+        if self.debug:
+            print("\n=== Starting Render ===")
+            print(f"Total batches: {len(self.batches)}")
+        
         # Update buffers once for all batches
         self.update_buffers()
+        if self.debug:
+            print(f"After update_buffers: vertices={self.vertex_count}, indices={self.index_count}")
         
         # Bind VAO and shader
         self.vao.bind()
@@ -198,7 +206,11 @@ class BatchRenderer:
             
         # Draw each batch separately
         index_offset = 0
+        self.draw_calls = 0
+        
         for batch_key, objects in self.batches.items():
+            if self.debug:
+                print(f"\nBatch: {batch_key} with {len(objects)} objects")
             if not objects:
                 continue
                 
@@ -212,12 +224,15 @@ class BatchRenderer:
                 glPointSize(objects[0].point_size)
                 
             # Draw each object in the batch
-            for obj in objects:
+            for i, obj in enumerate(objects):
                 # Set model matrix for this object
                 self.shader.set_model_matrix(obj.model_matrix)
                 
                 # Calculate number of indices for this object
                 num_indices = len(obj.index_data)
+                
+                if self.debug:
+                    print(f"  Object {i}: indices={num_indices}, offset={index_offset}")
                 
                 # Draw the object
                 glDrawElements(
@@ -230,6 +245,8 @@ class BatchRenderer:
                 index_offset += num_indices
                 self.draw_calls += 1
                 
+        if self.debug:
+            print(f"\nRender complete: {self.draw_calls} draw calls")
         self.vao.unbind()
     
 
