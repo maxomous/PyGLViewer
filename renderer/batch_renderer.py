@@ -9,6 +9,7 @@ from renderer.shaders import Shader, basic_vertex_shader, basic_fragment_shader
     #     # TODO: handle buffer_type for static and stream
     # def add_object_base(self, vertices, indices, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None):
     
+    # TODO: ADD STREAM BUFFER
     
     
 class BatchRenderer:
@@ -28,30 +29,42 @@ class BatchRenderer:
         self.max_indices = max_indices
         self.shader = shader or Shader(basic_vertex_shader, basic_fragment_shader) # Default shader if None
         
-        # Batch storage
+        # Single batch storage with buffer type in the key
         self.batches: Dict[str, List[RenderObject]] = {}
         
         # Calculate vertex size: 3 (pos) + 3 (color) + 3 (normal) = 9 floats
         self.vertex_size = 9 * np.dtype(np.float32).itemsize  # Size in bytes
         
-        # Create buffers with initial size
-        self.vertex_buffer = VertexBuffer(
+        # Create static buffers
+        self.static_vertex_buffer = VertexBuffer(
+            None,
+            BufferType.Static,
+            max_vertices * self.vertex_size
+        )
+        self.static_index_buffer = IndexBuffer(
+            None,
+            BufferType.Static,
+            max_indices * np.dtype(np.uint32).itemsize
+        )
+
+        # Create dynamic buffers
+        self.dynamic_vertex_buffer = VertexBuffer(
             None,
             BufferType.Dynamic,
             max_vertices * self.vertex_size
         )
-        
-        self.index_buffer = IndexBuffer(
+        self.dynamic_index_buffer = IndexBuffer(
             None,
             BufferType.Dynamic,
             max_indices * np.dtype(np.uint32).itemsize
         )
-        
-        # Create VAO with standard layout
+
+        # Create VAO with both buffer sets
         self.vao = VertexArray()
-        self.vao.add_buffer(self.vertex_buffer, [
-            # Position attribute (location=0)
-            {
+        
+        # Add dynamic buffers
+        self.vao.add_buffer(self.dynamic_vertex_buffer, [
+            { # Position attribute (location=0)
                 'index': 0,
                 'size': 3,
                 'type': GL_FLOAT,
@@ -78,8 +91,36 @@ class BatchRenderer:
                 'offset': 6 * np.dtype(np.float32).itemsize
             }
         ])
+
+        # Add static buffers
+        self.vao.add_buffer(self.static_vertex_buffer, [
+            {
+                'index': 3,
+                'size': 3,
+                'type': GL_FLOAT,
+                'normalized': False,
+                'stride': self.vertex_size,
+                'offset': 0
+            },
+            {
+                'index': 4,
+                'size': 3,
+                'type': GL_FLOAT,
+                'normalized': False,
+                'stride': self.vertex_size,
+                'offset': 3 * np.dtype(np.float32).itemsize
+            },
+            {
+                'index': 5,
+                'size': 3,
+                'type': GL_FLOAT,
+                'normalized': False,
+                'stride': self.vertex_size,
+                'offset': 6 * np.dtype(np.float32).itemsize
+            }
+        ])
         
-        # Batch statistics
+        # Statistics
         self.draw_calls = 0
         self.vertex_count = 0
         self.index_count = 0
@@ -93,6 +134,21 @@ class BatchRenderer:
         self.vertex_count = 0
         self.index_count = 0
     
+    
+    def _generate_batch_key(self, render_object: RenderObject):
+        """Generate a batch key for a render object."""
+        # Start with buffer type
+        batch_key = f'{render_object.buffer_type}'
+        # Add draw type
+        batch_key += f'_{render_object.draw_type}'
+        # Add line width to key if it's a line type
+        if render_object.draw_type in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP):
+            batch_key += f'_lw{render_object.line_width}'
+        # Add point size to key if it's a point type
+        elif render_object.draw_type == GL_POINTS:
+            batch_key += f'_ps{render_object.point_size}'
+        return batch_key
+    
     def add_object(self, render_object: RenderObject):
         """Submit a render object to the appropriate batch.
         
@@ -101,51 +157,77 @@ class BatchRenderer:
         render_object : RenderObject
             The render object to batch
         """
-        # Create batch key based on draw type and line/point size
-        batch_key = f"{render_object.draw_type}"
-        
-        # Add line width to key if it's a line type
-        if render_object.draw_type in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP):
-            batch_key += f"_lw{render_object.line_width}"
-        # Add point size to key if it's a point type
-        elif render_object.draw_type == GL_POINTS:
-            batch_key += f"_ps{render_object.point_size}"
-        
+        # Generate the key that determines which buffer the object goes in
+        batch_key = self._generate_batch_key(render_object)
+        # Create batch if it doesn't exist
         if batch_key not in self.batches:
             self.batches[batch_key] = []
-            
+        # Add object to batch
         self.batches[batch_key].append(render_object)
+        # Mark static data as dirty if this was a static object
+        if render_object.buffer_type == BufferType.Static:
+            self.static_dirty = True
     
     def update_buffers(self):
-        """Update the batch buffers with the combined vertex and index data."""
+        
+        
+
+        go throguh each of the batches
+        if static:
+            ...
+        if dynamic:
+        
+        """Update buffers with batch data."""
         combined_vertices = []
         combined_indices = []
         vertex_offset = 0
         
-        # First pass: collect all vertex and index data
-        for objects in self.batches.values():
-            for obj in objects:
-                if obj.vertex_data is None or obj.index_data is None:
+        if self.debug:
+            print("\nUpdating buffers:")
+            print(f"Total batches: {len(self.batches)}")
+            for key, objects in self.batches.items():
+                print(f"Batch {key}: {len(objects)} objects")
+        
+        static_batch
+        # Process static objects first, then dynamic
+        for buffer_type in [BufferType.Static, BufferType.Dynamic]:
+            # Skip static updates if not dirty
+            if buffer_type == BufferType.Static and not self.static_dirty:
+                print('Skipping static update for buffer')
+                continue
+                
+            # Process objects of current buffer type
+            for batch_key, objects in self.batches.items():
+                if not batch_key.startswith(str(buffer_type)):
                     continue
                     
-                # Get number of vertices (vertex_data shape should be (N, 9) where N is number of vertices)
-                vertex_data = obj.vertex_data.reshape(-1, 9)  # Reshape to ensure correct format
-                num_vertices = len(vertex_data)
-                
-                # Add vertices
-                combined_vertices.append(vertex_data)
-                
-                # Offset indices and add them
-                indices = obj.index_data + vertex_offset
-                combined_indices.append(indices)
-                
-                # Update offset for next object
-                vertex_offset += num_vertices
+                for obj in objects:
+                    if obj.vertex_data is None or obj.index_data is None:
+                        continue
+                    
+                    # Get number of vertices (vertex_data shape should be (N, 9) where N is number of vertices)
+                    vertex_data = obj.vertex_data.reshape(-1, 9)  # Reshape to ensure correct format
+                    num_vertices = len(vertex_data)
+                    
+                    # Add vertices
+                    combined_vertices.append(vertex_data)
+                    
+                    # Offset indices and add them
+                    indices = obj.index_data + vertex_offset
+                    combined_indices.append(indices)
+                    
+                    # Update offset for next object
+                    vertex_offset += num_vertices
+                    
+                    if self.debug:
+                        print(f"  Added object: vertices={num_vertices}, indices={len(indices)}")
         
         if not combined_vertices or not combined_indices:
+            if self.debug:
+                print("No data to update")
             return
-            
-        # Combine all data
+        
+        # Combine and update data
         vertex_data = np.concatenate(combined_vertices)
         index_data = np.concatenate(combined_indices)
         
@@ -153,18 +235,28 @@ class BatchRenderer:
         self.vertex_count = len(vertex_data)
         self.index_count = len(index_data)
         
+        if self.debug:
+            print(f"Final counts: vertices={self.vertex_count}, indices={self.index_count}")
+        
         # Check buffer limits
         if self.vertex_count > self.max_vertices:
             raise RuntimeError(f"Vertex buffer overflow: {self.vertex_count} > {self.max_vertices}")
         if self.index_count > self.max_indices:
             raise RuntimeError(f"Index buffer overflow: {self.index_count} > {self.max_indices}")
-    
-        # Update buffers
-        self.vertex_buffer.update_data(vertex_data.astype(np.float32))
-        self.index_buffer.update_data(index_data.astype(np.uint32))
-        self.index_buffer.count = len(index_data)
         
-
+        # Update static buffers
+        self.static_vertex_buffer.update_data(vertex_data.astype(np.float32))
+        self.static_index_buffer.update_data(index_data.astype(np.uint32))
+        self.static_index_buffer.count = len(index_data)
+        
+        # Update dynamic buffers
+        self.dynamic_vertex_buffer.update_data(vertex_data.astype(np.float32))
+        self.dynamic_index_buffer.update_data(index_data.astype(np.uint32))
+        self.dynamic_index_buffer.count = len(index_data)
+        
+        # Clear static dirty flag
+        self.static_dirty = False
+    
     def render(self, view_matrix: np.ndarray, projection_matrix: np.ndarray, 
              camera_pos: np.ndarray, lights: Optional[List] = None):
         """Render all batched objects.
@@ -203,49 +295,53 @@ class BatchRenderer:
         self.shader.set_view_position(camera_pos)
         if lights:
             self.shader.set_light_uniforms(lights)
-            
-        # Draw each batch separately
-        index_offset = 0
-        self.draw_calls = 0
         
-        for batch_key, objects in self.batches.items():
-            if self.debug:
-                print(f"\nBatch: {batch_key} with {len(objects)} objects")
-            if not objects:
-                continue
-                
-            # Get draw type from first object
-            draw_type = objects[0].draw_type
-            
-            # Set line width or point size if needed
-            if draw_type in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP):
-                glLineWidth(objects[0].line_width)
-            elif draw_type == GL_POINTS:
-                glPointSize(objects[0].point_size)
-                
-            # Draw each object in the batch
-            for i, obj in enumerate(objects):
-                if obj.vertex_data is None or obj.index_data is None:
-                    continue
-                # Set model matrix for this object
-                self.shader.set_model_matrix(obj.model_matrix)
-                
-                # Calculate number of indices for this object
-                num_indices = len(obj.index_data)
-                
+        # Reset draw calls counter
+        self.draw_calls = 0
+        index_offset = 0
+        
+        # Render static objects first, then dynamic
+        for buffer_type in [BufferType.Static, BufferType.Dynamic]:
+            for batch_key, objects in self.batches.items():
                 if self.debug:
-                    print(f"  Object {i}: indices={num_indices}, offset={index_offset}")
+                    print(f"\nBatch: {batch_key} with {len(objects)} objects")
+                if not batch_key.startswith(str(buffer_type)):
+                    continue
+                if not objects:
+                    continue
+                    
+                # Get draw type from first object
+                draw_type = objects[0].draw_type
                 
-                # Draw the object
-                glDrawElements(
-                    draw_type,
-                    num_indices,
-                    GL_UNSIGNED_INT,
-                    ctypes.c_void_p(index_offset * 4)  # 4 bytes per uint32
-                )
-                
-                index_offset += num_indices
-                self.draw_calls += 1
+                # Set line width or point size if needed
+                if draw_type in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP):
+                    glLineWidth(objects[0].line_width)
+                elif draw_type == GL_POINTS:
+                    glPointSize(objects[0].point_size)
+                    
+                # Draw each object in the batch
+                for i, obj in enumerate(objects):
+                    if obj.vertex_data is None or obj.index_data is None:
+                        continue
+                    # Set model matrix for this object
+                    self.shader.set_model_matrix(obj.model_matrix)
+                    
+                    # Calculate number of indices for this object
+                    num_indices = len(obj.index_data)
+                    
+                    if self.debug:
+                        print(f"  Object {i}: indices={num_indices}, offset={index_offset}")
+                    
+                    # Draw the object
+                    glDrawElements(
+                        draw_type,
+                        num_indices,
+                        GL_UNSIGNED_INT,
+                        ctypes.c_void_p(index_offset * 4)  # 4 bytes per uint32
+                    )
+                    
+                    index_offset += num_indices
+                    self.draw_calls += 1
                 
         if self.debug:
             print(f"\nRender complete: {self.draw_calls} draw calls")

@@ -10,7 +10,7 @@ class BufferType:
     """Enumeration of OpenGL buffer types."""
     Static = GL_STATIC_DRAW
     Dynamic = GL_DYNAMIC_DRAW
-    Stream = GL_STREAM_DRAW
+    # Stream = GL_STREAM_DRAW - Not implemented, requires glMapBuffer
 
 class Buffer:
     """Base class for OpenGL buffer objects. Set size when using a dynamic / stream buffer."""
@@ -114,12 +114,13 @@ class VertexArray:
 
 class RenderObject:
     """Represents a renderable object with vertex, index buffers, and shader."""
-    def __init__(self, vertex_data, index_data, draw_type, line_width=1.0, point_size=1.0):
+    def __init__(self, vertex_data, index_data, draw_type, buffer_type=BufferType.Dynamic, line_width=1.0, point_size=1.0):
         # Ensure vertex_data is a numpy array with the correct shape
         self.vertex_data = vertex_data if vertex_data is None else np.array(vertex_data, dtype=np.float32)
         # Ensure index_data is a numpy array
         self.index_data = index_data if index_data is None else np.array(index_data, dtype=np.uint32)
         self.draw_type = draw_type
+        self.buffer_type = buffer_type
         self.line_width = line_width
         self.point_size = point_size
         self.model_matrix = np.identity(4, dtype=np.float32)

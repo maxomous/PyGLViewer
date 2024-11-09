@@ -148,7 +148,6 @@ def render_ui_performance(dt):
 
 def render_ui_renderer(renderer, config):
     """Render renderer settings panel."""
-    print(config["background_colour"])
     # Changed to use a single array of RGB values (each from 0-1)
     _, config["background_colour"] = imgui.color_edit3("Background Colour", *config["background_colour"])
     

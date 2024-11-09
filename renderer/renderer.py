@@ -643,7 +643,7 @@ class Renderer:
 
 #TODO: Dynamically increase buffer size
 
-    def add_blank_object(self, buffer_type=BufferType.Stream, draw_type=GL_TRIANGLES, line_width=None, point_size=None):
+    def add_blank_object(self, buffer_type=BufferType.Dynamic, draw_type=GL_TRIANGLES, line_width=None, point_size=None):
         """Add a blank object for a dynamic / stream buffer.
 
         Parameters
@@ -733,7 +733,7 @@ class Renderer:
         
         # TODO: handle buffer_type for static and stream
         
-        obj = RenderObject(vertices, indices, draw_type, line_width, point_size)
+        obj = RenderObject(vertices, indices, draw_type, buffer_type, line_width, point_size)
          
         self.objects.append(obj)
         return obj

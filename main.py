@@ -98,8 +98,8 @@ class ExampleApplication(Application):
         # TODO: Dynamically allocate buffer size
         # Combine dictionaries (body & wireframe)
         self.rotating_cube = {
-            **self.renderer.add_blank_object(draw_type=GL_TRIANGLES, buffer_type=BufferType.Stream), # body
-            **self.renderer.add_blank_object(draw_type=GL_LINES, buffer_type=BufferType.Stream) # wireframe
+            **self.renderer.add_blank_object(draw_type=GL_TRIANGLES, buffer_type=BufferType.Dynamic), # body
+            **self.renderer.add_blank_object(draw_type=GL_LINES, buffer_type=BufferType.Dynamic) # wireframe
         }
 
     def update_scene(self):  
