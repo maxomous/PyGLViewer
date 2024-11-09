@@ -167,8 +167,8 @@ def render_ui_renderer(renderer, config):
                     imgui.text(f"{key}: {value}")
             imgui.tree_pop()
     
-    render_batch_renderer_stats('Static Batches', renderer.static_batch_renderer)
-    render_batch_renderer_stats('Dynamic Batches', renderer.dynamic_batch_renderer)
+    render_batch_renderer_stats('Static Buffer Info', renderer.static_batch_renderer)
+    render_batch_renderer_stats('Dynamic Buffer Info', renderer.dynamic_batch_renderer)
         
 def render_ui_config(config):
     """Render configuration panel to save/load configuration."""
