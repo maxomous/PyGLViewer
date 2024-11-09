@@ -19,6 +19,7 @@ class Buffer:
         self.target = target
         self.buffer_type = buffer_type
         self.size = size
+        self.deleted = False  # Track if buffer has been deleted
         self.bind()
         glBufferData(self.target, self.size, data, buffer_type)
 
@@ -32,9 +33,6 @@ class Buffer:
 
     def update_data(self, data, offset=0):
         """Update the buffer's data. Reallocates if data is larger than current size."""
-        if self.buffer_type == BufferType.Static:
-            raise RuntimeError("Cannot update data in a static buffer, use dynamic or stream instead.")
-        
         data_size = data.nbytes
         
         # If new data is larger than current buffer, reallocate
@@ -50,13 +48,20 @@ class Buffer:
 
     def shutdown(self):
         """Clean up buffer."""
-        if hasattr(self, 'id'):
-            glDeleteBuffers(1, [self.id])
-            self.id = None
+        if hasattr(self, 'id') and not self.deleted:
+            try:
+                glDeleteBuffers(1, [self.id])
+                self.deleted = True
+                self.id = None
+            except Exception:
+                # Context might be destroyed, ignore errors
+                pass
 
     def __del__(self):
         """Ensure cleanup on deletion."""
-        self.shutdown()
+        # Only attempt cleanup if not already deleted
+        if hasattr(self, 'deleted') and not self.deleted:
+            self.shutdown()
 
 class VertexBuffer(Buffer):
     """Vertex buffer object for storing vertex data."""
@@ -78,6 +83,7 @@ class VertexArray:
     """Vertex array object for managing vertex attribute configurations."""
     def __init__(self):
         self.vao = glGenVertexArrays(1)
+        self.deleted = False  # Track if VAO has been deleted
 
     def bind(self):
         """Bind this vertex array object."""
@@ -104,17 +110,24 @@ class VertexArray:
 
     def shutdown(self):
         """Clean up VAO."""
-        if hasattr(self, 'vao'):
-            glDeleteVertexArrays(1, [self.vao])
-            self.vao = None
+        if hasattr(self, 'vao') and not self.deleted:
+            try:
+                glDeleteVertexArrays(1, [self.vao])
+                self.deleted = True
+                self.vao = None
+            except Exception:
+                # Context might be destroyed, ignore errors
+                pass
 
     def __del__(self):
         """Ensure cleanup on deletion."""
-        self.shutdown()
+        # Only attempt cleanup if not already deleted
+        if hasattr(self, 'deleted') and not self.deleted:
+            self.shutdown()
 
 class RenderObject:
     """Represents a renderable object with vertex, index buffers, and shader."""
-    def __init__(self, vertex_data, index_data, draw_type, line_width=1.0, point_size=1.0):
+    def __init__(self, vertex_data, index_data, draw_type, line_width=1.0, point_size=1.0, buffer_type=BufferType.Dynamic):
         # Ensure vertex_data is a numpy array with the correct shape
         self.vertex_data = vertex_data if vertex_data is None else np.array(vertex_data, dtype=np.float32)
         # Ensure index_data is a numpy array
@@ -123,6 +136,7 @@ class RenderObject:
         self.line_width = line_width
         self.point_size = point_size
         self.model_matrix = np.identity(4, dtype=np.float32)
+        self.buffer_type = buffer_type
 
     def set_vertex_data(self, data):
         """Update the vertex data of this render object."""

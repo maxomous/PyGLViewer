@@ -9,12 +9,10 @@ from renderer.shaders import Shader, basic_vertex_shader, basic_fragment_shader
     #     # TODO: handle buffer_type for static and stream
     # def add_object_base(self, vertices, indices, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None):
     
-    
-    
 class BatchRenderer:
     """Efficient batch renderer for OpenGL objects."""
     
-    def __init__(self, max_vertices: int = 10000, max_indices: int = 30000, shader=None):
+    def __init__(self, max_vertices=10000, max_indices=30000, buffer_type=BufferType.Dynamic, shader=None):
         """Initialize the batch renderer.
         
         Parameters
@@ -24,8 +22,17 @@ class BatchRenderer:
         max_indices : int
             Maximum number of indices in a single batch
         """
+        self.initial_max_vertices = max_vertices
+        self.initial_max_indices = max_indices
         self.max_vertices = max_vertices
         self.max_indices = max_indices
+        self.growth_factor = 1.5  # Increase buffer by 50% when needed
+        
+        # Buffer overflow tracking
+        self.overflow_count = 0
+        self.max_overflow_warnings = 3
+        
+        self.buffer_type = buffer_type
         self.shader = shader or Shader(basic_vertex_shader, basic_fragment_shader) # Default shader if None
         
         # Batch storage
@@ -34,17 +41,28 @@ class BatchRenderer:
         # Calculate vertex size: 3 (pos) + 3 (color) + 3 (normal) = 9 floats
         self.vertex_size = 9 * np.dtype(np.float32).itemsize  # Size in bytes
         
-        # Create buffers with initial size
+        # Create initial buffers
+        self._create_buffers()
+        
+        # Batch statistics
+        self.draw_calls = 0
+        self.vertex_count = 0
+        self.index_count = 0
+        
+        self.debug = False
+    
+    def _create_buffers(self):
+        """Create or recreate buffers with current max sizes."""
         self.vertex_buffer = VertexBuffer(
             None,
-            BufferType.Dynamic,
-            max_vertices * self.vertex_size
+            self.buffer_type,
+            self.max_vertices * self.vertex_size
         )
         
         self.index_buffer = IndexBuffer(
             None,
-            BufferType.Dynamic,
-            max_indices * np.dtype(np.uint32).itemsize
+            self.buffer_type,
+            self.max_indices * np.dtype(np.uint32).itemsize
         )
         
         # Create VAO with standard layout
@@ -78,13 +96,47 @@ class BatchRenderer:
                 'offset': 6 * np.dtype(np.float32).itemsize
             }
         ])
+    
+    def _resize_buffers(self, new_vertex_count, new_index_count):
+        """Resize buffers to accommodate more data."""
+        if self.debug:
+            print(f"Resizing buffers: vertices {self.max_vertices}->{new_vertex_count}, indices {self.max_indices}->{new_index_count}")
         
-        # Batch statistics
-        self.draw_calls = 0
-        self.vertex_count = 0
-        self.index_count = 0
+        # Store old buffers
+        old_vertex_buffer = self.vertex_buffer
+        old_index_buffer = self.index_buffer
+        old_vao = self.vao
         
-        self.debug = False
+        # Update sizes
+        self.max_vertices = new_vertex_count
+        self.max_indices = new_index_count
+        
+        try:
+            # Create new buffers
+            self._create_buffers()
+            
+            # Copy existing data if any
+            if self.vertex_count > 0:
+                old_vertex_buffer.bind()
+                glCopyBufferSubData(
+                    GL_ARRAY_BUFFER, GL_ARRAY_BUFFER,
+                    0, 0,
+                    self.vertex_count * self.vertex_size
+                )
+                
+            if self.index_count > 0:
+                old_index_buffer.bind()
+                glCopyBufferSubData(
+                    GL_ELEMENT_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER,
+                    0, 0,
+                    self.index_count * np.dtype(np.uint32).itemsize
+                )
+                
+        finally:
+            # Clean up old buffers
+            old_vertex_buffer.shutdown()
+            old_index_buffer.shutdown()
+            old_vao.shutdown()
     
     def clear(self):
         """Begin a new batch."""
@@ -117,7 +169,7 @@ class BatchRenderer:
         self.batches[batch_key].append(render_object)
     
     def update_buffers(self):
-        """Update the batch buffers with the combined vertex and index data."""
+        """Update buffers with combined vertex and index data."""
         combined_vertices = []
         combined_indices = []
         vertex_offset = 0
@@ -128,18 +180,11 @@ class BatchRenderer:
                 if obj.vertex_data is None or obj.index_data is None:
                     continue
                     
-                # Get number of vertices (vertex_data shape should be (N, 9) where N is number of vertices)
-                vertex_data = obj.vertex_data.reshape(-1, 9)  # Reshape to ensure correct format
+                vertex_data = obj.vertex_data.reshape(-1, 9)
                 num_vertices = len(vertex_data)
                 
-                # Add vertices
                 combined_vertices.append(vertex_data)
-                
-                # Offset indices and add them
-                indices = obj.index_data + vertex_offset
-                combined_indices.append(indices)
-                
-                # Update offset for next object
+                combined_indices.append(obj.index_data + vertex_offset)
                 vertex_offset += num_vertices
         
         if not combined_vertices or not combined_indices:
@@ -149,22 +194,33 @@ class BatchRenderer:
         vertex_data = np.concatenate(combined_vertices)
         index_data = np.concatenate(combined_indices)
         
-        # Update statistics
-        self.vertex_count = len(vertex_data)
-        self.index_count = len(index_data)
+        # Check if we need to resize buffers
+        vertex_count = len(vertex_data)
+        index_count = len(index_data)
         
-        # Check buffer limits
-        if self.vertex_count > self.max_vertices:
-            raise RuntimeError(f"Vertex buffer overflow: {self.vertex_count} > {self.max_vertices}")
-        if self.index_count > self.max_indices:
-            raise RuntimeError(f"Index buffer overflow: {self.index_count} > {self.max_indices}")
-    
-        # Update buffers
+        if vertex_count > self.max_vertices or index_count > self.max_indices:
+            # Calculate new sizes with growth factor
+            new_vertex_count = max(self.max_vertices, int(vertex_count * self.growth_factor))
+            new_index_count = max(self.max_indices, int(index_count * self.growth_factor))
+            
+            self._resize_buffers(new_vertex_count, new_index_count)
+            
+            if self.debug:
+                print(f"Buffer overflow {self.overflow_count + 1}: Resized to {new_vertex_count} vertices, {new_index_count} indices")
+            
+            self.overflow_count += 1
+            if self.overflow_count <= self.max_overflow_warnings:
+                print(f"Warning: Buffer overflow occurred ({self.overflow_count}/{self.max_overflow_warnings}) - Resizing buffers")
+                print(f"Consider initializing with larger buffers: vertices={new_vertex_count}, indices={new_index_count}")
+        
+        # Update buffers with new data
         self.vertex_buffer.update_data(vertex_data.astype(np.float32))
         self.index_buffer.update_data(index_data.astype(np.uint32))
-        self.index_buffer.count = len(index_data)
         
-
+        # Update statistics
+        self.vertex_count = vertex_count
+        self.index_count = index_count
+    
     def render(self, view_matrix: np.ndarray, projection_matrix: np.ndarray, 
              camera_pos: np.ndarray, lights: Optional[List] = None):
         """Render all batched objects.
@@ -185,7 +241,7 @@ class BatchRenderer:
             return
         
         if self.debug:
-            print("\n=== Starting Render ===")
+            print(f"\n=== Starting {self.buffer_type} Render ===")
             print(f"Total batches: {len(self.batches)}")
         
         # Update buffers once for all batches
@@ -195,6 +251,10 @@ class BatchRenderer:
         
         # Bind VAO and shader
         self.vao.bind()
+        self.vertex_buffer.bind()
+        self.index_buffer.bind()
+        
+        # Set up shader
         self.shader.use()
         
         # Set shared uniforms
@@ -208,136 +268,74 @@ class BatchRenderer:
         index_offset = 0
         self.draw_calls = 0
         
-        for batch_key, objects in self.batches.items():
-            if self.debug:
-                print(f"\nBatch: {batch_key} with {len(objects)} objects")
-            if not objects:
-                continue
-                
-            # Get draw type from first object
-            draw_type = objects[0].draw_type
-            
-            # Set line width or point size if needed
-            if draw_type in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP):
-                glLineWidth(objects[0].line_width)
-            elif draw_type == GL_POINTS:
-                glPointSize(objects[0].point_size)
-                
-            # Draw each object in the batch
-            for i, obj in enumerate(objects):
-                if obj.vertex_data is None or obj.index_data is None:
-                    continue
-                # Set model matrix for this object
-                self.shader.set_model_matrix(obj.model_matrix)
-                
-                # Calculate number of indices for this object
-                num_indices = len(obj.index_data)
-                
+        try:
+            for batch_key, objects in self.batches.items():
                 if self.debug:
-                    print(f"  Object {i}: indices={num_indices}, offset={index_offset}")
+                    print(f"\nBatch: {batch_key} with {len(objects)} objects")
+                if not objects:
+                    continue
+                    
+                # Get draw type from first object
+                draw_type = objects[0].draw_type
                 
-                # Draw the object
-                glDrawElements(
-                    draw_type,
-                    num_indices,
-                    GL_UNSIGNED_INT,
-                    ctypes.c_void_p(index_offset * 4)  # 4 bytes per uint32
-                )
-                
-                index_offset += num_indices
-                self.draw_calls += 1
-                
+                # Set line width or point size if needed
+                if draw_type in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP):
+                    glLineWidth(objects[0].line_width)
+                elif draw_type == GL_POINTS:
+                    glPointSize(objects[0].point_size)
+                    
+                # Draw each object in the batch
+                for i, obj in enumerate(objects):
+                    if obj.vertex_data is None or obj.index_data is None:
+                        continue
+                    # Set model matrix for this object
+                    self.shader.set_model_matrix(obj.model_matrix)
+                    
+                    # Calculate number of indices for this object
+                    num_indices = len(obj.index_data)
+                    
+                    if self.debug:
+                        print(f"  Object {i}: indices={num_indices}, offset={index_offset}")
+                    
+                    # Draw the object
+                    glDrawElements(
+                        draw_type,
+                        num_indices,
+                        GL_UNSIGNED_INT,
+                        ctypes.c_void_p(index_offset * 4)  # 4 bytes per uint32
+                    )
+                    
+                    index_offset += num_indices
+                    self.draw_calls += 1
+                    
+        finally:
+            # Cleanup state
+            self.vao.unbind()
+            self.vertex_buffer.unbind()
+            self.index_buffer.unbind()
+            glUseProgram(0)
+        
         if self.debug:
             print(f"\nRender complete: {self.draw_calls} draw calls")
-        self.vao.unbind()
     
 
     def get_stats(self):
-        """Get comprehensive rendering statistics.
-        
-        Returns
-        -------
-        dict
-            Dictionary containing various rendering statistics including:
-            - Basic render stats (draw calls, vertex/index counts)
-            - Buffer sizes and usage
-            - Batch information
-            - Memory usage
-        """
+        """Get key rendering statistics."""
         # Calculate batch stats
-        batch_stats = {}
-        total_objects = 0
-        for batch_key, objects in self.batches.items():
-            batch_objects = len(objects)
-            total_objects += batch_objects
-            
-            # Parse batch key for type info
-            if '_lw' in batch_key:
-                draw_type, line_width = batch_key.split('_lw')
-                batch_stats[batch_key] = {
-                    'draw_type': draw_type,
-                    'line_width': float(line_width),
-                    'object_count': batch_objects
-                }
-            elif '_ps' in batch_key:
-                draw_type, point_size = batch_key.split('_ps')
-                batch_stats[batch_key] = {
-                    'draw_type': draw_type,
-                    'point_size': float(point_size),
-                    'object_count': batch_objects
-                }
-            else:
-                batch_stats[batch_key] = {
-                    'draw_type': batch_key,
-                    'object_count': batch_objects
-                }
-
-        # Calculate buffer usage
-        vertex_buffer_size = self.max_vertices * self.vertex_size
-        vertex_buffer_used = self.vertex_count * self.vertex_size
-        vertex_buffer_usage = (vertex_buffer_used / vertex_buffer_size) * 100 if vertex_buffer_size > 0 else 0
-
-        index_buffer_size = self.max_indices * np.dtype(np.uint32).itemsize
-        index_buffer_used = self.index_count * np.dtype(np.uint32).itemsize
-        index_buffer_usage = (index_buffer_used / index_buffer_size) * 100 if index_buffer_size > 0 else 0
-
+        total_objects = sum(len(objects) for objects in self.batches.values())
+        
+        # Calculate buffer usage percentages
+        vertex_buffer_usage = (self.vertex_count / self.max_vertices * 100) if self.max_vertices > 0 else 0
+        index_buffer_usage = (self.index_count / self.max_indices * 100) if self.max_indices > 0 else 0
+        
         return {
-            # Render statistics
+            'buffer_type': str(self.buffer_type),
             'draw_calls': self.draw_calls,
-            'vertex_count': self.vertex_count,
-            'index_count': self.index_count,
             'total_objects': total_objects,
-            
-            # Buffer information
-            'vertex_buffer': {
-                'size_bytes': vertex_buffer_size,
-                'used_bytes': vertex_buffer_used,
-                'usage_percent': vertex_buffer_usage,
-                'max_vertices': self.max_vertices,
-                'current_vertices': self.vertex_count
-            },
-            'index_buffer': {
-                'size_bytes': index_buffer_size,
-                'used_bytes': index_buffer_used,
-                'usage_percent': index_buffer_usage,
-                'max_indices': self.max_indices,
-                'current_indices': self.index_count
-            },
-            
-            # Memory usage
-            'total_buffer_size_mb': (vertex_buffer_size + index_buffer_size) / (1024 * 1024),
-            'total_buffer_used_mb': (vertex_buffer_used + index_buffer_used) / (1024 * 1024),
-            
-            # Batch information
             'batch_count': len(self.batches),
-            'batches': batch_stats,
-            
-            # Vertex format
-            'vertex_size_bytes': self.vertex_size,
-            'vertex_attributes': {
-                'position': {'size': 3, 'type': 'float', 'offset': 0},
-                'color': {'size': 3, 'type': 'float', 'offset': 3 * 4},  # 4 bytes per float
-                'normal': {'size': 3, 'type': 'float', 'offset': 6 * 4}
+            'buffer_usage': {
+                'vertices': f"{self.vertex_count}/{self.max_vertices} ({vertex_buffer_usage:.1f}%)",
+                'indices': f"{self.index_count}/{self.max_indices} ({index_buffer_usage:.1f}%)"
             }
         }
 

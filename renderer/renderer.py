@@ -7,6 +7,8 @@ from renderer.batch_renderer import BatchRenderer
 from typing import Dict, List
 from utils.config import Config
 
+# TODO: buffer_type is not really implemented for static buffer
+
 # 1 1 1
 # 0 1 1
 # 0 0 1
@@ -20,7 +22,7 @@ class Renderer:
     Handles creation and rendering of geometric objects,
     lighting setup, and camera transformations.
     """
-    def __init__(self, config):
+    def __init__(self, config, static_max_vertices=10000, static_max_indices=30000, dynamic_max_vertices=10000, dynamic_max_indices=30000):
         """Initialize renderer with default settings and OpenGL state."""
         self.lights = []
         self.objects = []
@@ -43,8 +45,11 @@ class Renderer:
         self.projection_matrix = None
         self.camera_position = None
         # Add batch renderer
-        self.batch_renderer = BatchRenderer(max_vertices=15000, max_indices=45000)
-    
+        self.static_batch_renderer = BatchRenderer(max_vertices=static_max_vertices, max_indices=static_max_indices, buffer_type=BufferType.Static)
+        self.dynamic_batch_renderer = BatchRenderer(max_vertices=dynamic_max_vertices, max_indices=dynamic_max_indices, buffer_type=BufferType.Dynamic)
+        # Static objects should be updated only once (or very rarely), dynamic objects update every frame
+        self.static_needs_update = True
+        
     def add_light(self, light):
         """Add a light source to the scene.
         
@@ -56,28 +61,33 @@ class Renderer:
         self.lights.append(light)
 
     def draw(self, view_matrix, projection_matrix, camera_position, lights):
-        """Render all objects in the scene, using batching when possible."""
-
-        # Start a new batch
-        self.batch_renderer.clear()
+        """Render all objects in the scene, using batching"""
+        # Clear static batch renderer if needed
+        if self.static_needs_update:
+            self.static_batch_renderer.clear()
+        # Clear dynamic batch renderer every frame
+        self.dynamic_batch_renderer.clear()
         
         # Submit all objects to the batch renderer
         for obj in self.objects:
-            self.batch_renderer.add_object(obj)
+            # Add static objects only once
+            if self.static_needs_update and obj.buffer_type == BufferType.Static:
+                self.static_batch_renderer.add_object(obj)
+            # Add dynamic objects every frame
+            elif obj.buffer_type == BufferType.Dynamic:
+                self.dynamic_batch_renderer.add_object(obj)
 
-        # Render all batched objects
-        self.batch_renderer.render(
-            view_matrix,
-            projection_matrix,
-            camera_position,
-            lights
-        )
-
+        # Render all static batched objects
+        self.static_batch_renderer.render(view_matrix, projection_matrix, camera_position, lights)
+        # Render all dynamic batched objects
+        self.dynamic_batch_renderer.render(view_matrix, projection_matrix, camera_position, lights)
+    
         # Reset to default state
         glEnable(GL_DEPTH_TEST)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         glLineWidth(1.0)
         glPointSize(1.0)
+        self.static_needs_update = False
 
     def clear(self):
         """Clear the framebuffer with a dark teal background."""
@@ -733,7 +743,7 @@ class Renderer:
         
         # TODO: handle buffer_type for static and stream
         
-        obj = RenderObject(vertices, indices, draw_type, line_width, point_size)
+        obj = RenderObject(vertices, indices, draw_type, line_width, point_size, buffer_type)
          
         self.objects.append(obj)
         return obj
@@ -741,8 +751,10 @@ class Renderer:
     def shutdown(self):
         """Clean up all renderer resources."""
         # Clean up batch renderer
-        if self.batch_renderer:
-            self.batch_renderer.shutdown()
+        if self.static_batch_renderer:
+            self.static_batch_renderer.shutdown()
+        if self.dynamic_batch_renderer:
+            self.dynamic_batch_renderer.shutdown()
             
         # Clean up any individual render objects
         for obj in self.objects:

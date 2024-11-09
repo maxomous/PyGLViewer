@@ -106,9 +106,9 @@ class Application:
             up=(0, 0, 1),  # Constant up vector
             distance=self.camera_settings['distance']
         )
-        self.mouse = Mouse(self.camera, self.config)  # Pass parameters instance
+        self.mouse = Mouse(self.window, self.camera, self.config)  # Pass parameters instance
         self.keyboard = Keyboard(self.camera)
-        self.renderer = Renderer(self.config)
+        self.renderer = Renderer(self.config, static_max_vertices=20000, static_max_indices=60000, dynamic_max_vertices=20000, dynamic_max_indices=60000)
         self.set_frame_size(self.window, self.width, self.height)
 
     def _init_imgui(self):

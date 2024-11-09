@@ -1,3 +1,4 @@
+import glfw
 import imgui
 from core.camera import Camera
 from utils.config import Config
@@ -11,11 +12,14 @@ class Mouse:
     Uses ImGui for input capture and configuration for sensitivity settings.
     """
 
-    def __init__(self, camera, config):
+    def __init__(self, window, camera, config):
+        self.window = window
         self.camera = camera
         self.config = config
         self.last_x = 0
         self.last_y = 0
+        # Cursor state tracking
+        self.last_cursor = None
         self.uninitialised = True
         
         # Initialize configuration with defaults
@@ -45,6 +49,9 @@ class Mouse:
         - Scroll wheel for zoom
         """
 
+        # Update cursor
+        self.update_cursor()
+        
         io = imgui.get_io()
 
         if io.want_capture_mouse:
@@ -78,3 +85,42 @@ class Mouse:
             self.camera.zoom(-wheel * self.scroll_sensitivity * self.config["mouse.invert_scroll"])
 
         self.last_x, self.last_y = mouse_pos.x, mouse_pos.y
+        
+        
+
+
+    def update_cursor(self):
+        """Update the cursor based on ImGui state.
+        These aren't currently called when setting up glfw so we need to call them manually."""
+        io = imgui.get_io()
+        
+        if io.want_capture_mouse:
+            # Get ImGui's desired cursor
+            cursor = imgui.get_mouse_cursor()
+            
+            # Only update if cursor changed
+            if cursor != self.last_cursor:
+                # print(f"Cursor: {cursor}")
+                if cursor == imgui.MOUSE_CURSOR_ARROW:
+                    glfw.set_cursor(self.window, glfw.create_standard_cursor(glfw.ARROW_CURSOR))
+                elif cursor == imgui.MOUSE_CURSOR_RESIZE_NS:
+                    glfw.set_cursor(self.window, glfw.create_standard_cursor(glfw.VRESIZE_CURSOR))
+                elif cursor == imgui.MOUSE_CURSOR_RESIZE_EW:
+                    glfw.set_cursor(self.window, glfw.create_standard_cursor(glfw.HRESIZE_CURSOR))
+                elif cursor == imgui.MOUSE_CURSOR_RESIZE_NESW:
+                    glfw.set_cursor(self.window, glfw.create_standard_cursor(glfw.HRESIZE_CURSOR))  # RESIZE_NESW_CURSOR doesn't work
+                elif cursor == imgui.MOUSE_CURSOR_RESIZE_NWSE:
+                    glfw.set_cursor(self.window, glfw.create_standard_cursor(glfw.HRESIZE_CURSOR))  # RESIZE_NWSE_CURSOR doesn't work
+                elif cursor == imgui.MOUSE_CURSOR_TEXT_INPUT:
+                    glfw.set_cursor(self.window, glfw.create_standard_cursor(glfw.IBEAM_CURSOR))
+                elif cursor == imgui.MOUSE_CURSOR_HAND:
+                    glfw.set_cursor(self.window, glfw.create_standard_cursor(glfw.HAND_CURSOR))
+                else:
+                    glfw.set_cursor(self.window, glfw.create_standard_cursor(glfw.ARROW_CURSOR))
+                    
+                self.last_cursor = cursor
+        else:
+            # Reset to default cursor when not over ImGui windows
+            if self.last_cursor is not None:
+                glfw.set_cursor(self.window, glfw.create_standard_cursor(glfw.ARROW_CURSOR))
+                self.last_cursor = None
