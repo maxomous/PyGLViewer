@@ -70,8 +70,7 @@ class ObjectSelection:
         valid_hits = []
         
         for i, obj in enumerate(self.renderer.objects):
-            position = obj.model_matrix[3, :3]
-            hit, distance = obj.intersect_cursor(self.renderer.cursor_pos - position)
+            hit, distance = obj.intersect_cursor(self.renderer.cursor_pos, self.camera.distance)
             if hit and distance > 0 and distance < float('inf'):
                 valid_hits.append((distance, obj))
         

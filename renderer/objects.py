@@ -149,44 +149,57 @@ class RenderObject:
         self._world_bounds = None
         self._bounds_dirty = True
 
+    def get_mid_point(self):
+        """Get the mid point of the object."""
+        return (self.get_bounds()['min'] + self.get_bounds()['max']) / 2
+
     def get_bounds(self):
         """Calculate accurate bounds in world space."""
         if not hasattr(self, 'vertex_data') or self.vertex_data is None or len(self.vertex_data) == 0:
             return None
-            
+        # Return cached bounds if available and not dirty
+        if not self._bounds_dirty:
+            return self._world_bounds
+        
         # Get local bounds from actual vertex data
         vertices = self.vertex_data.reshape(-1, 3, 3)[:,0,:]  # Reshape to Nx3 array of positions and remove colours / normals
         local_min = np.min(vertices, axis=0)
         local_max = np.max(vertices, axis=0)
         
-        # Get transform components
-        translate = self.model_matrix[:3, 3]
-        scale = self.model_matrix[:3, :3].diagonal()
-        
-        # Apply scale and translation to bounds
-        world_min = local_min * scale + translate
-        world_max = local_max * scale + translate
-        
+        # Apply transform to bounds
+        world_min = (self.model_matrix.T @ np.append(local_min, 1))[:3]
+        world_max = (self.model_matrix.T @ np.append(local_max, 1))[:3]
+                
         # Ensure min is actually min and max is actually max after transform
         bounds_min = np.minimum(world_min, world_max)
         bounds_max = np.maximum(world_min, world_max)
         
-        return {
+        self._world_bounds = {
             'min': bounds_min,
             'max': bounds_max
         }
+        self._bounds_dirty = False
+        return self._world_bounds
 
-    def intersect_cursor(self, cursor_pos):
+    def intersect_cursor(self, cursor_pos, scale_factor=1.0):
         """Intersect ray with object bounds."""
         if not self.selectable:
-            # print("  Object not selectable")
             return False, float('inf')
             
         bounds = self.get_bounds()
+        print(f'bounds = {bounds}')
         if bounds is None:
-            # print("  No bounds available")
             return False, float('inf')
-        
+
+        # Expand bounds by point_size if this is a point object
+        if hasattr(self, 'draw_type') and self.draw_type == GL_POINTS:
+            half_size = scale_factor / (10 * self.point_size)
+            bounds = {
+                'min': bounds['min'] - np.array([half_size, half_size, 0]),
+                'max': bounds['max'] + np.array([half_size, half_size, 0])
+            }
+            print(f'expanded bounds = {bounds}')
+
         if cursor_pos[0] > bounds['min'][0] and cursor_pos[0] < bounds['max'][0] and \
            cursor_pos[1] > bounds['min'][1] and cursor_pos[1] < bounds['max'][1]:
             midpoint = (bounds['min'] + bounds['max']) / 2

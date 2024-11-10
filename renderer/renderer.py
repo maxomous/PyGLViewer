@@ -8,7 +8,7 @@ from typing import Dict, List
 from utils.config import Config
 
 # TODO: buffer_type is not really implemented for static buffer
-
+# TODO: Remove the 1.01 scaling and replace with a input for every function
 # 1 1 1
 # 0 1 1
 # 0 0 1
@@ -37,10 +37,16 @@ class Renderer:
         self.default_face_color = Color.WHITE
         self.default_wireframe_color = Color.BLACK
         self.default_arrow_dimensions = Renderer.ArrowDimensions(shaft_radius=0.03, head_radius=0.06, head_length=0.1)
+        
         # Initialize OpenGL state
         glEnable(GL_DEPTH_TEST)      # Enable depth testing
         glEnable(GL_CULL_FACE)       # Enable back-face culling
         glCullFace(GL_BACK)          # Cull back faces
+        
+        # Enable blending for transparent effects
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+                
         self.view_matrix = None
         self.projection_matrix = None
         self.camera_position = None
@@ -50,6 +56,10 @@ class Renderer:
         # Static objects should be updated only once (or very rarely), dynamic objects update every frame
         self.static_needs_update = True
         
+    def get_selected_objects(self):
+        """Get all selected objects."""
+        return [obj for obj in self.objects if getattr(obj, 'selected', False)]
+    
     def add_light(self, light):
         """Add a light source to the scene.
         

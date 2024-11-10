@@ -46,16 +46,16 @@ class GeometryData:
         vertices (list[Vertex]): List of vertices defining the geometry
         indices (np.array): Indices of the vertices to render
     """
-    def __init__(self, vertices, indices):
+    def __init__(self, vertices=None, indices=None):
         """
         Args:
             vertices (list[Vertex]): List of vertices
             indices (list[int]): List of indices
         """
-        self.vertices = np.array(vertices, dtype=Vertex)
-        self.indices = np.array(indices, dtype=np.uint32)
-        self.vertex_count = len(vertices)
-        self.index_count = len(indices)
+        self.vertices = np.array(vertices, dtype=Vertex) if vertices is not None else []
+        self.indices = np.array(indices, dtype=np.uint32) if indices is not None else []
+        self.vertex_count = len(vertices) if vertices is not None else 0
+        self.index_count = len(indices) if indices is not None else 0
         
     def __add__(self, other):
         """Combine two geometries into a single geometry.
@@ -156,6 +156,11 @@ class Geometry:
     All shapes are centered at origin unless specified otherwise.
     Includes both solid and wireframe generation methods.
     """
+    @staticmethod
+    def create_blank():
+        """Create a blank geometry."""
+        return GeometryData()
+    
     @staticmethod
     def create_grid(size, increment, color):
         """Create a grid in the XY plane centered at origin.
@@ -343,6 +348,61 @@ class Geometry:
             Vertex([x - half_w, y + half_h, 0], color, normal)
         ]
         indices = [0, 1, 2, 2, 3, 0]
+        return GeometryData(vertices, indices)
+
+    @staticmethod
+    def create_rectangle_target(x, y, width, height, edge_length, color):
+        """Create a target rectangle with corner edges in the XY plane.
+        
+        Args:
+            x (float): Center X coordinate
+            y (float): Center Y coordinate
+            width (float): Total width of rectangle
+            height (float): Total height of rectangle
+            edge_length (float): Length of corner edges
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Corner edges forming a target rectangle
+        """
+        half_w, half_h = width / 2, height / 2
+        normal = [0, 0, 1]  # Normal pointing outwards
+        
+        # Calculate edge ratios to avoid edges longer than the rectangle sides
+        edge_ratio_w = min(edge_length / width, 0.5)
+        edge_ratio_h = min(edge_length / height, 0.5)
+        
+        # Corner vertices
+        corners = [
+            [x - half_w, y - half_h, 0],  # Bottom left
+            [x + half_w, y - half_h, 0],  # Bottom right
+            [x + half_w, y + half_h, 0],  # Top right
+            [x - half_w, y + half_h, 0]   # Top left
+        ]
+        
+        vertices = []
+        indices = []
+        
+        # Create two edges for each corner
+        for i, corner in enumerate(corners):
+            corner = np.array(corner)
+            vertices.append(Vertex(corner.tolist(), color, normal))  # Corner vertex
+            
+            # For horizontal edges: left for right corners, right for left corners
+            h_direction = np.array([-1 if i in [1, 2] else 1, 0, 0])  # Left for corners 1,2, Right for corners 0,3
+            h_point = corner + h_direction * edge_length
+            vertices.append(Vertex(h_point.tolist(), color, normal))
+            
+            # For vertical edges: down for top corners, up for bottom corners
+            v_direction = np.array([0, -1 if i in [2, 3] else 1, 0])  # Down for corners 2,3, Up for corners 0,1
+            v_point = corner + v_direction * edge_length
+            vertices.append(Vertex(v_point.tolist(), color, normal))
+            
+            # Add indices for the two edges from this corner
+            base_idx = i * 3
+            indices.extend([base_idx, base_idx + 1])  # Horizontal edge
+            indices.extend([base_idx, base_idx + 2])  # Vertical edge
+        
         return GeometryData(vertices, indices)
 
     @staticmethod

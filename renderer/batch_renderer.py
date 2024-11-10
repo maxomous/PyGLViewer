@@ -2,7 +2,7 @@ from typing import Dict, List, Optional
 import numpy as np
 from OpenGL.GL import *
 from renderer.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, RenderObject
-from renderer.shaders import Shader, basic_vertex_shader, basic_fragment_shader  
+from renderer.shaders import Shader, vertex_shader_lighting, fragment_shader_lighting  
 
     
 
@@ -12,7 +12,7 @@ from renderer.shaders import Shader, basic_vertex_shader, basic_fragment_shader
 class BatchRenderer:
     """Efficient batch renderer for OpenGL objects."""
     
-    def __init__(self, max_vertices=10000, max_indices=30000, buffer_type=BufferType.Dynamic, shader=None):
+    def __init__(self, max_vertices=10000, max_indices=30000, buffer_type=BufferType.Dynamic, shader=None, shader_point=None):
         """Initialize the batch renderer.
         
         Parameters
@@ -33,7 +33,7 @@ class BatchRenderer:
         self.max_overflow_warnings = 3
         
         self.buffer_type = buffer_type
-        self.shader = shader or Shader(basic_vertex_shader, basic_fragment_shader) # Default shader if None
+        self.shader = shader or Shader(vertex_shader_lighting, fragment_shader_lighting) # Default shader if None
         
         # Batch storage
         self.batches: Dict[str, List[RenderObject]] = {}

@@ -2,8 +2,9 @@ from OpenGL.GL import *
 from OpenGL.GL import shaders
 import numpy as np
 
+
 # Vertex shader for basic lighting and transformations
-basic_vertex_shader = """
+vertex_shader_lighting = """
 #version 330 core
 layout (location = 0) in vec3 aPos;      // Vertex position
 layout (location = 1) in vec3 aColor;    // Vertex color
@@ -28,7 +29,7 @@ void main() {
 """
 
 # Fragment shader supporting multiple light types with Blinn-Phong lighting
-basic_fragment_shader = """
+fragment_shader_lighting = """
 #version 330 core
 in vec3 FragPos;    // Fragment position in world space
 in vec3 Normal;     // Fragment normal in world space
@@ -102,6 +103,7 @@ void main() {
     FragColor = vec4(result * Color, 1.0);
 }
 """
+
 
 class Shader:
     """OpenGL shader program wrapper supporting vertex and fragment shaders.

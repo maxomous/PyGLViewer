@@ -1,7 +1,7 @@
 import imgui
 from imgui.integrations.glfw import GlfwRenderer
 import os
-import glfw
+
 class ImGuiManager:
     """Manager class for ImGui integration with GLFW.
     

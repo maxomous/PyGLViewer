@@ -72,7 +72,9 @@ class ExampleApplication(Application):
     
         RENDER_AREA = 50
         # Cursor 3D point
-        self.cursor_3d = self.renderer.add_blank_object(draw_type=GL_POINTS, buffer_type=BufferType.Dynamic)
+        self.cursor_3d = self.renderer.add_blank_object(draw_type=GL_POINTS, buffer_type=BufferType.Dynamic, selectable=False)
+        self.selected_object = self.renderer.add_blank_object(draw_type=GL_LINES, buffer_type=BufferType.Dynamic, selectable=False)
+        
         # Grid and axis
         self.renderer.add_grid(RENDER_AREA*2, 1, Color.GRAY, translate=(0, 0, -0.011), selectable=False) # Move grid slightly below z=0 to avoid z-fighting
         self.renderer.add_grid(RENDER_AREA*2, 10, Color.WHITE, translate=(0, 0, -0.01), selectable=False) # Move grid slightly below z=0 to avoid z-fighting
@@ -113,17 +115,17 @@ class ExampleApplication(Application):
         self.renderer.plot(x, y, 
                           color=Color.CYAN, 
                           line_width=2.0,
-                          translate=(-4, 0, 0))  # Move to left side
+                          translate=(-3, 0, 0))  # Move to left side
 
         # Create a scatter plot in a circular pattern
-        num_points = 50
+        num_points = 100
         t = np.linspace(0, 2*np.pi, num_points)  # evenly spaced angles
-        radius = 0.8
+        radius = 6.5
         x = radius * np.cos(t)  # x = r * cos(t)
         y = radius * np.sin(t)  # y = r * sin(t)
         self.renderer.scatter(x, y,
-                             color=Color.MAGENTA,
-                             point_size=5.0,
+                             color=Color.YELLOW,
+                             point_size=3.0,
                              translate=(0, 0, 0))  # Center position
 
         # Create a parabola (y = x²)
@@ -132,7 +134,7 @@ class ExampleApplication(Application):
         self.renderer.plot(x, y,
                           color=Color.GREEN,
                           line_width=2.0,
-                          translate=(4, 0, 0))  # Move to right side
+                          translate=(3, -1, 0))  # Move to right side
 
 
     def update_scene(self):
@@ -143,7 +145,24 @@ class ExampleApplication(Application):
             self.cursor_3d['line'].set_vertex_data(point_geometry.get_vertices())
             self.cursor_3d['line'].set_index_data(point_geometry.get_indices())
         
+        # Get object under cursor
+        if selected_objects := self.renderer.get_selected_objects():
+            # Create a single geometry with multiple rectangles to indicate each selected object
+            selected_geometry = []
+            for i, obj in enumerate(selected_objects):
+                if bounds := obj.get_bounds():
+                    offset = self.camera.distance * 0.01
+                    width, height, _ = (bounds['max'] - bounds['min']) + np.array([offset, offset, 0])
+                    selected_geometry.append(Geometry.create_rectangle_target(*obj.get_mid_point()[:2], width, height, edge_length=self.camera.distance/50, color=Color.WHITE)) 
+            selected_geometry = sum(selected_geometry, Geometry.create_blank())
+        else:
+            selected_geometry = Geometry.create_blank()
+            
+        self.selected_object['line'].set_vertex_data(selected_geometry.get_vertices())
+        self.selected_object['line'].set_index_data(selected_geometry.get_indices())
 
+
+        # Rotating cube
         rotate_geometry = (0, 0, self.timer.oscillate_angle(speed=0.6))
         rotate_object = (0, 0, self.timer.oscillate_angle(speed=0.5))
 
@@ -180,19 +199,19 @@ class ExampleApplication(Application):
         # If ImGui is capturing input, do not process further
         if io.want_capture_keyboard:
             return
-        # Example: Check for specific key presses
-        if io.keys_down[glfw.KEY_SPACE]:
-            print("Space pressed!")
         
+        # Example: Check for specific key presses
+        if imgui.is_key_pressed(glfw.KEY_SPACE):
+            print("Space pressed!")
         # Example: Check mouse button states
-        if io.mouse_down[glfw.MOUSE_BUTTON_LEFT]:
+        if imgui.is_mouse_clicked(imgui.MOUSE_BUTTON_LEFT):
             print(f"Left mouse button clicked: {io.mouse_pos}")
-
+            
     def render_ui_window(self):
         """Render the example UI window."""
         imgui.begin('Example Window', flags=imgui.WINDOW_HORIZONTAL_SCROLLING_BAR)
         render_core_ui(self.camera, self.renderer, self.config, self.timer, self.imgui_manager)
-    
+        
         imgui.end()
 
     def render_ui(self):

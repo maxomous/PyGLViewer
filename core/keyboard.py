@@ -28,7 +28,7 @@ class Keyboard:
             return
 
         speed = 0.5
-        if io.keys_down[glfw.KEY_X]:
+        if io.keys_down[glfw.KEY_W]:
             self.camera.move("FORWARD", speed)
         if io.keys_down[glfw.KEY_S]:
             self.camera.move("BACKWARD", speed)

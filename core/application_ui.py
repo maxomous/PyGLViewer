@@ -27,8 +27,8 @@ def render_core_ui(camera, renderer, config, timer, imgui_manager):
     
 
 def render_ui_selection_widget(renderer):
-    """Render widget showing information about selected object."""    
-    selected_objects = [obj for obj in renderer.objects if getattr(obj, 'selected', False)]
+    """Render widget showing information about selected object."""
+    selected_objects = renderer.get_selected_objects()
     
     if not selected_objects:
         imgui.text("No object selected")
