@@ -338,4 +338,3 @@ class BatchRenderer:
                 'indices': f"{self.index_count}/{self.max_indices} ({index_buffer_usage:.1f}%)"
             }
         }
-

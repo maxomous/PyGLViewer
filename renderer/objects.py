@@ -4,7 +4,8 @@ import numpy as np
 from OpenGL.GL import *
 from utils.transform import Transform
 
-
+# At the top of the file, after imports
+global_object_counter = 0
 
 class BufferType:
     """Enumeration of OpenGL buffer types."""
@@ -127,7 +128,10 @@ class VertexArray:
 
 class RenderObject:
     """Represents a renderable object with vertex, index buffers, and shader."""
-    def __init__(self, vertex_data, index_data, draw_type, line_width=1.0, point_size=1.0, buffer_type=BufferType.Dynamic):
+    def __init__(self, vertex_data, index_data, draw_type, line_width=1.0, point_size=1.0, buffer_type=BufferType.Dynamic, selectable=True):
+        global global_object_counter
+        self.id = global_object_counter
+        global_object_counter += 1 
         # Ensure vertex_data is a numpy array with the correct shape
         self.vertex_data = vertex_data if vertex_data is None else np.array(vertex_data, dtype=np.float32)
         # Ensure index_data is a numpy array
@@ -137,22 +141,84 @@ class RenderObject:
         self.point_size = point_size
         self.model_matrix = np.identity(4, dtype=np.float32)
         self.buffer_type = buffer_type
+        # Add selection-related properties
+        self.selected = False
+        self.selectable = selectable  # Flag to control if object can be selected
 
+        # Cache transformed bounds for faster picking
+        self._world_bounds = None
+        self._bounds_dirty = True
+
+    def get_bounds(self):
+        """Calculate accurate bounds in world space."""
+        if not hasattr(self, 'vertex_data') or self.vertex_data is None or len(self.vertex_data) == 0:
+            return None
+            
+        # Get local bounds from actual vertex data
+        vertices = self.vertex_data.reshape(-1, 3, 3)[:,0,:]  # Reshape to Nx3 array of positions and remove colours / normals
+        local_min = np.min(vertices, axis=0)
+        local_max = np.max(vertices, axis=0)
+        
+        # Get transform components
+        translate = self.model_matrix[:3, 3]
+        scale = self.model_matrix[:3, :3].diagonal()
+        
+        # Apply scale and translation to bounds
+        world_min = local_min * scale + translate
+        world_max = local_max * scale + translate
+        
+        # Ensure min is actually min and max is actually max after transform
+        bounds_min = np.minimum(world_min, world_max)
+        bounds_max = np.maximum(world_min, world_max)
+        
+        return {
+            'min': bounds_min,
+            'max': bounds_max
+        }
+
+    def intersect_cursor(self, cursor_pos):
+        """Intersect ray with object bounds."""
+        if not self.selectable:
+            # print("  Object not selectable")
+            return False, float('inf')
+            
+        bounds = self.get_bounds()
+        if bounds is None:
+            # print("  No bounds available")
+            return False, float('inf')
+        
+        if cursor_pos[0] > bounds['min'][0] and cursor_pos[0] < bounds['max'][0] and \
+           cursor_pos[1] > bounds['min'][1] and cursor_pos[1] < bounds['max'][1]:
+            midpoint = (bounds['min'] + bounds['max']) / 2
+            distance = np.linalg.norm(cursor_pos - midpoint)
+            return True, distance
+        else:
+            return False, float('inf')
+        
     def set_vertex_data(self, data):
-        """Update the vertex data of this render object."""
+        """Update the vertex data."""
         self.vertex_data = np.array(data, dtype=np.float32)
+        self._bounds_dirty = True  # Mark bounds for recalculation
 
     def set_index_data(self, data):
         """Update the index data of this render object."""
         self.index_data = np.array(data, dtype=np.uint32)
 
     def set_transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
-        """Set the transform matrix - Will scale, rotate and translate the object, in that order."""
-        self.model_matrix = Transform(translate, rotate, scale).transform_matrix().T # Transpose to convert row-major to column-major
+        """Set the transform matrix."""
+        self.model_matrix = Transform(translate, rotate, scale).transform_matrix().T
+        self._bounds_dirty = True  # Mark bounds for recalculation
 
-    def shutdown(self):
-        """Clean up resources associated with this render object."""
-        # Clear data references
-        self.vertex_data = None
-        self.index_data = None
-        self.model_matrix = None
+    def select(self):
+        """Mark this object as selected."""
+        if self.selectable:
+            self.selected = True
+
+    def deselect(self):
+        """Mark this object as not selected."""
+        self.selected = False
+
+    def toggle_selection(self):
+        """Toggle the selection state of this object."""
+        if self.selectable:
+            self.selected = not self.selected

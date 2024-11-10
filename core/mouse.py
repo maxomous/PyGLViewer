@@ -3,7 +3,7 @@ import imgui
 from core.camera import Camera
 from utils.config import Config
 
-# NOTE: You should ideally use ImGui instead of glfw to get inputs
+# NOTE: Ideally use ImGui instead of glfw to get inputs
 
 class Mouse:
     """Mouse input handler for camera control.

@@ -7,15 +7,16 @@ def render_core_ui(camera, renderer, config, timer, imgui_manager):
     imgui_manager.push_font('arial_rounded_mt_bold-medium')
     
     sections = [
-        ('CAMERA', render_ui_camera, [camera], imgui.TREE_NODE_DEFAULT_OPEN),
-        ('MOUSE', render_ui_mouse, [config], imgui.TREE_NODE_DEFAULT_OPEN),
-        ('PERFORMANCE', render_ui_performance, [timer.dt], imgui.TREE_NODE_DEFAULT_OPEN),
-        ('RENDERER', render_ui_renderer, [renderer, config], imgui.TREE_NODE_DEFAULT_OPEN),
-        ('CONFIGURATION', render_ui_config, [config], imgui.TREE_NODE_DEFAULT_OPEN),
+        ('SELECTION', render_ui_selection_widget, [renderer]),
+        ('CAMERA', render_ui_camera, [camera]),
+        ('MOUSE', render_ui_mouse, [config]),
+        ('PERFORMANCE', render_ui_performance, [timer.dt]),
+        ('RENDERER', render_ui_renderer, [renderer, config]),
+        ('CONFIGURATION', render_ui_config, [config]),
     ]
     
-    for title, func, args, flags in sections:
-        if imgui.collapsing_header(title, flags=flags)[0]:
+    for title, func, args in sections:
+        if imgui.collapsing_header(title, flags=imgui.TREE_NODE_DEFAULT_OPEN)[0]:
             imgui_manager.push_font('arial-medium')
             imgui.indent()
             func(*args)
@@ -25,6 +26,48 @@ def render_core_ui(camera, renderer, config, timer, imgui_manager):
     imgui_manager.pop_font()
     
 
+def render_ui_selection_widget(renderer):
+    """Render widget showing information about selected object."""    
+    selected_objects = [obj for obj in renderer.objects if getattr(obj, 'selected', False)]
+    
+    if not selected_objects:
+        imgui.text("No object selected")
+    else:
+        for i, obj in enumerate(selected_objects):
+            if imgui.tree_node(f"Object {obj.id}"):
+                # Display object properties
+                imgui.text(f"Draw Type: {obj.draw_type}")
+                imgui.text(f"Buffer Type: {obj.buffer_type}")
+                
+                # Display transform info
+                if imgui.tree_node("Transform"):
+                    # Extract position from model matrix (last column)
+                    position = obj.model_matrix[3, :3]
+                    imgui.text(f"Position: {position[0]:.2f}, {position[1]:.2f}, {position[2]:.2f}")
+                    
+                    # Display vertex count
+                    if obj.vertex_data is not None:
+                        vertex_count = len(obj.vertex_data) // 3  # Assuming 3 components per vertex
+                        imgui.text(f"Vertex Count: {vertex_count}")
+                    
+                    # Add transform controls
+                    changed, new_pos = imgui.drag_float3("Position", *position, 0.1)
+                    if changed:
+                        # Update object position
+                        obj.set_transform(translate=new_pos)
+                    
+                    imgui.tree_pop()
+                
+                # Display bounds info
+                if imgui.tree_node("Bounds"):
+                    bounds = obj.get_bounds()
+                    if bounds:
+                        imgui.text(f"Min: {bounds['min'][0]:.2f}, {bounds['min'][1]:.2f}, {bounds['min'][2]:.2f}")
+                        imgui.text(f"Max: {bounds['max'][0]:.2f}, {bounds['max'][1]:.2f}, {bounds['max'][2]:.2f}")
+                    imgui.tree_pop()
+                
+                imgui.tree_pop()
+    
 def render_ui_camera(camera):
     """Render camera control panel.
     

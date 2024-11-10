@@ -3,12 +3,14 @@ from OpenGL.GL import *
 from core.camera import ThirdPersonCamera
 from core.keyboard import Keyboard
 from core.mouse import Mouse
+from core.object_selection import ObjectSelection
 from renderer.renderer import Renderer
 from utils.timer import Timer
 from utils.config import Config
 from gui.imgui_manager import ImGuiManager
 import time
 
+            
 class Application:
     """Base class for OpenGL applications with ImGui integration.
     
@@ -51,6 +53,7 @@ class Application:
         self.mouse = None
         self.keyboard = None
         self.imgui_manager = None
+        self.object_selection = None
         self.timer = Timer()  # Initialize the Timer
         self.config = config
         self.camera_settings = camera_settings
@@ -109,6 +112,7 @@ class Application:
         self.mouse = Mouse(self.window, self.camera, self.config)  # Pass parameters instance
         self.keyboard = Keyboard(self.camera)
         self.renderer = Renderer(self.config, static_max_vertices=20000, static_max_indices=60000, dynamic_max_vertices=20000, dynamic_max_indices=60000)
+        self.object_selection = ObjectSelection(self.camera, self.renderer)
         self.set_frame_size(self.window, self.width, self.height)
 
     def _init_imgui(self):
@@ -161,7 +165,9 @@ class Application:
         self.imgui_manager.process_inputs()
         self.mouse.process_input()
         self.keyboard.process_input()
-        self.events()
+        self.object_selection.process_input(self.width, self.height)
+
+        self.events() # custon events
         
     def events(self):
         """Process custom input events specific to your application."""
@@ -210,11 +216,7 @@ class Application:
         
         Saves configuration, shuts down ImGui and terminates GLFW.
         """
-        try:
-            # Clean up renderer resources first
-            if self.renderer:
-                self.renderer.shutdown()
-                
+        try:                
             # Save config
             if self.config:
                 self.config.save()

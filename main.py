@@ -69,18 +69,18 @@ class ExampleApplication(Application):
         self.renderer.default_point_size = 3.0
         self.renderer.default_line_width = 1.0 # lines & wireframes
         self.renderer.default_segments = 32 # n segments in circle
-                
+                    
+        # Cursor 3D point
+        self.cursor_3d = self.renderer.add_blank_object(draw_type=GL_POINTS, buffer_type=BufferType.Dynamic)
         # Grid and axis
-        self.renderer.add_grid(10, 1, Color.GRAY, translate=(0, 0, -0.01)) # Move grid slightly below z=0 to avoid z-fighting
-        self.renderer.add_axis(size=1)
+        self.renderer.add_grid(10, 1, Color.GRAY, translate=(0, 0, -0.01), selectable=False) # Move grid slightly below z=0 to avoid z-fighting
+        self.renderer.add_axis(size=1, selectable=False)
         
         # Row 1 - Wireframe Shapes
         self.renderer.add_point((-4, 4, 0), Color.RED, point_size=10)
         self.renderer.add_line((-2.5, 3.5, 0), (-1.5, 4.5, 0), Color.ORANGE, line_width=5)
         self.renderer.add_triangle((0, 4.433, 0), (-0.5, 3.567, 0), (0.5, 3.567, 0), wireframe_color=Color.YELLOW, show_body=False)
- 
         self.renderer.add_rectangle((2, 4), 1, 1, wireframe_color=Color.GREEN, show_body=False)
-        
         self.renderer.add_circle(position=(4, 4, 0), radius=0.5, wireframe_color=Color.BLUE, show_body=False)
 
 
@@ -95,16 +95,20 @@ class ExampleApplication(Application):
         arrow_size = self.renderer.ArrowDimensions(shaft_radius=0.2, head_radius=0.4, head_length=0.3)
         self.renderer.add_arrow((-2.4, 1.6, 0.25), (-1.6, 2.4, 0.75), arrow_size, color=Color.RED)
         
-        # TODO: Dynamically allocate buffer size
         # Combine dictionaries (body & wireframe)
         self.rotating_cube = {
             **self.renderer.add_blank_object(draw_type=GL_TRIANGLES, buffer_type=BufferType.Dynamic), # body
             **self.renderer.add_blank_object(draw_type=GL_LINES, buffer_type=BufferType.Dynamic) # wireframe
         }
 
-    def update_scene(self):  
-        # TODO: Make ObjectCollection to store multiple objects OR multiple geometries???
+    def update_scene(self):
         """Update scene state called every frame."""
+        # Draw cursor point
+        if hasattr(self.renderer, 'cursor_pos'):
+            point_geometry = Geometry.create_point(self.renderer.cursor_pos, Color.YELLOW)
+            self.cursor_3d['line'].set_vertex_data(point_geometry.get_vertices())
+            self.cursor_3d['line'].set_index_data(point_geometry.get_indices())
+        
 
         rotate_geometry = (0, 0, self.timer.oscillate_angle(speed=0.6))
         rotate_object = (0, 0, self.timer.oscillate_angle(speed=0.5))
@@ -136,7 +140,6 @@ class ExampleApplication(Application):
         self.rotating_cube['line'].set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), 0, 0), rotate=rotate_object)
         
         
-        
     def events(self):
         """Process custom input events specific to your application."""
         io = imgui.get_io()
@@ -149,14 +152,13 @@ class ExampleApplication(Application):
         
         # Example: Check mouse button states
         if io.mouse_down[glfw.MOUSE_BUTTON_LEFT]:
-            pass
-            # print(f"Left mouse button clicked: {io.mouse_pos}")
+            print(f"Left mouse button clicked: {io.mouse_pos}")
 
     def render_ui_window(self):
         """Render the example UI window."""
         imgui.begin('Example Window', flags=imgui.WINDOW_HORIZONTAL_SCROLLING_BAR)
         render_core_ui(self.camera, self.renderer, self.config, self.timer, self.imgui_manager)
-                
+    
         imgui.end()
 
     def render_ui(self):

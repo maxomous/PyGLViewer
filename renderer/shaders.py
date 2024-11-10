@@ -274,7 +274,7 @@ class Shader:
         """
         self.set_uniform("viewPos", view_position)
 
-    def cleanup(self):
+    def shutdown(self):
         """Delete shader program and individual shaders."""
         if self.program:
             glDeleteProgram(self.program)
@@ -288,4 +288,4 @@ class Shader:
 
     def __del__(self):
         """Ensure shader resources are cleaned up."""
-        self.cleanup()
+        self.shutdown()
