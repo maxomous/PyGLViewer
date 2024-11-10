@@ -554,7 +554,7 @@ class Renderer:
                 origin_radius=0.035, origin_subdivisions=None, 
                 origin_color=Color.BLACK, wireframe_color=None, buffer_type=BufferType.Static, 
                 show_body=True, show_wireframe=True, line_width=None, translate=(0,0,0), rotate=(0,0,0), 
-                scale=(1,1,1), selectable=True):
+                scale=(1,1,1), selectable=False):
         """Add coordinate axis arrows with sphere at origin.
 
         Creates RGB arrows along X, Y, Z axes with black sphere at origin.
@@ -625,15 +625,14 @@ class Renderer:
     def add_numbered_axis(self, size=5.0, increment=1.0, arrow_dimensions=None, segments=None,
                      origin_radius=0.035, origin_subdivisions=None, 
                      origin_color=Color.BLACK, axis_color=Color.WHITE, tick_color=Color.WHITE,
-                     buffer_type=BufferType.Static, line_width=None, 
-                     translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True):
+                     buffer_type=BufferType.Static, line_width=None, tick_size=0.1,
+                     translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
         """Add coordinate axes with number ticks."""
         # Create main axes
         x_axis = Geometry.create_line((-size, 0, 0), (size, 0, 0), axis_color)
         y_axis = Geometry.create_line((0, -size, 0), (0, size, 0), axis_color)
         
         # Create tick marks
-        tick_size = 0.1  # Size of tick marks
         tick_geometry = None
         
         # Generate ticks from -size to +size at increment intervals
@@ -672,7 +671,7 @@ class Renderer:
         }
    
 
-    def add_grid(self, size, increment, color, line_width=None, buffer_type=BufferType.Static, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True):
+    def add_grid(self, size, increment, color, line_width=None, buffer_type=BufferType.Static, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
         """Add a grid of lines in the XY plane.
 
         Parameters
@@ -703,7 +702,7 @@ class Renderer:
         grid = self.add_object(geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
         return {"line": grid}
 
-    def plot(self, x, y, color=Color.WHITE, line_width=1.0, buffer_type=BufferType.Static, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True):
+    def plot(self, x, y, color=Color.WHITE, line_width=1.0, buffer_type=BufferType.Static, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
         """Plot a line through a series of x,y points.
         
         Parameters
@@ -733,7 +732,7 @@ class Renderer:
         return {"line": linestring}
 
 
-    def scatter(self, x, y, color=None, point_size=3.0, buffer_type=BufferType.Static, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True):
+    def scatter(self, x, y, color=None, point_size=3.0, buffer_type=BufferType.Static, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
         """Create a scatter plot of x,y points.
         
         Parameters

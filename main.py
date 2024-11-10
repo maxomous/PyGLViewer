@@ -69,12 +69,17 @@ class ExampleApplication(Application):
         self.renderer.default_point_size = 3.0
         self.renderer.default_line_width = 1.0 # lines & wireframes
         self.renderer.default_segments = 32 # n segments in circle
-                    
+    
+        RENDER_AREA = 50
         # Cursor 3D point
         self.cursor_3d = self.renderer.add_blank_object(draw_type=GL_POINTS, buffer_type=BufferType.Dynamic)
         # Grid and axis
-        self.renderer.add_grid(10, 1, Color.GRAY, translate=(0, 0, -0.01), selectable=False) # Move grid slightly below z=0 to avoid z-fighting
-        self.renderer.add_axis(size=1, selectable=False)
+        self.renderer.add_grid(RENDER_AREA*2, 1, Color.GRAY, translate=(0, 0, -0.011), selectable=False) # Move grid slightly below z=0 to avoid z-fighting
+        self.renderer.add_grid(RENDER_AREA*2, 10, Color.WHITE, translate=(0, 0, -0.01), selectable=False) # Move grid slightly below z=0 to avoid z-fighting
+        # self.renderer.add_axis(size=1, selectable=False)
+        
+        # Add numbered axes
+        self.renderer.add_numbered_axis(size=RENDER_AREA, increment=0.5, axis_color=Color.WHITE, tick_color=Color.rgb(200, 200, 200), line_width=1.0, tick_size=0.05)
         
         # Row 1 - Wireframe Shapes
         self.renderer.add_point((-4, 4, 0), Color.RED, point_size=10)
@@ -129,14 +134,6 @@ class ExampleApplication(Application):
                           line_width=2.0,
                           translate=(4, 0, 0))  # Move to right side
 
-        # Add numbered axes
-        self.renderer.add_numbered_axis(
-            size=5.0,                # Extends from -5 to +5
-            increment=0.5,           # Tick mark every unit
-            axis_color=Color.WHITE,  # Main axes in white
-            tick_color=Color.rgb(200, 200, 200),   # Tick marks in gray
-            line_width=1.0          
-        )
 
     def update_scene(self):
         """Update scene state called every frame."""
