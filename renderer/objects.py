@@ -187,7 +187,7 @@ class RenderObject:
             return False, float('inf')
             
         bounds = self.get_bounds()
-        print(f'bounds = {bounds}')
+        # print(f'bounds = {bounds}')
         if bounds is None:
             return False, float('inf')
 
@@ -198,7 +198,7 @@ class RenderObject:
                 'min': bounds['min'] - np.array([half_size, half_size, 0]),
                 'max': bounds['max'] + np.array([half_size, half_size, 0])
             }
-            print(f'expanded bounds = {bounds}')
+            # print(f'expanded bounds = {bounds}')
 
         if cursor_pos[0] > bounds['min'][0] and cursor_pos[0] < bounds['max'][0] and \
            cursor_pos[1] > bounds['min'][1] and cursor_pos[1] < bounds['max'][1]:
@@ -220,6 +220,15 @@ class RenderObject:
     def set_transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
         """Set the transform matrix."""
         self.model_matrix = Transform(translate, rotate, scale).transform_matrix().T
+        self._bounds_dirty = True  # Mark bounds for recalculation
+
+    def get_translate(self):
+        """Get the translation of the object."""
+        return self.model_matrix[3, :3]
+    
+    def set_translate(self, translate=(0, 0, 0)):
+        """Set the translation of the object."""
+        self.model_matrix[3, :3] = translate
         self._bounds_dirty = True  # Mark bounds for recalculation
 
     def select(self):

@@ -5,6 +5,7 @@ import numpy as np
 from core.application import Application
 from core.application_ui import render_core_ui
 from core.light import Light, LightType
+from core.object_selection import ObjectSelection
 from renderer.renderer import Renderer
 from renderer.geometry import Geometry
 from renderer.objects import BufferType
@@ -31,6 +32,8 @@ class ExampleApplication(Application):
         self.config.add("variable 1", 0.001, "Description of variable 1")
         # Variables can be set like this
         self.config["variable 1"] = 0.002 
+        
+        self.object_start_pos = None
         
     def init_lights(self):
         """Initialize lighting setup for the scene.
@@ -94,13 +97,12 @@ class ExampleApplication(Application):
         # Row 2 - Filled Shapes
         self.renderer.add_circle(position=(-4, 2, 0), radius=0.5, color=Color.GREEN)
         # self.renderer.add_cube(Color.RED, translate=(-2, 2, 0.5), scale=(0.5, 0.5, 0.5), rotate=(np.pi/4, np.pi/4, 0), buffer_type=BufferType.Dynamic)
-        self.renderer.add_cone(Color.rgb(255, 165, 0), segments=5, translate=(0, 2, 0.5), scale=(0.5, 0.5, 0.5))
-        self.renderer.add_cylinder(Color.WHITE, translate=(2, 2, 0.5), scale=(0.5, 0.5, 0.5))
-        self.renderer.add_sphere(translate=(4, 2, 0.5), radius=0.25, subdivisions=1, color=Color.WHITE)
-        self.renderer.add_sphere(translate=(4, 0, 0.5), radius=0.25, subdivisions=4, color=Color.WHITE)
+        self.renderer.add_cone(Color.rgb(255, 165, 0), segments=16, translate=(0, 2, 0.25), scale=(0.5, 0.5, 0.5))
+        self.renderer.add_cylinder(Color.MAGENTA, translate=(2, 2, 0.25), scale=(0.5, 0.5, 0.5))
+        self.renderer.add_sphere(translate=(4, 2, 0.5), radius=0.25, subdivisions=4, color=Color.RED)
         # Row 3 - Filled Shapes
         arrow_size = self.renderer.ArrowDimensions(shaft_radius=0.2, head_radius=0.4, head_length=0.3)
-        self.renderer.add_arrow((-2.4, 1.6, 0.25), (-1.6, 2.4, 0.75), arrow_size, color=Color.RED)
+        self.renderer.add_arrow((-2.4, 1.6, 0.25), (-1.6, 2.4, 0.75), arrow_size, color=Color.PURPLE)
         
         # Dynamic objects (Rotating cubes - body & wireframe)
         self.rotating_cube = {
@@ -110,23 +112,12 @@ class ExampleApplication(Application):
 
         # Example plots
         # Create a sine wave
-        x = np.linspace(-3, 3, 100)
+        x = np.linspace(-3, 3, 25)
         y = np.sin(x)
-        self.renderer.plot(x, y, 
-                          color=Color.CYAN, 
-                          line_width=2.0,
-                          translate=(-3, 0, 0))  # Move to left side
-
-        # Create a scatter plot in a circular pattern
-        num_points = 100
-        t = np.linspace(0, 2*np.pi, num_points)  # evenly spaced angles
-        radius = 6.5
-        x = radius * np.cos(t)  # x = r * cos(t)
-        y = radius * np.sin(t)  # y = r * sin(t)
-        self.renderer.scatter(x, y,
-                             color=Color.YELLOW,
-                             point_size=3.0,
-                             translate=(0, 0, 0))  # Center position
+        self.renderer.scatter(x, y, 
+                              color=Color.CYAN, 
+                              point_size=5.0,
+                              translate=(-3, 0, 0))  # Move to left side
 
         # Create a parabola (y = x²)
         x = np.linspace(-1.5, 1.5, 100)  # x values from -1 to 1
@@ -199,13 +190,11 @@ class ExampleApplication(Application):
         # If ImGui is capturing input, do not process further
         if io.want_capture_keyboard:
             return
-        
+
         # Example: Check for specific key presses
         if imgui.is_key_pressed(glfw.KEY_SPACE):
             print("Space pressed!")
-        # Example: Check mouse button states
-        if imgui.is_mouse_clicked(imgui.MOUSE_BUTTON_LEFT):
-            print(f"Left mouse button clicked: {io.mouse_pos}")
+        
             
     def render_ui_window(self):
         """Render the example UI window."""
@@ -224,15 +213,6 @@ if __name__ == '__main__':
     Application entry point. Sets up window, camera, and fonts 
     before starting the render loop.
     """
-        
-    # Font configuration
-    fonts = {
-        'arial-large': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 24 },
-        'arial-medium': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 16 },
-        'arial-small': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 12 },
-        'arial_rounded_mt_bold-medium': { 'path': 'C:/Windows/Fonts/ARLRDBD.TTF', 'size': 15 },
-    }
-    
     # Create application with settings
     app = ExampleApplication(
         width=1280,
@@ -242,10 +222,16 @@ if __name__ == '__main__':
             'target': (0, 0, 0),
             'distance': 10
         },
-        fonts=fonts,
+        fonts={
+            'arial-large': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 24 },
+            'arial-medium': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 16 },
+            'arial-small': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 12 },
+            'arial_rounded_mt_bold-medium': { 'path': 'C:/Windows/Fonts/ARLRDBD.TTF', 'size': 15 },
+        },
         default_font='arial-medium',
         config=Config('config.json'),
-        enable_docking=True
+        enable_docking=True,
+        enable_drag_objects=False
     )
     
     if app.init_core():

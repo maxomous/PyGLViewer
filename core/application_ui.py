@@ -54,7 +54,7 @@ def render_ui_selection_widget(renderer):
                     changed, new_pos = imgui.drag_float3("Position", *position, 0.1)
                     if changed:
                         # Update object position
-                        obj.set_transform(translate=new_pos)
+                        obj.set_translate(translate=new_pos)
                     
                     imgui.tree_pop()
                 

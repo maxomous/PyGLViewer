@@ -4,18 +4,28 @@ from renderer.renderer import Renderer
 
 class ObjectSelection:
     """Handles object selection based on mouse input."""
-    def __init__(self, camera, renderer: Renderer):
+    def __init__(self, camera, renderer: Renderer, mouse, drag_objects=True):
         self.camera = camera
         self.renderer = renderer
+        self.mouse = mouse
+        self.drag_objects = drag_objects
     
-    def process_input(self, width, height):
-        io = imgui.get_io()
-        if io.want_capture_mouse:
+    def process_input(self):
+        if imgui.get_io().want_capture_mouse:
+            return
+
+        self.process_select()
+        if self.drag_objects:
+            self.process_drag()
+    
+    def process_select(self):
+        if not self.camera.is_2d_mode:
             return
         
+        io = imgui.get_io()
         # Handle object selection on left click
         if io.mouse_down[imgui.MOUSE_BUTTON_LEFT]:  # Left mouse button
-            picked_object = self.get_object_under_cursor(io.mouse_pos[0], io.mouse_pos[1], width, height)
+            picked_object = self.get_object_under_cursor(io.mouse_pos[0], io.mouse_pos[1])
             
             # Clear previous selection if not holding shift
             if not io.key_shift:
@@ -27,50 +37,37 @@ class ObjectSelection:
             if picked_object:
                 picked_object.toggle_selection()
             
-    def get_object_under_cursor(self, cursor_x, cursor_y, width, height):
-        """Determine which object is under the cursor using ray casting.
-        
-        Args:
-            cursor_x (float): Cursor X position in screen coordinates
-            cursor_y (float): Cursor Y position in screen coordinates
+    def process_drag(self):
+        '''Drag selected objects with left mouse button pressed.'''
+        # Drag selected objects
+        if imgui.is_mouse_dragging(imgui.MOUSE_BUTTON_LEFT):
+            selected_objects = self.renderer.get_selected_objects() 
+            # Set initial object positions
+            if not hasattr(self, 'object_start_pos') or self.object_start_pos is None:
+                self.object_start_pos = [obj.get_translate().copy() for i, obj in enumerate(selected_objects)] if len(selected_objects) > 0 else None
+
+            # Get mouse delta & convert to world space
+            mouse_delta = imgui.get_mouse_drag_delta()
+            print(f'mouse_delta: {mouse_delta}   ')
+            x, y, _ = self.mouse.screen_to_world_delta(mouse_delta.x, mouse_delta.y)
             
-        Returns:
-            object: The picked object or None if nothing was hit
-        """
-        # Convert screen coordinates to NDC
-        ndc_x, ndc_y = self.screen_to_ndc(cursor_x, cursor_y, width, height)
-        # Get matrices
-        view = self.camera.get_view_matrix()
-        projection = self.camera.get_projection_matrix()
-        
-        # Let the renderer handle the actual picking
-        return self.pick_object(ndc_x, ndc_y, view, projection)
-
-
-    def pick_object(self, ndc_x, ndc_y, view_matrix, projection_matrix):
-        """Optimized object picking."""
-       
-        # Get camera position (ray origin) in world space
-        inv_view = np.linalg.inv(view_matrix)
-        camera_pos = inv_view[3, :3]
-        
-        # Convert NDC to view space
-        inv_projection = np.linalg.inv(projection_matrix)
-        
-        # Point on near plane
-        point_ndc = np.array([ndc_x, ndc_y, 0.0, 1.0])
-        point_view = inv_projection @ point_ndc
-        point_view = point_view / point_view[3]  # Perspective divide
-        
-        # Convert view space point to world space
-        self.renderer.cursor_pos = (inv_view @ np.append(point_view[:3], 1.0))[:3]
-        self.renderer.cursor_pos += (camera_pos[0], camera_pos[1], 0)        
+            for i, obj in enumerate(selected_objects):
+                # Set new object transform
+                translate = self.object_start_pos[i] + np.array([x, y, 0.0])
+                obj.set_translate(translate)
+                
+        if imgui.is_mouse_released(imgui.MOUSE_BUTTON_LEFT):
+            self.object_start_pos = None
+            
+    def get_object_under_cursor(self, cursor_x, cursor_y):
+        """Determine which object is under the cursor"""
+        world_pos = self.mouse.screen_to_world(cursor_x, cursor_y)
+        self.renderer.cursor_pos = world_pos
         
         # Test intersection with objects
         valid_hits = []
-        
-        for i, obj in enumerate(self.renderer.objects):
-            hit, distance = obj.intersect_cursor(self.renderer.cursor_pos, self.camera.distance)
+        for obj in self.renderer.objects:
+            hit, distance = obj.intersect_cursor(world_pos, self.camera.distance)
             if hit and distance > 0 and distance < float('inf'):
                 valid_hits.append((distance, obj))
         
@@ -79,22 +76,5 @@ class ObjectSelection:
             
         # Sort by distance and get closest
         valid_hits.sort(key=lambda x: x[0])
-        closest_hit = valid_hits[0]
-        
-        return closest_hit[1]
-
-    def screen_to_ndc(self, screen_x, screen_y, width, height):
-        """Convert screen coordinates to normalized device coordinates (NDC).
-        
-        Args:
-            screen_x (float): X coordinate in screen space
-            screen_y (float): Y coordinate in screen space
-            
-        Returns:
-            tuple: (x, y) in NDC space (-1 to 1)
-        """
-        # Convert to NDC
-        ndc_x = (2.0 * screen_x) / width - 1.0
-        ndc_y = 1.0 - (2.0 * screen_y) / height  # Flip Y coordinate
-        return ndc_x, ndc_y
-
+        return valid_hits[0][1]
+    

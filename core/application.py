@@ -43,9 +43,9 @@ class Application:
         enable_docking (bool): Enable ImGui docking functionality
     """
 
-    def __init__(self, width, height, title, camera_settings, fonts, default_font, config, enable_docking=True):
-        self.width = width
-        self.height = height
+    def __init__(self, width, height, title, camera_settings, fonts, default_font, config, enable_docking=True, enable_drag_objects=True):
+        self.window_width = width
+        self.window_height = height
         self.title = title
         self.window = None
         self.camera = None
@@ -60,6 +60,7 @@ class Application:
         self.fonts = fonts
         self.default_font = default_font
         self.enable_docking = enable_docking
+        self.enable_drag_objects = enable_drag_objects
         
     def init_core(self):
         """Initialize GLFW, OpenGL context, and application components.
@@ -90,7 +91,7 @@ class Application:
         # Enable vsync
         glfw.window_hint(glfw.DOUBLEBUFFER, True)
 
-        self.window = glfw.create_window(self.width, self.height, self.title, None, None)
+        self.window = glfw.create_window(self.window_width, self.window_height, self.title, None, None)
         if not self.window:
             glfw.terminate()    
             return False
@@ -109,11 +110,11 @@ class Application:
             up=(0, 0, 1),  # Constant up vector
             distance=self.camera_settings['distance']
         )
-        self.mouse = Mouse(self.window, self.camera, self.config)  # Pass parameters instance
+        self.mouse = Mouse(self)
         self.keyboard = Keyboard(self.camera)
         self.renderer = Renderer(self.config, static_max_vertices=20000, static_max_indices=60000, dynamic_max_vertices=20000, dynamic_max_indices=60000)
-        self.object_selection = ObjectSelection(self.camera, self.renderer)
-        self.set_frame_size(self.window, self.width, self.height)
+        self.object_selection = ObjectSelection(self.camera, self.renderer, self.mouse, drag_objects=self.enable_drag_objects)
+        self.set_frame_size(self.window, self.window_width, self.window_height)
 
     def _init_imgui(self):
         self.imgui_manager = ImGuiManager(self.window, enable_docking=self.enable_docking)
@@ -132,8 +133,8 @@ class Application:
             height (int): New window height
         """
         glViewport(0, 0, width, height)
-        self.width = width
-        self.height = height
+        self.window_width = width
+        self.window_height = height
         self.camera.set_aspect_ratio(width, height)
         self.camera.update_projection()
 
@@ -165,7 +166,7 @@ class Application:
         self.imgui_manager.process_inputs()
         self.mouse.process_input()
         self.keyboard.process_input()
-        self.object_selection.process_input(self.width, self.height)
+        self.object_selection.process_input()
 
         self.events() # custon events
         

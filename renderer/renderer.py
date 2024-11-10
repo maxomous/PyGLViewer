@@ -768,7 +768,7 @@ class Renderer:
         geometry = None
         for i in range(len(x)):
             # Create 3D point with z=0
-            point = Geometry.create_point(np.array([x[i], y[i], 0]), color)
+            point = Geometry.create_point(np.array([x[i], y[i], 0]), color).transform(translate, rotate, scale)
             geometry = point if geometry is None else geometry + point
             
         return self.add_object(geometry, buffer_type, GL_POINTS, point_size=point_size, selectable=selectable)
