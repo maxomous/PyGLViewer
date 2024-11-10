@@ -95,11 +95,48 @@ class ExampleApplication(Application):
         arrow_size = self.renderer.ArrowDimensions(shaft_radius=0.2, head_radius=0.4, head_length=0.3)
         self.renderer.add_arrow((-2.4, 1.6, 0.25), (-1.6, 2.4, 0.75), arrow_size, color=Color.RED)
         
-        # Combine dictionaries (body & wireframe)
+        # Dynamic objects (Rotating cubes - body & wireframe)
         self.rotating_cube = {
             **self.renderer.add_blank_object(draw_type=GL_TRIANGLES, buffer_type=BufferType.Dynamic), # body
             **self.renderer.add_blank_object(draw_type=GL_LINES, buffer_type=BufferType.Dynamic) # wireframe
         }
+
+        # Example plots
+        # Create a sine wave
+        x = np.linspace(-3, 3, 100)
+        y = np.sin(x)
+        self.renderer.plot(x, y, 
+                          color=Color.CYAN, 
+                          line_width=2.0,
+                          translate=(-4, 0, 0))  # Move to left side
+
+        # Create a scatter plot in a circular pattern
+        num_points = 50
+        t = np.linspace(0, 2*np.pi, num_points)  # evenly spaced angles
+        radius = 0.8
+        x = radius * np.cos(t)  # x = r * cos(t)
+        y = radius * np.sin(t)  # y = r * sin(t)
+        self.renderer.scatter(x, y,
+                             color=Color.MAGENTA,
+                             point_size=5.0,
+                             translate=(0, 0, 0))  # Center position
+
+        # Create a parabola (y = x²)
+        x = np.linspace(-1.5, 1.5, 100)  # x values from -1 to 1
+        y = x**2                     # parabola equation: y = x²
+        self.renderer.plot(x, y,
+                          color=Color.GREEN,
+                          line_width=2.0,
+                          translate=(4, 0, 0))  # Move to right side
+
+        # Add numbered axes
+        self.renderer.add_numbered_axis(
+            size=5.0,                # Extends from -5 to +5
+            increment=0.5,           # Tick mark every unit
+            axis_color=Color.WHITE,  # Main axes in white
+            tick_color=Color.rgb(200, 200, 200),   # Tick marks in gray
+            line_width=1.0          
+        )
 
     def update_scene(self):
         """Update scene state called every frame."""

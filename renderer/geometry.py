@@ -56,7 +56,6 @@ class GeometryData:
         self.indices = np.array(indices, dtype=np.uint32)
         self.vertex_count = len(vertices)
         self.index_count = len(indices)
-        self.dirty = True  # Track if geometry needs GPU update
         
     def __add__(self, other):
         """Combine two geometries into a single geometry.
@@ -84,7 +83,6 @@ class GeometryData:
         combined_indices = np.concatenate((self.indices, adjusted_other_indices))
 
         result = GeometryData(combined_vertices, combined_indices)
-        result.dirty = True
         return result
 
     def get_vertices(self):
@@ -141,7 +139,6 @@ class GeometryData:
             vertex.normal = normal_matrix @ vertex.normal
             vertex.normal = vertex.normal / np.linalg.norm(vertex.normal)
 
-        self.dirty = True
         return self
     
     def clone(self):
@@ -231,6 +228,57 @@ class Geometry:
             Vertex(p1, color, normal)
         ]
         indices = [0, 1]
+        return GeometryData(vertices, indices)
+
+    @staticmethod
+    def create_linestring(points, color):
+        """Create a connected series of line segments through points.
+        
+        Args:
+            points (list): List of XYZ coordinates for each point
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Combined line segments with shared vertices
+            
+        Raises:
+            ValueError: If fewer than 2 points provided
+        """
+        if len(points) < 2:
+            raise ValueError("Line string requires at least 2 points")
+            
+        vertices = []
+        indices = []
+        
+        # Create vertices for each point
+        for i, point in enumerate(points):
+            # Skip first point as we'll handle it with pairs
+            if i == 0:
+                continue
+                
+            p0 = points[i-1]
+            p1 = point
+            
+            # Calculate normal for this segment (same as create_line)
+            direction = np.array(p1) - np.array(p0)
+            normal = np.cross(direction, [0, 0, 1])
+            norm = np.linalg.norm(normal)
+                
+            if norm > 1e-6:  # If the normal not (close to) zero
+                normal = normal / norm
+            else:  # The line is parallel to z-axis, so we can use any perpendicular vector
+                normal = np.cross(direction, [1, 0, 0])
+                normal = normal / np.linalg.norm(normal)
+            
+            # Add vertices for this segment
+            if i == 1:  # First segment needs both vertices
+                vertices.append(Vertex(p0, color, normal))
+            vertices.append(Vertex(p1, color, normal))
+            
+            # Add indices to connect this segment
+            base_idx = i - 1
+            indices.extend([base_idx, base_idx + 1])
+        
         return GeometryData(vertices, indices)
 
     @staticmethod

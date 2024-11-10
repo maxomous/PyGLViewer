@@ -622,6 +622,56 @@ class Renderer:
             "wireframe": axis_wireframe
         }
 
+    def add_numbered_axis(self, size=5.0, increment=1.0, arrow_dimensions=None, segments=None,
+                     origin_radius=0.035, origin_subdivisions=None, 
+                     origin_color=Color.BLACK, axis_color=Color.WHITE, tick_color=Color.WHITE,
+                     buffer_type=BufferType.Static, line_width=None, 
+                     translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True):
+        """Add coordinate axes with number ticks."""
+        # Create main axes
+        x_axis = Geometry.create_line((-size, 0, 0), (size, 0, 0), axis_color)
+        y_axis = Geometry.create_line((0, -size, 0), (0, size, 0), axis_color)
+        
+        # Create tick marks
+        tick_size = 0.1  # Size of tick marks
+        tick_geometry = None
+        
+        # Generate ticks from -size to +size at increment intervals
+        for i in np.arange(-size + increment, size, increment):
+            if abs(i) < 1e-10:  # Skip origin
+                continue
+                
+            # X-axis tick - slightly offset in z to prevent z-fighting
+            x_tick = Geometry.create_line((i, -tick_size, 0.01), (i, tick_size, 0.01), tick_color)
+            # Y-axis tick - slightly offset in z to prevent z-fighting
+            y_tick = Geometry.create_line((-tick_size, i, 0.01), (tick_size, i, 0.01), tick_color)
+            
+            # Combine with existing geometry
+            if tick_geometry is None:
+                tick_geometry = x_tick + y_tick
+            else:
+                tick_geometry = tick_geometry + x_tick + y_tick
+        
+        # Add origin sphere
+        origin_geometry = Geometry.create_sphere(origin_radius, origin_subdivisions or self.default_subdivisions, origin_color)
+        
+        # Combine geometries
+        axis_geometry = (x_axis + y_axis).transform(translate, rotate, scale)
+        tick_geometry = tick_geometry.transform(translate, rotate, scale) if tick_geometry else None
+        origin_geometry = origin_geometry.transform(translate, rotate, scale)
+        
+        # Create render objects
+        axis_obj = self.add_object(axis_geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
+        tick_obj = self.add_object(tick_geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable) if tick_geometry else None
+        origin_obj = self.add_object(origin_geometry, buffer_type, GL_TRIANGLES, selectable=selectable)
+        
+        return {
+            "axis": axis_obj,
+            "ticks": tick_obj,
+            "origin": origin_obj
+        }
+   
+
     def add_grid(self, size, increment, color, line_width=None, buffer_type=BufferType.Static, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True):
         """Add a grid of lines in the XY plane.
 
@@ -653,9 +703,68 @@ class Renderer:
         grid = self.add_object(geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
         return {"line": grid}
 
+    def plot(self, x, y, color=Color.WHITE, line_width=1.0, buffer_type=BufferType.Static, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True):
+        """Plot a line through a series of x,y points.
+        
+        Parameters
+        ----------
+        x : float or array-like
+            X coordinates
+        y : float or array-like
+            Y coordinates
+        color : Color, optional
+            Line color (default: white)
+        line_width : float, optional
+            Width of the line (default: 1.0)
+        transform : dict, optional
+            Transform to apply to the points (translate, rotate, scale)
+        """
+        # Convert single points to arrays
+        x = np.atleast_1d(x)
+        y = np.atleast_1d(y)
+        
+        if len(x) != len(y):
+            raise ValueError("x and y must have same length")
+            
+        # Add z=0 coordinate to make points 3D
+        points = np.column_stack((x, y, np.zeros_like(x)))
+        geometry = Geometry.create_linestring(points, color).transform(translate, rotate, scale)
+        linestring = self.add_object(geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
+        return {"line": linestring}
 
-#TODO: Dynamically increase buffer size
 
+    def scatter(self, x, y, color=None, point_size=3.0, buffer_type=BufferType.Static, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True):
+        """Create a scatter plot of x,y points.
+        
+        Parameters
+        ----------
+        x : float or array-like
+            X coordinates
+        y : float or array-like
+            Y coordinates
+        color : Color, optional
+            Point color (default: white)
+        point_size : float, optional
+            Size of points (default: 3.0)
+        transform : dict, optional
+            Transform to apply to the points (translate, rotate, scale)
+        """
+        # Convert single points to arrays
+        x = np.atleast_1d(x)
+        y = np.atleast_1d(y)
+        
+        if len(x) != len(y):
+            raise ValueError("x and y must have same length")
+        
+        geometry = None
+        for i in range(len(x)):
+            # Create 3D point with z=0
+            point = Geometry.create_point(np.array([x[i], y[i], 0]), color)
+            geometry = point if geometry is None else geometry + point
+            
+        return self.add_object(geometry, buffer_type, GL_POINTS, point_size=point_size, selectable=selectable)
+           
+           
     def add_blank_object(self, buffer_type=BufferType.Stream, draw_type=GL_TRIANGLES, line_width=None, point_size=None, selectable=True):
         """Add a blank object for a dynamic / stream buffer.
 
