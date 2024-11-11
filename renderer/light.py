@@ -7,6 +7,33 @@ class LightType:
     POINT = 2        # Light radiating in all directions from a point
     SPOT = 3         # Cone-shaped light from a point
 
+"""Three lights:
+- Main directional light from top-right
+- Ambient light for base illumination
+- Fill directional light from opposite side
+"""
+default_lighting = {  
+    'main': {
+        'type': LightType.DIRECTIONAL, 
+        'position': (10, 10, 10), 
+        'target': (0, 0, 0), 
+        'color': (1.0, 0.95, 0.8),
+        'intensity': 0.4
+    },
+    'ambient': {
+        'type': LightType.AMBIENT, 
+        'color': (1, 1, 1), 
+        'intensity': 0.7
+    },
+    'fill': {
+        'type': LightType.DIRECTIONAL, 
+        'position': (-5, 5, -5), 
+        'target': (0, 0, 0), 
+        'color': (0.8, 0.9, 1.0), 
+        'intensity': 0.3
+    }
+}
+
 class Light:
     """Represents a light source in 3D space.
     

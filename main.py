@@ -4,7 +4,7 @@ import glfw
 import numpy as np
 from core.application import Application
 from core.application_ui import render_core_ui
-from core.light import Light, LightType
+from renderer.light import Light, LightType, default_lighting
 from core.object_selection import ObjectSelection
 from renderer.renderer import Renderer
 from renderer.geometry import Geometry
@@ -17,7 +17,7 @@ class ExampleApplication(Application):
     def init(self):
         self.init_ui()
         self.init_variables()
-        self.init_lights()
+        self.renderer.add_lights(default_lighting)
         self.init_geometry()
     
     def init_ui(self):
@@ -35,37 +35,6 @@ class ExampleApplication(Application):
         
         self.object_start_pos = None
         
-    def init_lights(self):
-        """Initialize lighting setup for the scene.
-        Creates and adds three lights:
-        - Main directional light from top-right
-        - Ambient light for base illumination
-        - Fill directional light from opposite side
-        """
-        lights = {  
-            'main': {
-                'type': LightType.DIRECTIONAL, 
-                'position': (10, 10, 10), 
-                'target': (0, 0, 0), 
-                'color': (1.0, 0.95, 0.8),
-                'intensity': 0.4
-            },
-            'ambient': {
-                'type': LightType.AMBIENT, 
-                'color': (1, 1, 1), 
-                'intensity': 0.7
-            },
-            'fill': {
-                'type': LightType.DIRECTIONAL, 
-                'position': (-5, 5, -5), 
-                'target': (0, 0, 0), 
-                'color': (0.8, 0.9, 1.0), 
-                'intensity': 0.3
-            }
-        }
-        for light_data in lights.values():
-            self.renderer.add_light(Light(**light_data))
-
     def init_geometry(self):
         """Create the geometric objects in the scene."""
         # Settings
@@ -73,18 +42,16 @@ class ExampleApplication(Application):
         self.renderer.default_line_width = 1.0 # lines & wireframes
         self.renderer.default_segments = 32 # n segments in circle
     
-        RENDER_AREA = 50
+        GRID_SIZE = 50
         # Cursor 3D point
         self.cursor_3d = self.renderer.add_blank_object(draw_type=GL_POINTS, buffer_type=BufferType.Dynamic, selectable=False)
         self.selected_object = self.renderer.add_blank_object(draw_type=GL_LINES, buffer_type=BufferType.Dynamic, selectable=False)
-        
         # Grid and axis
-        self.renderer.add_grid(RENDER_AREA*2, 1, Color.GRAY, translate=(0, 0, -0.011), selectable=False) # Move grid slightly below z=0 to avoid z-fighting
-        self.renderer.add_grid(RENDER_AREA*2, 10, Color.WHITE, translate=(0, 0, -0.01), selectable=False) # Move grid slightly below z=0 to avoid z-fighting
-        # self.renderer.add_axis(size=1, selectable=False)
-        
-        # Add numbered axes
-        self.renderer.add_numbered_axis(size=RENDER_AREA, increment=0.5, axis_color=Color.WHITE, tick_color=Color.rgb(200, 200, 200), line_width=1.0, tick_size=0.05)
+        translate_grid = (0, 0, -0.002) # Move grid slightly below z=0 to avoid z-fighting
+        self.renderer.add_grid(GRID_SIZE*2, 10, Color.WHITE, translate=translate_grid)
+        self.renderer.add_grid(GRID_SIZE*2, 1, Color.GRAY, translate=translate_grid)
+        self.renderer.add_numbered_axis(size=GRID_SIZE, increment=0.5, axis_color=Color.WHITE, tick_color=Color.rgb(200, 200, 200), line_width=1.0, tick_size=0.05, draw_origin=False, translate=translate_grid)
+        self.axis = self.renderer.add_axis(selectable=False)
         
         # Row 1 - Wireframe Shapes
         self.renderer.add_point((-4, 4, 0), Color.RED, point_size=10)
@@ -114,8 +81,7 @@ class ExampleApplication(Application):
         # Create a sine wave
         x = np.linspace(-3, 3, 25)
         y = np.sin(x)
-        self.renderer.scatter(x, y, 
-                              color=Color.CYAN, 
+        self.renderer.scatter(x, y, color=Color.CYAN, 
                               point_size=5.0,
                               translate=(-3, 0, 0))  # Move to left side
 
@@ -130,6 +96,10 @@ class ExampleApplication(Application):
 
     def update_scene(self):
         """Update scene state called every frame."""
+        # Update axis
+        self.axis['body'].set_transform(scale=(self.camera.distance/10, self.camera.distance/10, self.camera.distance/10))
+        self.axis['wireframe'].set_transform(scale=(self.camera.distance/10, self.camera.distance/10, self.camera.distance/10))
+        
         # Draw cursor point
         if hasattr(self.renderer, 'cursor_pos'):
             point_geometry = Geometry.create_point(self.renderer.cursor_pos, Color.YELLOW)

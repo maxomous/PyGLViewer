@@ -4,9 +4,9 @@ from renderer.geometry import Geometry, Vertex
 from utils.color import Color
 from renderer.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, RenderObject
 from renderer.batch_renderer import BatchRenderer
+from renderer.light import Light
 from typing import Dict, List
 from utils.config import Config
-
 # TODO: buffer_type is not really implemented for static buffer
 # TODO: Remove the 1.01 scaling and replace with a input for every function
 # 1 1 1
@@ -60,15 +60,16 @@ class Renderer:
         """Get all selected objects."""
         return [obj for obj in self.objects if getattr(obj, 'selected', False)]
     
-    def add_light(self, light):
-        """Add a light source to the scene.
+    def add_lights(self, lights):
+        """Add multiple light sources to the scene.
         
         Parameters
         ----------
-        light : Light
-            Light object to add
+        lights : dict
+            Dictionary of light data
         """
-        self.lights.append(light)
+        for light_data in lights.values():
+            self.lights.append(Light(**light_data))
 
     def draw(self, view_matrix, projection_matrix, camera_position, lights):
         """Render all objects in the scene, using batching"""
@@ -636,7 +637,7 @@ class Renderer:
                      origin_radius=0.035, origin_subdivisions=None, 
                      origin_color=Color.BLACK, axis_color=Color.WHITE, tick_color=Color.WHITE,
                      buffer_type=BufferType.Static, line_width=None, tick_size=0.1,
-                     translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
+                     translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False, draw_origin=True):
         """Add coordinate axes with number ticks."""
         # Create main axes
         x_axis = Geometry.create_line((-size, 0, 0), (size, 0, 0), axis_color)
@@ -661,23 +662,24 @@ class Renderer:
             else:
                 tick_geometry = tick_geometry + x_tick + y_tick
         
-        # Add origin sphere
-        origin_geometry = Geometry.create_sphere(origin_radius, origin_subdivisions or self.default_subdivisions, origin_color)
-        
         # Combine geometries
         axis_geometry = (x_axis + y_axis).transform(translate, rotate, scale)
         tick_geometry = tick_geometry.transform(translate, rotate, scale) if tick_geometry else None
-        origin_geometry = origin_geometry.transform(translate, rotate, scale)
         
         # Create render objects
         axis_obj = self.add_object(axis_geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
         tick_obj = self.add_object(tick_geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable) if tick_geometry else None
-        origin_obj = self.add_object(origin_geometry, buffer_type, GL_TRIANGLES, selectable=selectable)
+        
+        # Add origin sphere
+        if origin_radius > 0:
+            origin_geometry = Geometry.create_sphere(origin_radius, origin_subdivisions or self.default_subdivisions, origin_color)
+            origin_geometry = origin_geometry.transform(translate, rotate, scale)
+            origin_obj = self.add_object(origin_geometry, buffer_type, GL_TRIANGLES, selectable=selectable) if draw_origin else None
         
         return {
             "axis": axis_obj,
             "ticks": tick_obj,
-            "origin": origin_obj
+            "origin": origin_obj or None
         }
    
 
