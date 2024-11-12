@@ -4,8 +4,8 @@ import glfw
 import numpy as np
 from core.application import Application
 from core.application_ui import render_core_ui
-from renderer.light import Light, LightType, default_lighting
 from core.object_selection import ObjectSelection, SelectionSettings
+from renderer.light import Light, LightType, default_lighting
 from renderer.renderer import Renderer
 from renderer.geometry import Geometry
 from renderer.objects import BufferType, ObjectCollection
@@ -22,14 +22,12 @@ class ExampleApplication(Application):
     
     def init_ui(self):
         """Initialize UI elements."""
-        imgui.get_style().colors[imgui.COLOR_HEADER] = (0, 0, 0, 0)
-        # imgui.get_style().colors[imgui.COLOR_HEADER_HOVERED] = (0, 0, 0, 0)
-        # imgui.get_style().colors[imgui.COLOR_HEADER_ACTIVE] = (0, 0, 0, 0)
-
+        imgui.get_style().colors[imgui.COLOR_HEADER] = (0, 0, 0, 0) # COLOR_HEADER_HOVERED / COLOR_HEADER_ACTIVE
+        
     def init_variables(self):
         """Variables added to config are saved in a JSON file and can be loaded/saved at runtime"""
-        # Register variable - value will be read from config file if it exists else default value will be used
-        self.config.add("variable 1", 0.001, "Description of variable 1")
+        # Register variable to read/write from config file (if it doesn't exist, default value will be used)
+        self.config.add("variable 1", 0.001, "Description of variable to be saved in config file")
         # Variables can be set like this
         self.config["variable 1"] = 0.002 
                 
@@ -37,8 +35,8 @@ class ExampleApplication(Application):
         """Create the geometric objects in the scene."""
         # Settings
         self.renderer.default_point_size = 3.0
-        self.renderer.default_line_width = 1.0 # lines & wireframes
-        self.renderer.default_segments = 32 # n segments in circle
+        self.renderer.default_line_width = 1.0  # lines & wireframes
+        self.renderer.default_segments = 32     # n segments in circle
     
         GRID_SIZE = 50
         # Grid and axis
@@ -63,29 +61,24 @@ class ExampleApplication(Application):
         arrow_dimensions = self.renderer.ArrowDimensions(shaft_radius=0.2, head_radius=0.4, head_length=0.3)
         self.renderer.add_arrow((-2.4, 1.6, 0.25), (-1.6, 2.4, 0.75), arrow_dimensions, color=Color.PURPLE)
 
-        # Dynamic objects (Rotating cubes - body & wireframe)
+        # Dynamic objects (2 objects, body & wireframe)
         self.rotating_cubes = self.renderer.add_blank_objects({'body': GL_TRIANGLES, 'wireframe': GL_LINES})
 
         # Example plots
         # Create a sine wave
         x = np.linspace(-3, 3, 25)
         y = np.sin(x)
-        self.renderer.scatter(x, y, color=Color.CYAN, 
-                              point_size=5.0,
-                              translate=(-3, 0, 0))  # Move to left side
+        self.renderer.scatter(x, y, color=Color.CYAN, point_size=5.0, translate=(-3, 0, 0))  # Move to left side
 
         # Create a parabola (y = x²)
-        x = np.linspace(-1.5, 1.5, 100)  # x values from -1 to 1
-        y = x**2                     # parabola equation: y = x²
-        self.renderer.plot(x, y,
-                          color=Color.GREEN,
-                          line_width=2.0,
-                          translate=(3, -1, 0))  # Move to right side
+        x = np.linspace(-1.5, 1.5, 100) # x values from -1 to 1
+        y = x**2                        # parabola equation: y = x²
+        self.renderer.plot(x, y, color=Color.GREEN, line_width=2.0, translate=(3, -1, 0))  # Move to right side
 
 
     def update_scene(self):
         """Update dynamic objects in the scene, called every frame."""
-        # Update axis
+        # Update axis size
         self.axis.set_transform(scale=(self.camera.distance/10, self.camera.distance/10, self.camera.distance/10))
         
         # Rotating cube
@@ -111,20 +104,23 @@ class ExampleApplication(Application):
         if io.want_capture_keyboard:
             return
 
-        # Example: Check for specific key presses
+        # Space pressed
         if imgui.is_key_pressed(glfw.KEY_SPACE):
-            print("Space pressed!")
-        
+            pass 
+        # Left mouse button pressed
+        if imgui.is_mouse_down(glfw.MOUSE_BUTTON_LEFT):
+            pass 
             
     def render_ui_window(self):
-        """Render the example UI window."""
+        """Example UI window."""
         imgui.begin('Example Window', flags=imgui.WINDOW_HORIZONTAL_SCROLLING_BAR)
+        # Render core UI elements (mouse, camera etc.)
         render_core_ui(self.camera, self.renderer, self.config, self.timer, self.imgui_manager)
         
         imgui.end()
 
     def render_ui(self):
-        """Render UI elements."""
+        """Render your UI elements."""
         imgui.show_demo_window()
         self.render_ui_window()
 
