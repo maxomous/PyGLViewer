@@ -7,10 +7,11 @@ class LightType:
     POINT = 2        # Light radiating in all directions from a point
     SPOT = 3         # Cone-shaped light from a point
 
-"""Three lights:
-- Main directional light from top-right
-- Ambient light for base illumination
-- Fill directional light from opposite side
+
+""" Default lighting:
+    - Main directional light from top-right
+    - Ambient light for base illumination
+    - Fill directional light from opposite side
 """
 default_lighting = {  
     'main': {

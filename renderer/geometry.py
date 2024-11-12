@@ -41,6 +41,7 @@ class GeometryData:
     """
     Container for 3D geometry data including vertices and indices.
     Provides methods for combining and transforming geometric objects.
+    Vertices are stored in their transformed state.
 
     Attributes:
         vertices (list[Vertex]): List of vertices defining the geometry
