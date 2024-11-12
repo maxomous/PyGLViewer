@@ -126,9 +126,9 @@ class VertexArray:
         if hasattr(self, 'deleted') and not self.deleted:
             self.shutdown()
 
-class RenderObject:
+class Object:
     """Represents a renderable object with vertex, index buffers, and shader."""
-    def __init__(self, vertex_data, index_data, draw_type, line_width=1.0, point_size=1.0, buffer_type=BufferType.Dynamic, selectable=True):
+    def __init__(self, vertex_data, index_data, draw_type, line_width, point_size, buffer_type, selectable):
         global global_object_counter
         self.id = global_object_counter
         global_object_counter += 1 
@@ -217,6 +217,11 @@ class RenderObject:
         """Update the index data of this render object."""
         self.index_data = np.array(data, dtype=np.uint32)
 
+    def set_geometry_data(self, geometry):
+        """Update the vertex and index data from a geometry object."""
+        self.set_vertex_data(geometry.get_vertices())
+        self.set_index_data(geometry.get_indices())
+            
     def set_transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
         """Set the transform matrix."""
         self.model_matrix = Transform(translate, rotate, scale).transform_matrix().T
@@ -244,3 +249,18 @@ class RenderObject:
         """Toggle the selection state of this object."""
         if self.selectable:
             self.selected = not self.selected
+
+
+class ObjectCollection:
+    def __init__(self, objects: dict[str, Object]):
+        self.objects = objects
+        
+    def __getitem__(self, key: str) -> Object:
+        return self.objects[key]
+        
+    def __setitem__(self, key: str, value: Object):
+        self.objects[key] = value
+        
+    def set_transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
+        for object in self.objects.values():
+            object.set_transform(translate, rotate, scale)

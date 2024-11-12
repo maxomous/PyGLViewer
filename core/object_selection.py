@@ -1,25 +1,39 @@
 import numpy as np
 import imgui
+from OpenGL.GL import GL_POINTS, GL_LINES
 from renderer.renderer import Renderer
+from renderer.geometry import Geometry
+from renderer.objects import BufferType
+from utils.color import Color
+
+class SelectionSettings:
+    def __init__(self, show_cursor_point=True, select_objects=True, drag_objects=False):
+        self.show_cursor_point = show_cursor_point
+        self.select_objects = select_objects
+        self.drag_objects = drag_objects
 
 class ObjectSelection:
     """Handles object selection based on mouse input."""
-    def __init__(self, camera, renderer: Renderer, mouse, drag_objects=True):
+    def __init__(self, camera, renderer: Renderer, mouse, settings: SelectionSettings):
         self.camera = camera
         self.renderer = renderer
         self.mouse = mouse
-        self.drag_objects = drag_objects
-    
+        self.settings = settings
+        self.target_edge_length = 0.02
+        self.cursor_point = self.renderer.add_blank_object(draw_type=GL_POINTS, buffer_type=BufferType.Dynamic, selectable=False)
+        self.selected_object = self.renderer.add_blank_object(draw_type=GL_LINES, buffer_type=BufferType.Dynamic, selectable=False)
+        
     def process_input(self):
         if imgui.get_io().want_capture_mouse:
             return
 
         self.process_select()
-        if self.drag_objects:
-            self.process_drag()
+        self.process_drag()
+        self.process_cursor_point()
+        self.process_selection_targets()
     
     def process_select(self):
-        if not self.camera.is_2d_mode:
+        if not self.settings.select_objects or not self.camera.is_2d_mode:
             return
         
         io = imgui.get_io()
@@ -39,6 +53,9 @@ class ObjectSelection:
             
     def process_drag(self):
         '''Drag selected objects with left mouse button pressed.'''
+        if not self.settings.drag_objects:
+            return
+        
         # Drag selected objects
         if imgui.is_mouse_dragging(imgui.MOUSE_BUTTON_LEFT):
             selected_objects = self.renderer.get_selected_objects() 
@@ -59,6 +76,27 @@ class ObjectSelection:
         if imgui.is_mouse_released(imgui.MOUSE_BUTTON_LEFT):
             self.object_start_pos = None
             
+    def process_cursor_point(self):
+        # Draw cursor point
+        if hasattr(self.renderer, 'cursor_pos'):
+            self.cursor_point.set_geometry_data(Geometry.create_point(self.renderer.cursor_pos, color=Color.WHITE))
+        
+    def process_selection_targets(self):
+        # Draw target on selected objects
+        selected_geometry = Geometry.create_blank()
+        # Get object under cursor
+        if selected_objects := self.renderer.get_selected_objects():
+            # Create a single geometry with multiple rectangles to indicate each selected object
+            for i, obj in enumerate(selected_objects):
+                if bounds := obj.get_bounds():
+                    offset = self.camera.distance * 0.01
+                    width, height, _ = (bounds['max'] - bounds['min']) + np.array([offset, offset, 0])
+                    mid_x, mid_y, _ = obj.get_mid_point()
+                    edge_length = self.camera.distance * self.target_edge_length
+                    selected_geometry += Geometry.create_rectangle_target(mid_x, mid_y, width, height, edge_length, Color.WHITE) 
+
+        self.selected_object.set_geometry_data(selected_geometry)
+        
     def get_object_under_cursor(self, cursor_x, cursor_y):
         """Determine which object is under the cursor"""
         world_pos = self.mouse.screen_to_world(cursor_x, cursor_y)
@@ -77,4 +115,3 @@ class ObjectSelection:
         # Sort by distance and get closest
         valid_hits.sort(key=lambda x: x[0])
         return valid_hits[0][1]
-    

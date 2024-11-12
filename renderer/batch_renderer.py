@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional
 import numpy as np
 from OpenGL.GL import *
-from renderer.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, RenderObject
+from renderer.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, Object
 from renderer.shaders import Shader, vertex_shader_lighting, fragment_shader_lighting  
 
     
@@ -36,7 +36,7 @@ class BatchRenderer:
         self.shader = shader or Shader(vertex_shader_lighting, fragment_shader_lighting) # Default shader if None
         
         # Batch storage
-        self.batches: Dict[str, List[RenderObject]] = {}
+        self.batches: Dict[str, List[Object]] = {}
         
         # Calculate vertex size: 3 (pos) + 3 (color) + 3 (normal) = 9 floats
         self.vertex_size = 9 * np.dtype(np.float32).itemsize  # Size in bytes
@@ -145,7 +145,7 @@ class BatchRenderer:
         self.vertex_count = 0
         self.index_count = 0
     
-    def add_object(self, render_object: RenderObject):
+    def add_object(self, render_object: Object):
         """Submit a render object to the appropriate batch.
         
         Parameters

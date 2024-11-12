@@ -5,10 +5,10 @@ import numpy as np
 from core.application import Application
 from core.application_ui import render_core_ui
 from renderer.light import Light, LightType, default_lighting
-from core.object_selection import ObjectSelection
+from core.object_selection import ObjectSelection, SelectionSettings
 from renderer.renderer import Renderer
 from renderer.geometry import Geometry
-from renderer.objects import BufferType
+from renderer.objects import BufferType, ObjectCollection
 from utils.color import Color
 from utils.config import Config   
 
@@ -32,9 +32,7 @@ class ExampleApplication(Application):
         self.config.add("variable 1", 0.001, "Description of variable 1")
         # Variables can be set like this
         self.config["variable 1"] = 0.002 
-        
-        self.object_start_pos = None
-        
+                
     def init_geometry(self):
         """Create the geometric objects in the scene."""
         # Settings
@@ -43,39 +41,30 @@ class ExampleApplication(Application):
         self.renderer.default_segments = 32 # n segments in circle
     
         GRID_SIZE = 50
-        # Cursor 3D point
-        self.cursor_3d = self.renderer.add_blank_object(draw_type=GL_POINTS, buffer_type=BufferType.Dynamic, selectable=False)
-        self.selected_object = self.renderer.add_blank_object(draw_type=GL_LINES, buffer_type=BufferType.Dynamic, selectable=False)
         # Grid and axis
         translate_grid = (0, 0, -0.002) # Move grid slightly below z=0 to avoid z-fighting
         self.renderer.add_grid(GRID_SIZE*2, 10, Color.WHITE, translate=translate_grid)
         self.renderer.add_grid(GRID_SIZE*2, 1, Color.GRAY, translate=translate_grid)
         self.renderer.add_numbered_axis(size=GRID_SIZE, increment=0.5, axis_color=Color.WHITE, tick_color=Color.rgb(200, 200, 200), line_width=1.0, tick_size=0.05, draw_origin=False, translate=translate_grid)
-        self.axis = self.renderer.add_axis(selectable=False)
+        self.axis = self.renderer.add_axis()
         
-        # Row 1 - Wireframe Shapes
+        # Wireframe Shapes
         self.renderer.add_point((-4, 4, 0), Color.RED, point_size=10)
         self.renderer.add_line((-2.5, 3.5, 0), (-1.5, 4.5, 0), Color.ORANGE, line_width=5)
         self.renderer.add_triangle((0, 4.433, 0), (-0.5, 3.567, 0), (0.5, 3.567, 0), wireframe_color=Color.YELLOW, show_body=False)
         self.renderer.add_rectangle((2, 4), 1, 1, wireframe_color=Color.GREEN, show_body=False)
         self.renderer.add_circle(position=(4, 4, 0), radius=0.5, wireframe_color=Color.BLUE, show_body=False)
 
-
-        # Row 2 - Filled Shapes
+        # Filled Shapes
         self.renderer.add_circle(position=(-4, 2, 0), radius=0.5, color=Color.GREEN)
-        # self.renderer.add_cube(Color.RED, translate=(-2, 2, 0.5), scale=(0.5, 0.5, 0.5), rotate=(np.pi/4, np.pi/4, 0), buffer_type=BufferType.Dynamic)
         self.renderer.add_cone(Color.rgb(255, 165, 0), segments=16, translate=(0, 2, 0.25), scale=(0.5, 0.5, 0.5))
         self.renderer.add_cylinder(Color.MAGENTA, translate=(2, 2, 0.25), scale=(0.5, 0.5, 0.5))
         self.renderer.add_sphere(translate=(4, 2, 0.5), radius=0.25, subdivisions=4, color=Color.RED)
-        # Row 3 - Filled Shapes
-        arrow_size = self.renderer.ArrowDimensions(shaft_radius=0.2, head_radius=0.4, head_length=0.3)
-        self.renderer.add_arrow((-2.4, 1.6, 0.25), (-1.6, 2.4, 0.75), arrow_size, color=Color.PURPLE)
-        
+        arrow_dimensions = self.renderer.ArrowDimensions(shaft_radius=0.2, head_radius=0.4, head_length=0.3)
+        self.renderer.add_arrow((-2.4, 1.6, 0.25), (-1.6, 2.4, 0.75), arrow_dimensions, color=Color.PURPLE)
+
         # Dynamic objects (Rotating cubes - body & wireframe)
-        self.rotating_cube = {
-            **self.renderer.add_blank_object(draw_type=GL_TRIANGLES, buffer_type=BufferType.Dynamic), # body
-            **self.renderer.add_blank_object(draw_type=GL_LINES, buffer_type=BufferType.Dynamic) # wireframe
-        }
+        self.rotating_cubes = self.renderer.add_blank_objects({'body': GL_TRIANGLES, 'wireframe': GL_LINES})
 
         # Example plots
         # Create a sine wave
@@ -95,64 +84,25 @@ class ExampleApplication(Application):
 
 
     def update_scene(self):
-        """Update scene state called every frame."""
+        """Update dynamic objects in the scene, called every frame."""
         # Update axis
-        self.axis['body'].set_transform(scale=(self.camera.distance/10, self.camera.distance/10, self.camera.distance/10))
-        self.axis['wireframe'].set_transform(scale=(self.camera.distance/10, self.camera.distance/10, self.camera.distance/10))
+        self.axis.set_transform(scale=(self.camera.distance/10, self.camera.distance/10, self.camera.distance/10))
         
-        # Draw cursor point
-        if hasattr(self.renderer, 'cursor_pos'):
-            point_geometry = Geometry.create_point(self.renderer.cursor_pos, Color.YELLOW)
-            self.cursor_3d['line'].set_vertex_data(point_geometry.get_vertices())
-            self.cursor_3d['line'].set_index_data(point_geometry.get_indices())
-        
-        # Get object under cursor
-        if selected_objects := self.renderer.get_selected_objects():
-            # Create a single geometry with multiple rectangles to indicate each selected object
-            selected_geometry = []
-            for i, obj in enumerate(selected_objects):
-                if bounds := obj.get_bounds():
-                    offset = self.camera.distance * 0.01
-                    width, height, _ = (bounds['max'] - bounds['min']) + np.array([offset, offset, 0])
-                    selected_geometry.append(Geometry.create_rectangle_target(*obj.get_mid_point()[:2], width, height, edge_length=self.camera.distance/50, color=Color.WHITE)) 
-            selected_geometry = sum(selected_geometry, Geometry.create_blank())
-        else:
-            selected_geometry = Geometry.create_blank()
-            
-        self.selected_object['line'].set_vertex_data(selected_geometry.get_vertices())
-        self.selected_object['line'].set_index_data(selected_geometry.get_indices())
-
-
         # Rotating cube
         rotate_geometry = (0, 0, self.timer.oscillate_angle(speed=0.6))
         rotate_object = (0, 0, self.timer.oscillate_angle(speed=0.5))
-
-        # TODO: Update geometry only when required, set the model matrix instead of transforming the geometry
-        rotating_cube_geometry = \
-            Geometry.create_cube(size=0.5, color=Color.YELLOW) \
-                .transform(translate=(-1, 0, 0.5), rotate=rotate_geometry) + \
-            Geometry.create_cube(size=0.5, color=Color.GREEN) \
-                .transform(translate=(1, 0, 0.5), rotate=rotate_geometry)
-
-        
-        # TODO: Sort objects make one combined class
-        # Update vertex data
-        self.rotating_cube['body'].set_vertex_data(rotating_cube_geometry.get_vertices())
-        self.rotating_cube['body'].set_index_data(rotating_cube_geometry.get_indices()) # TODO: only needed first frame
-        self.rotating_cube['body'].set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), 0, 0), rotate=rotate_object)
-        
-
-        rotating_cube_wireframe = \
-            Geometry.create_cube_wireframe(size=0.5, color=Color.BLACK) \
-                .transform(translate=(-1, 0, 0.5), rotate=rotate_geometry, scale=(1.0001, 1.0001, 1.0001)) + \
-            Geometry.create_cube_wireframe(size=0.5, color=Color.BLACK) \
-                .transform(translate=(1, 0, 0.5), rotate=rotate_geometry, scale=(1.0001, 1.0001, 1.0001))
-        
-        # Update vertex data
-        self.rotating_cube['line'].set_vertex_data(rotating_cube_wireframe.get_vertices())
-        self.rotating_cube['line'].set_index_data(rotating_cube_wireframe.get_indices()) # TODO: only needed first frame
-        self.rotating_cube['line'].set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), 0, 0), rotate=rotate_object)
-        
+        # Rotating cubes
+        self.rotating_cubes['body'].set_geometry_data(
+            Geometry.create_cube(size=0.5, color=Color.YELLOW).transform(translate=(-1, 0, 0.5), rotate=rotate_geometry) +
+            Geometry.create_cube(size=0.5, color=Color.GREEN).transform(translate=(1, 0, 0.5), rotate=rotate_geometry)
+        )
+        self.rotating_cubes['wireframe'].set_geometry_data(
+            Geometry.create_cube_wireframe(size=0.5, color=Color.BLACK).transform(translate=(-1, 0, 0.5), rotate=rotate_geometry, scale=(1.0001, 1.0001, 1.0001)) +
+            Geometry.create_cube_wireframe(size=0.5, color=Color.BLACK).transform(translate=(1, 0, 0.5), rotate=rotate_geometry, scale=(1.0001, 1.0001, 1.0001))
+        )
+        # Translate & rotate cube objects
+        self.rotating_cubes.set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), 0, 0), rotate=rotate_object)
+    
         
     def events(self):
         """Process custom input events specific to your application."""
@@ -179,11 +129,7 @@ class ExampleApplication(Application):
         self.render_ui_window()
 
 if __name__ == '__main__':
-    """
-    Application entry point. Sets up window, camera, and fonts 
-    before starting the render loop.
-    """
-    # Create application with settings
+    """ Setup your application"""
     app = ExampleApplication(
         width=1280,
         height=720,
@@ -201,9 +147,14 @@ if __name__ == '__main__':
         default_font='arial-medium',
         config=Config('config.json'),
         enable_docking=True,
-        enable_drag_objects=False
+        selection_settings=SelectionSettings(
+            show_cursor_point=True,
+            select_objects=True,
+            drag_objects=False
+        )
     )
     
+    """ Initialise application & start the render loop. """
     if app.init_core():
         app.init()
         app.main_loop()

@@ -3,7 +3,7 @@ from OpenGL.GL import *
 from core.camera import ThirdPersonCamera
 from core.keyboard import Keyboard
 from core.mouse import Mouse
-from core.object_selection import ObjectSelection
+from core.object_selection import ObjectSelection, SelectionSettings
 from renderer.renderer import Renderer
 from utils.timer import Timer
 from utils.config import Config
@@ -41,9 +41,10 @@ class Application:
         default_font (str): Name of default font to use
         config (Config): Configuration container with custom variables which are saved to a JSON file
         enable_docking (bool): Enable ImGui docking functionality
+        selection_settings (dict): Selection settings
     """
 
-    def __init__(self, width, height, title, camera_settings, fonts, default_font, config, enable_docking=True, enable_drag_objects=True):
+    def __init__(self, width, height, title, camera_settings, fonts, default_font, config, enable_docking, selection_settings: SelectionSettings):
         self.window_width = width
         self.window_height = height
         self.title = title
@@ -60,7 +61,7 @@ class Application:
         self.fonts = fonts
         self.default_font = default_font
         self.enable_docking = enable_docking
-        self.enable_drag_objects = enable_drag_objects
+        self.selection_settings = selection_settings
         
     def init_core(self):
         """Initialize GLFW, OpenGL context, and application components.
@@ -113,7 +114,8 @@ class Application:
         self.mouse = Mouse(self)
         self.keyboard = Keyboard(self.camera)
         self.renderer = Renderer(self.config, static_max_vertices=20000, static_max_indices=60000, dynamic_max_vertices=20000, dynamic_max_indices=60000)
-        self.object_selection = ObjectSelection(self.camera, self.renderer, self.mouse, drag_objects=self.enable_drag_objects)
+        
+        self.object_selection = ObjectSelection(self.camera, self.renderer, self.mouse, self.selection_settings)
         self.set_frame_size(self.window, self.window_width, self.window_height)
 
     def _init_imgui(self):
