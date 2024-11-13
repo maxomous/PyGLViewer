@@ -1,7 +1,7 @@
 {
-  "mouse.rotate_sensitivity": 0.1,
-  "mouse.base_pan_sensitivity": 0.0135,
-  "mouse.base_scroll_sensitivity": 0.6,
+  "mouse.rotate_sensitivity": 0.10000000149011612,
+  "mouse.base_pan_sensitivity": 0.013500000350177288,
+  "mouse.base_scroll_sensitivity": 0.6000000238418579,
   "mouse.invert_pan": [
     -1,
     -1
@@ -16,5 +16,12 @@
     0.3436200022697449,
     0.40084001421928406
   ],
-  "variable 1": 0.002
+  "variable 1": 0.0020000000949949026,
+  "variable 2": [
+    0.5,
+    0.5,
+    0.6140000224113464
+  ],
+  "variable 3": 2,
+  "variable 4": true
 }

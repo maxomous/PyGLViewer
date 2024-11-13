@@ -11,6 +11,8 @@ from renderer.geometry import Geometry
 from renderer.objects import BufferType, ObjectCollection
 from utils.color import Color
 from utils.config import Config   
+from utils.timer import Timer
+from utils.transform import Transform
 
 class ExampleApplication(Application):
     
@@ -36,11 +38,11 @@ class ExampleApplication(Application):
         """
         Variables can be added to a config file (JSON format) which can be loaded/saved at runtime
         """
-        # Register variable to read/write from config file (if it doesn't exist, default value will be used)
-        self.config.add("variable 1", 0.001, "Description of variable to be saved in config file")
-        # Variables can be set like this
-        self.config["variable 1"] = 0.002 
-                
+        self.config.add("variable 1", 0.5, "Value of float slider")
+        self.config.add("variable 2", (0.5, 0.5, 0.5), "Value of float slider 3D")
+        self.config.add("variable 3", 2, "Value of dropdown")
+        self.config.add("variable 4", True, "Value of checkbox")
+    
     def init_geometry(self):
         """
         Create objects using either:
@@ -142,21 +144,44 @@ class ExampleApplication(Application):
         if imgui.is_mouse_down(glfw.MOUSE_BUTTON_LEFT):
             pass 
             
+    def render_core_ui_window(self):
+        """
+        Creates a UI window for core settings.
+        """
+        imgui.begin('Core', flags=imgui.WINDOW_HORIZONTAL_SCROLLING_BAR)
+        render_core_ui(self.camera, self.renderer, self.config, self.timer, self.imgui_manager)
+        imgui.end()
+
     def render_ui_window(self):
         """
-        An example UI window.
+        An example UI window demonstrating various ImGui widgets.
         """
         imgui.begin('Example Window', flags=imgui.WINDOW_HORIZONTAL_SCROLLING_BAR)
-        # Render core UI elements (mouse, camera etc.)
-        render_core_ui(self.camera, self.renderer, self.config, self.timer, self.imgui_manager)
-        
+        # Text
+        imgui.text("Basic widgets")
+        # Buttons
+        if imgui.button("Click Me!", width=100, height=30):
+            print("Button clicked!")
+        # Sliders - this variable is stored in the config file
+        changed, self.config["variable 1"] = imgui.slider_float("Float Slider", self.config["variable 1"], 0.0, 1.0)
+        # Sliders - this variable is stored in the config file
+        changed, self.config["variable 2"] = imgui.slider_float3("Float Slider 3D", self.config["variable 2"], 0.0, 1.0)
+        # Combo box (dropdown)
+        items = ["Option 1", "Option 2", "Option 3"]
+        changed, self.config["variable 3"] = imgui.combo("Dropdown", self.config["variable 3"], items)
+        # Checkbox
+        changed, self.config["variable 4"] = imgui.checkbox("Checkbox", self.config["variable 4"])
+        # End UI window
         imgui.end()
 
     def render_ui(self):
         """
-        Render the UI elements.
+        Render all of the UI windows here.
+        The imgui demo window shows all of the available ImGui functions.
+        The code is here: https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp 
         """
         imgui.show_demo_window()
+        self.render_core_ui_window()
         self.render_ui_window()
 
 if __name__ == '__main__':

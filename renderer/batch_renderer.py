@@ -4,11 +4,6 @@ from OpenGL.GL import *
 from renderer.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, Object
 from renderer.shaders import Shader, vertex_shader_lighting, fragment_shader_lighting  
 
-    
-
-    #     # TODO: handle buffer_type for static and stream
-    # def add_object_base(self, vertices, indices, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None):
-    
 class BatchRenderer:
     """Efficient batch renderer for OpenGL objects."""
     

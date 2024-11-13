@@ -9,12 +9,6 @@ from typing import Dict, List
 from utils.config import Config
 # TODO: buffer_type is not really implemented for static buffer
 # TODO: Remove the 1.01 scaling and replace with a input for every function
-# 1 0 1
-# 1 0 0
-# 1 1 0
-# 1 1 1
-# 0 1 1
-# 0 0 1
 
 class Renderer:
     """OpenGL renderer for managing 3D objects, lights, and scene rendering.
@@ -933,9 +927,6 @@ class Renderer:
         
         line_width = line_width or self.default_line_width
         point_size = point_size or self.default_point_size
-        
-        
-        # TODO: handle buffer_type for static and stream
         
         obj = Object(vertices, indices, draw_type, line_width, point_size, buffer_type, selectable)
          
