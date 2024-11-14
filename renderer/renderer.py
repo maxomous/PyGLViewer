@@ -4,7 +4,7 @@ from renderer.geometry import Geometry, Vertex
 from utils.color import Color
 from renderer.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, Object, ObjectCollection
 from renderer.batch_renderer import BatchRenderer
-from renderer.light import Light
+from renderer.light import Light, default_lighting
 from typing import Dict, List
 from utils.config import Config
 # TODO: buffer_type is not really implemented for static buffer
@@ -32,7 +32,17 @@ class Renderer:
         self.default_face_color = Color.WHITE
         self.default_wireframe_color = Color.BLACK
         self.default_arrow_dimensions = Renderer.ArrowDimensions(shaft_radius=0.03, head_radius=0.06, head_length=0.1)
-        
+        self.default_axis_ticks = [
+            { 'increment': 1,    'tick_size': 0.08,   'line_width': 3, 'tick_color': Color.rgb(200, 200, 200) }, 
+            { 'increment': 0.5,  'tick_size': 0.04,  'line_width': 3, 'tick_color': Color.rgb(200, 200, 200) }, 
+            { 'increment': 0.1,  'tick_size': 0.02,  'line_width': 3, 'tick_color': Color.rgb(200, 200, 200) }
+        ]
+        self.default_grid_params = [ 
+            {'increment': 0, 'color': Color.rgb(200, 200, 200), 'line_width': 3.0},
+            {'increment': 1, 'color': Color.rgb(200, 200, 200), 'line_width': 1.0},
+            {'increment': 0.1, 'color': Color.rgb(150, 150, 150), 'line_width': 1.0}
+        ]
+
         # Initialize OpenGL state
         glEnable(GL_DEPTH_TEST)     # Enable depth testing
         glEnable(GL_CULL_FACE)      # Enable back-face culling
@@ -63,6 +73,12 @@ class Renderer:
         """
         for light_data in lights.values():
             self.lights.append(Light(**light_data))
+
+    def get_lights(self):
+        """Get all lights."""
+        if not self.lights:
+            self.add_lights(default_lighting)
+        return self.lights
 
     def draw(self, view_matrix, projection_matrix, camera_position, lights):
         """Render all objects in the scene, using batching"""
@@ -661,23 +677,21 @@ class Renderer:
         axis_wireframe = self.add_object(wireframe, buffer_type, GL_LINES, line_width=line_width, selectable=selectable) if show_wireframe else None
         return ObjectCollection({'body': axis_body, 'wireframe': axis_wireframe})
 
-    def add_numbered_axis(self, size=5.0, increment=1.0, arrow_dimensions=None, segments=None,
-                     origin_radius=0.035, origin_subdivisions=None, 
-                     origin_color=Color.BLACK, axis_color=Color.WHITE, tick_color=Color.WHITE,
-                     buffer_type=BufferType.Static, line_width=None, tick_size=0.1,
-                     translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False, draw_origin=True):
-        """Add coordinate axes with number ticks.
+    def add_axis_ticks(self, size=5.0, axis_tick_params=None, buffer_type=BufferType.Static,
+                     translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
+        """Add ticks to the axis with multiple increment sizes.
         
         Parameters
         ----------
         size : float, optional
             Length of axis arrows
-        increment : float, optional
-            Spacing between grid lines
-        color : Color, optional
-            Grid line color
-        line_width : float, optional
-            Grid line width (default is self.default_line_width)
+        axis_tick_params : list of dict, optional
+            List of tick specifications, each containing:
+            - 'increment': spacing between ticks
+            - 'tick_size': size of ticks
+            - 'tick_color': color of ticks
+            - 'line_width': width of lines
+            If None, uses self.default_axis_ticks
         buffer_type : BufferType, optional
             Static or Dynamic buffer
         translate : tuple, optional
@@ -686,78 +700,123 @@ class Renderer:
             Rotation angles (x,y,z)
         scale : tuple, optional
             Scale factors (x,y,z)
-
-        Returns
-        -------
-        ObjectCollection
-            Collection containing 'axis', 'ticks', and 'origin' objects
-        """
-        objects = {}
-        
-        x_axis = Geometry.create_line((-size, 0, 0), (size, 0, 0), axis_color)
-        y_axis = Geometry.create_line((0, -size, 0), (0, size, 0), axis_color)
-        
-        axis_geometry = (x_axis + y_axis).transform(translate, rotate, scale)
-        objects['axis'] = self.add_object(axis_geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
-
-        # Add ticks if they exist
-        tick_geometry = None
-        for i in np.arange(-size + increment, size, increment):
-            if abs(i) < 1e-10:  # Skip origin
-                continue
-                
-            x_tick = Geometry.create_line((i, -tick_size, 0.01), (i, tick_size, 0.01), tick_color)
-            y_tick = Geometry.create_line((-tick_size, i, 0.01), (tick_size, i, 0.01), tick_color)
-            
-            if tick_geometry is None:
-                tick_geometry = x_tick + y_tick
-            else:
-                tick_geometry = tick_geometry + x_tick + y_tick
-
-        if tick_geometry:
-            tick_geometry = tick_geometry.transform(translate, rotate, scale)
-            objects['ticks'] = self.add_object(tick_geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
-        
-        # Add origin if requested
-        if origin_radius > 0 and draw_origin:
-            origin_geometry = Geometry.create_sphere(origin_radius, origin_subdivisions or self.default_subdivisions, origin_color)
-            origin_geometry = origin_geometry.transform(translate, rotate, scale)
-            objects['origin'] = self.add_object(origin_geometry, buffer_type, GL_TRIANGLES, selectable=selectable)
-        
-        return ObjectCollection(objects)
-
-    def add_grid(self, size, increment, color, line_width=None, buffer_type=BufferType.Static, 
-                translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
-        """Add a grid of lines in the XY plane.
-        
-        Parameters
-        ----------
-        size : float
-            Grid size (extends from -size to +size)
-        increment : float
-            Spacing between grid lines
-        color : Color
-            Grid line color
-        line_width : float, optional
-            Grid line width (default is self.default_line_width)
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
+        selectable : bool, optional
+            Allow object to be selected
 
         Returns
         -------
         RenderObject
-            Grid line render object
+            Tick render object
         """
-        geometry = Geometry.create_grid(size, increment, color).transform(translate, rotate, scale)
-        grid = self.add_object(geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
-        return grid
+        tick_geometry = None
+        
+        # Use default ticks if none provided
+        tick_params = axis_tick_params or self.default_axis_ticks
+        
+        # Sort by increment size (largest first) to ensure proper rendering order
+        tick_params = sorted(tick_params, key=lambda x: x['increment'], reverse=True)
+        
+        # Create geometry for each increment level
+        for params in tick_params:
+            increment = params['increment']
+            tick_size = params['tick_size']
+            tick_color = params['tick_color']
+            line_width = params.get('line_width', self.default_line_width)
+            
+            for i in np.arange(-size + increment, size + increment/2, increment):  # Added increment/2 to ensure last tick is included
+                if abs(i) < 1e-10:  # Skip origin
+                    continue
+                    
+                x_tick = Geometry.create_line((i, -tick_size, 0), (i, tick_size, 0), tick_color)
+                y_tick = Geometry.create_line((-tick_size, i, 0), (tick_size, i, 0), tick_color)
+                
+                if tick_geometry is None:
+                    tick_geometry = x_tick + y_tick
+                else:
+                    tick_geometry = tick_geometry + x_tick + y_tick
 
+        if tick_geometry is None:
+            return None
+        
+        tick_geometry = tick_geometry.transform(translate, rotate, scale)
+        return self.add_object(tick_geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
+
+    def add_grid(self, size, grid_params=None, buffer_type=BufferType.Static,
+                translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
+        """Add a grid with multiple increment sizes.
+        
+        Parameters
+        ----------
+        size : float
+            Size of the grid
+        grid_params : list of dict, optional
+            List of grid specifications, each containing:
+            - 'increment': spacing between grid lines (0 for main axes)
+            - 'color': color of grid lines
+            - 'line_width': width of lines
+            If None, uses self.default_grid_params
+        buffer_type : BufferType, optional
+            Static or Dynamic buffer
+        translate : tuple, optional
+            Translation vector (x,y,z)
+        rotate : tuple, optional
+            Rotation angles (x,y,z)
+        scale : tuple, optional
+            Scale factors (x,y,z)
+        selectable : bool, optional
+            Allow object to be selected
+
+        Returns
+        -------
+        RenderObject
+            Grid render object
+        """
+        grid_params = grid_params or self.default_grid_params
+        grid_params = sorted(grid_params, key=lambda x: (x['increment'] == 0, -x['increment']))
+        
+        objects = []  # Store separate objects for each line width
+        
+        # Create geometry for each increment level
+        for params in grid_params:
+            increment = params['increment']
+            color = params['color']
+            line_width = params.get('line_width', self.default_line_width)
+            
+            grid_geometry = None
+            
+            if increment == 0:
+                # Draw main axes
+                x_axis = Geometry.create_line((-size, 0, 0), (size, 0, 0), color)
+                y_axis = Geometry.create_line((0, -size, 0), (0, size, 0), color)
+                grid_geometry = x_axis + y_axis
+            else:
+                # Draw regular grid lines
+                for i in np.arange(-size + increment, size + increment/2, increment):
+                    if abs(i) < 1e-10:  # Skip center lines
+                        continue
+                        
+                    vertical_line = Geometry.create_line((i, -size, 0), (i, size, 0), color)
+                    horizontal_line = Geometry.create_line((-size, i, 0), (size, i, 0), color)
+                    
+                    if grid_geometry is None:
+                        grid_geometry = vertical_line + horizontal_line
+                    else:
+                        grid_geometry = grid_geometry + vertical_line + horizontal_line
+
+            if grid_geometry is not None:
+                grid_geometry = grid_geometry.transform(translate, rotate, scale)
+                grid_object = self.add_object(grid_geometry, buffer_type, GL_LINES, 
+                                            line_width=line_width, selectable=selectable)
+                
+                # Enable polygon offset to prevent z-fighting
+                grid_object.polygon_offset = True
+                grid_object.polygon_offset_factor = -1.0
+                grid_object.polygon_offset_units = -1.0
+                
+                objects.append(grid_object)
+        
+        # Return an ObjectCollection if multiple objects, otherwise return the single object
+        return ObjectCollection({'grid': objects}) if len(objects) > 1 else objects[0]
 
     def plot(self, x, y, color=Color.WHITE, line_width=None, buffer_type=BufferType.Static, 
             translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):

@@ -61,11 +61,10 @@ class ExampleApplication(Application):
         self.renderer.default_segments = 32     # n segments in circle
     
         GRID_SIZE = 50
-        translate_grid = (0, 0, -0.002) # Move grid slightly below z=0 to avoid z-fighting
+        GRID_TRANSLATE = (0, 0, -0.002) # Move grid slightly below z=0 to avoid z-fighting
         # Grid and axis
-        self.renderer.add_grid(GRID_SIZE*2, 10, Color.WHITE, translate=translate_grid)
-        self.renderer.add_grid(GRID_SIZE*2, 1, Color.GRAY, translate=translate_grid)
-        self.renderer.add_numbered_axis(size=GRID_SIZE, increment=0.5, axis_color=Color.WHITE, tick_color=Color.rgb(200, 200, 200), line_width=1.0, tick_size=0.05, draw_origin=False, translate=translate_grid)
+        self.renderer.add_grid(GRID_SIZE*2, translate=GRID_TRANSLATE)
+        self.renderer.add_axis_ticks(size=GRID_SIZE, translate=GRID_TRANSLATE)
         self.axis = self.renderer.add_axis()
         
         # Wireframe Shapes (show_body=False)
@@ -109,8 +108,9 @@ class ExampleApplication(Application):
         Note: Only update geometry if it actually changes, 
             update the Object transform if only translating, rotating or scaling.
         """
+        SCALE_WITH_ZOOM = np.repeat(self.camera.distance, 3)
         # Update axis size
-        self.axis.set_transform(scale=(self.camera.distance/10, self.camera.distance/10, self.camera.distance/10))
+        self.axis.set_transform(scale=SCALE_WITH_ZOOM/10)
         
         # Rotating cube
         rotate_geometry = (0, 0, self.timer.oscillate_angle(speed=0.6))
@@ -191,7 +191,7 @@ if __name__ == '__main__':
     app = ExampleApplication(
         width=1280,
         height=720,
-        title='Example PyGLViewer Window',
+        title='Example 3D PyGLViewer Window',
         camera_settings={
             'target': (0, 0, 0),
             'distance': 10
@@ -203,7 +203,7 @@ if __name__ == '__main__':
             'arial_rounded_mt_bold-medium': { 'path': 'C:/Windows/Fonts/ARLRDBD.TTF', 'size': 15 },
         },
         default_font='arial-medium',
-        config=Config('config.json'),
+        config=Config('example_3d_config.json'),
         enable_docking=True,
         selection_settings=SelectionSettings(
             show_cursor_point=True,

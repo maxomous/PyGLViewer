@@ -253,16 +253,24 @@ class ThirdPersonCamera(Camera):
         self.update_vectors()
         self.update_projection()
         
-    def toggle_2d_mode(self):
-        """Switch between 2D top-down and 3D orbital modes."""
-        self.is_2d_mode = not self.is_2d_mode
-        self.is_orthographic = self.is_2d_mode
-        if self.is_2d_mode:
+    def set_2d_mode(self, enabled):
+        """Set 2D top-down or 3D orbital mode.
+        
+        Args:
+            enabled (bool): True for 2D mode, False for 3D mode
+        """
+        self.is_2d_mode = enabled
+        self.is_orthographic = enabled
+        if enabled:
             self.pitch = -90.0  # Look straight down
         else:
-            # When switching back to 3D mode, reset the pitch to a reasonable value
+            # When in 3D mode, use a reasonable pitch value
             self.pitch = -45.0
         self.update_vectors()
+
+    def toggle_2d_mode(self):
+        """Switch between 2D top-down and 3D orbital modes."""
+        self.set_2d_mode(not self.is_2d_mode)
 
     def move(self, direction, speed):
         """Move camera target in specified direction.
@@ -295,7 +303,16 @@ class ThirdPersonCamera(Camera):
                 self.target += right * speed
         self.update_vectors()
 
+    def set_projection(self, orthographic):
+        """Set orthographic or perspective projection mode.
+        
+        Args:
+            orthographic (bool): True for orthographic, False for perspective
+        """
+        self.is_orthographic = orthographic
+        self.update_vectors()
+        self.update_projection()  # Also adding this as it's important to update the projection matrix
+
     def toggle_projection(self):
         """Toggle between orthographic and perspective projection."""
-        self.is_orthographic = not self.is_orthographic
-        self.update_vectors()
+        self.set_projection(not self.is_orthographic)

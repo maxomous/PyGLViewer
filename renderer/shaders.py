@@ -278,15 +278,19 @@ class Shader:
 
     def shutdown(self):
         """Delete shader program and individual shaders."""
-        if self.program:
-            glDeleteProgram(self.program)
-            self.program = None
-        if self.vertex_shader:
-            glDeleteShader(self.vertex_shader)
-            self.vertex_shader = None
-        if self.fragment_shader:
-            glDeleteShader(self.fragment_shader)
-            self.fragment_shader = None
+        try:
+            if self.program and bool(glDeleteProgram):  # Check if OpenGL functions are still available
+                glDeleteProgram(self.program)
+                self.program = None
+            if self.vertex_shader and bool(glDeleteShader):
+                glDeleteShader(self.vertex_shader)
+                self.vertex_shader = None
+            if self.fragment_shader and bool(glDeleteShader):
+                glDeleteShader(self.fragment_shader)
+                self.fragment_shader = None
+        except:
+            # Ignore errors during shutdown
+            pass
 
     def __del__(self):
         """Ensure shader resources are cleaned up."""

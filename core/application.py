@@ -201,7 +201,7 @@ class Application:
         glfw.swap_buffers(self.window)
 
     def render_ui(self):
-        pass  # Override in derived class
+        raise NotImplementedError("render_ui() must be implemented in derived class")
 
     def render_scene(self):
         """Render 3D scene with current camera settings.
@@ -211,8 +211,8 @@ class Application:
         view_matrix = self.camera.get_view_matrix()
         projection = self.camera.get_projection_matrix()
         camera_position = self.camera.position
-        
-        self.renderer.draw(view_matrix, projection, camera_position, self.renderer.lights)
+        lights = self.renderer.get_lights()
+        self.renderer.draw(view_matrix, projection, camera_position, lights)
 
     def cleanup(self):
         """Clean up resources before application exit.
