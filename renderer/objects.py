@@ -5,7 +5,7 @@ from OpenGL.GL import *
 from utils.transform import Transform
 
 # At the top of the file, after imports
-global_object_counter = 0
+_global_object_counter = 0
 
 class BufferType:
     """Enumeration of OpenGL buffer types."""
@@ -126,12 +126,13 @@ class VertexArray:
         if hasattr(self, 'deleted') and not self.deleted:
             self.shutdown()
 
+
 class Object:
     """Represents a renderable object with vertex, index buffers, and shader."""
-    def __init__(self, vertex_data, index_data, draw_type, line_width, point_size, buffer_type, selectable, shader=None):
-        global global_object_counter
-        self.id = global_object_counter
-        global_object_counter += 1 
+    def __init__(self, vertex_data, index_data, draw_type, line_width, point_size, point_shape, buffer_type, selectable, shader=None):
+        global _global_object_counter
+        self.id = _global_object_counter
+        _global_object_counter += 1 
         # Ensure vertex_data is a numpy array with the correct shape
         self.vertex_data = vertex_data if vertex_data is None else np.array(vertex_data, dtype=np.float32)
         # Ensure index_data is a numpy array
@@ -139,6 +140,7 @@ class Object:
         self.draw_type = draw_type
         self.line_width = line_width
         self.point_size = point_size
+        self.point_shape = point_shape
         self.model_matrix = np.identity(4, dtype=np.float32)
         self.buffer_type = buffer_type
         self.shader = shader  # Store shader per object

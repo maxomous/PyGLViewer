@@ -147,19 +147,21 @@ class BatchRenderer:
         render_object : RenderObject
             The render object to batch
         """
-        # Create batch key based on draw type, shader, and line/point size
-        batch_key = f"{render_object.draw_type}_{id(render_object.shader)}"
-        
+        # Create batch key based on draw type
+        batch_key = f"{render_object.draw_type}"
+        # Add shader id to key
+        batch_key += f"_{id(render_object.shader)}"
         # Add line width to key if it's a line type
         if render_object.draw_type in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP):
             batch_key += f"_lw{render_object.line_width}"
         # Add point size to key if it's a point type
         elif render_object.draw_type == GL_POINTS:
             batch_key += f"_ps{render_object.point_size}"
-        
+            batch_key += f"_sh{render_object.point_shape}"
+        # Add new batch if it doesn't exist
         if batch_key not in self.batches:
             self.batches[batch_key] = []
-            
+        # Add object to batch
         self.batches[batch_key].append(render_object)
     
     def update_buffers(self):
@@ -258,7 +260,7 @@ class BatchRenderer:
                 if not objects:
                     continue
                 
-                # Get properties from first object in batch
+                # Get properties from first object in batch, all objects should have the same properties
                 first_obj = objects[0]
                 draw_type = first_obj.draw_type
                 shader = first_obj.shader
@@ -273,11 +275,12 @@ class BatchRenderer:
                         shader.set_light_uniforms(lights)
                     current_shader = shader
                 
-                # Set line width or point size if needed
+                # Set line width or point properties if needed
                 if draw_type in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP):
                     glLineWidth(first_obj.line_width)
                 elif draw_type == GL_POINTS:
                     glPointSize(first_obj.point_size)
+                    current_shader.set_point_shape(first_obj.point_shape)
                     
                 # Draw each object in the batch
                 for obj in objects:

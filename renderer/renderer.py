@@ -35,6 +35,7 @@ class Renderer:
         # Set default values or pass arguments to add_x() functions individually
         self.default_point_size = 1.0
         self.default_line_width = 1.0
+        self.default_point_shape = PointShape.CIRCLE
         self.default_segments = 16
         self.default_subdivisions = 4
         self.default_face_color = Color.WHITE
@@ -123,7 +124,7 @@ class Renderer:
         glClearColor(r, g, b, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    def add_point(self, position, color, point_size=None, shape=PointShape.CIRCLE, buffer_type=BufferType.Static, selectable=True, shader=None):
+    def add_point(self, position, color, point_size=None, shape=None, buffer_type=BufferType.Static, selectable=True, shader=None):
         """Add a point primitive to the scene.
         
         Parameters
@@ -142,15 +143,12 @@ class Renderer:
         RenderObject
             Point render object
         """
+        shader = shader or self.point_shader
         geometry = Geometry.create_point(position, color)
-        point = self.add_object(geometry, buffer_type, GL_POINTS, point_size=point_size, selectable=selectable, shader=shader)
-        # Set point shape
-        if shader is None:
-            shader = self.point_shader
-            shader.set_point_shape(shape) THIS IS NOT GOING TO WORK AS IT IS NOT IN THE LOOP
+        point = self.add_object(geometry, buffer_type, GL_POINTS, point_size=point_size, point_shape=shape, selectable=selectable, shader=shader)
         return point
 
-    def add_points(self, points, color=Color.WHITE, point_size=3.0, shape=PointShape.CIRCLE, buffer_type=BufferType.Static, 
+    def add_points(self, points, color=Color.WHITE, point_size=3.0, shape=None, buffer_type=BufferType.Static, 
                    translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False, shader=None):
         """Add a series of points.
         
@@ -176,15 +174,12 @@ class Renderer:
         RenderObject
             Points render object
         """
+        shader = shader or self.point_shader
         geometry = Geometry.create_blank()
         for point in points:
             geometry = geometry + Geometry.create_point(point, color).transform(translate, rotate, scale)
-        points = self.add_object(geometry, buffer_type, GL_POINTS, point_size=point_size, selectable=selectable, shader=shader)
-        # Set point shape
-        if shader is None:
-            shader = self.point_shader
-            shader.set_point_shape(shape)
-        
+        points = self.add_object(geometry, buffer_type, GL_POINTS, point_size=point_size, point_shape=shape, selectable=selectable, shader=shader)
+
         return points
 
     def add_line(self, p0, p1, color, line_width=None, buffer_type=BufferType.Static, 
@@ -849,8 +844,14 @@ class Renderer:
             Line color (default: white)
         line_width : float, optional
             Width of the line (default: 1.0)
-        transform : dict, optional
-            Transform to apply to the points (translate, rotate, scale)
+        translate : tuple, optional
+            Translation vector (x,y,z)
+        rotate : tuple, optional
+            Rotation angles (x,y,z)
+        scale : tuple, optional
+            Scale factors (x,y,z)
+        selectable : bool, optional
+            Allow object to be selected
 
         Returns
         -------
@@ -867,7 +868,7 @@ class Renderer:
         
         return self.add_linestring(points, color, line_width, buffer_type, translate, rotate, scale, selectable)
 
-    def scatter(self, x, y, color=None, point_size=3.0, shape=PointShape.CIRCLE, buffer_type=BufferType.Static, 
+    def scatter(self, x, y, color=None, point_size=3.0, shape=None, buffer_type=BufferType.Static, 
                translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
         """Create a scatter plot of x,y points.
         
@@ -903,8 +904,26 @@ class Renderer:
         points = np.column_stack((x, y, np.zeros_like(x)))
         return self.add_points(points, color, point_size, shape, buffer_type, translate, rotate, scale, selectable)
 
-    def add_blank_object(self, buffer_type=BufferType.Stream, draw_type=GL_TRIANGLES, 
-                        line_width=None, point_size=None, selectable=True):
+    def add_blank_objects(self, draw_types, buffer_type=BufferType.Dynamic, line_width=None, point_size=None, point_shape=None):
+        """Add a collection of blank objects for a dynamic / stream buffer.
+        
+        Parameters
+        ----------
+        draw_types : dict
+            Dictionary of draw types for each object
+        buffer_type : BufferType, optional
+            Static or Dynamic buffer
+
+        Returns
+        -------
+        ObjectCollection
+            Collection of blank objects
+        """
+        return ObjectCollection({name: self.add_blank_object(draw_type, buffer_type, line_width, point_size, point_shape) 
+                                 for name, draw_type in draw_types.items()})
+
+    def add_blank_object(self, draw_type=GL_TRIANGLES, buffer_type=BufferType.Stream, 
+                        line_width=None, point_size=None, point_shape=None, selectable=True, shader=None):
         """Add a blank object for a dynamic / stream buffer.
         
         Parameters
@@ -921,33 +940,18 @@ class Renderer:
             Line width (default is self.default_line_width)
         point_size : float, optional
             Point size (default is self.default_point_size)
+        shader : Shader, optional
+            Shader for the object (default is self.default_shader)
 
         Returns
         -------
         RenderObject
             Blank render object
         """        
-        blank = self.add_object_base(None, None, buffer_type, draw_type, line_width, point_size, selectable)
+        blank = self._add_object_base(None, None, buffer_type, draw_type, line_width, point_size, point_shape, selectable, shader)
         return blank
 
-    def add_blank_objects(self, draw_types, buffer_type=BufferType.Dynamic):
-        """Add a collection of blank objects for a dynamic / stream buffer.
-        
-        Parameters
-        ----------
-        draw_types : dict
-            Dictionary of draw types for each object
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-
-        Returns
-        -------
-        ObjectCollection
-            Collection of blank objects
-        """
-        return ObjectCollection({name: self.add_blank_object(buffer_type, draw_type) for name, draw_type in draw_types.items()})
-
-    def add_object(self, geometry_data, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None, selectable=True, shader=None):
+    def add_object(self, geometry_data, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None, point_shape=None, selectable=True, shader=None):
         """Create and add a new render object to the scene.
 
         Parameters
@@ -975,9 +979,9 @@ class Renderer:
         vertices = geometry_data.get_vertices()
         indices = geometry_data.get_indices()
         
-        return self.add_object_base(vertices, indices, buffer_type, draw_type, line_width, point_size, selectable, shader)
+        return self._add_object_base(vertices, indices, buffer_type, draw_type, line_width, point_size, point_shape, selectable, shader)
 
-    def add_object_base(self, vertices, indices, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None, selectable=True, shader=None):
+    def _add_object_base(self, vertices, indices, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None, point_shape=None, selectable=True, shader=None):
         """Create and add a new render object to the scene.
 
         Parameters
@@ -1009,12 +1013,12 @@ class Renderer:
         
         line_width = line_width or self.default_line_width
         point_size = point_size or self.default_point_size
-        
+        point_shape = point_shape or self.default_point_shape
         # Use point shader for point primitives if no shader specified
         if shader is None:
             shader = self.point_shader if (draw_type == GL_POINTS) else self.default_shader
         
-        obj = Object(vertices, indices, draw_type, line_width, point_size, 
+        obj = Object(vertices, indices, draw_type, line_width, point_size, point_shape,
                     buffer_type, selectable, shader)
          
         self.objects.append(obj)

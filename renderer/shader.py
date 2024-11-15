@@ -160,9 +160,7 @@ void main() {
         inside = max(abs(coord.x), abs(coord.y)) <= 0.5;
     }
     else if (pointShape == 2) {  // Triangle
-        // Equilateral triangle
-        float height = 0.866025;  // sqrt(3)/2
-        vec2 triCoord = vec2(coord.x / 0.5, coord.y / height + 0.5);
+        vec2 triCoord = vec2(coord.x * 2, coord.y + 0.5);
         inside = triCoord.y >= 0.0 &&
                 triCoord.y <= 1.0 &&
                 triCoord.x >= -triCoord.y &&
@@ -348,6 +346,17 @@ class Shader:
 
     def set_point_shape(self, shape):
         """Set point shape: 0=circle, 1=square, 2=triangle."""
+
+        if shape == PointShape.CIRCLE:
+            shape = 0
+        elif shape == PointShape.SQUARE:
+            shape = 1
+        elif shape == PointShape.TRIANGLE:
+            shape = 2
+        else:
+            print(f"Warning: Unsupported point shape: {shape}")
+            shape = 0
+        
         self.set_uniform("pointShape", shape)
 
     def shutdown(self):

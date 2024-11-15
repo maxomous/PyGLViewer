@@ -5,6 +5,7 @@ from core.application import Application
 from core.object_selection import SelectionSettings
 from renderer.light import default_lighting
 from renderer.objects import ObjectCollection
+from renderer.shader import PointShape
 from utils.color import Color
 from utils.config import Config
 from utils.timer import Timer
@@ -30,8 +31,8 @@ class Example2DApplication(Application):
         y2 = np.sin(x2)
         self.renderer.plot(x1, 1.5*y1, color=Color.CYAN, line_width=3.0)
         self.renderer.plot(x1, -0.75*y1, color=Color.RED, line_width=3.0)
-        self.renderer.scatter(x2, 0.5*y2, color=Color.GREEN, point_size=10.0, shape='square')
-        self.renderer.scatter(x2, -0.25*y2, color=Color.GREEN, point_size=10.0, shape='circle')
+        self.renderer.scatter(x2, 0.5*y2, color=Color.GREEN, point_size=12.0, shape=PointShape.CIRCLE)
+        self.renderer.scatter(x2, -0.25*y2, color=Color.ORANGE, point_size=12.0, shape=PointShape.TRIANGLE)
                 
     def update_scene(self):
         """ update the scene """
