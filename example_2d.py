@@ -13,26 +13,26 @@ class Example2DApplication(Application):
     
     def init(self):
         """ Initialise the application. Create the UI, variables, lighting and geometry. """
+        # Set 2D mode and orthographic projection
+        self.camera.set_2d_mode(True)
+        self.camera.set_projection(orthographic=True)
+        
+        # Grid and axis
         GRID_SIZE = 20
         GRID_TRANSLATE = (0, 0, -0.002) # Move grid slightly below z=0 to avoid z-fighting
-        # Grid and axis
         self.renderer.add_axis_ticks(size=GRID_SIZE, translate=GRID_TRANSLATE, scale=(1, 1, 1))
-        self.renderer.add_grid(GRID_SIZE*2, translate=GRID_TRANSLATE)     
-        angle = self.timer.oscillate_angle(1)
+        self.renderer.add_grid(GRID_SIZE*2, translate=GRID_TRANSLATE) 
+                
         # Example sine wave scatter plot
         x1 = np.linspace(0, 10, 200)
         y1 = np.sin(x1)
         x2 = np.linspace(0, 10, 50)
         y2 = np.sin(x2)
-        self.plots = ObjectCollection({
-            'plot_1': self.renderer.plot(x1, 1.5*y1, color=Color.CYAN, line_width=3.0),
-            'plot_2': self.renderer.plot(x1, -0.75*y1, color=Color.RED, line_width=3.0),
-            'scatter_1': self.renderer.scatter(x2, 0.5*y2, color=Color.GREEN, point_size=10.0)
-        })
-
-        self.camera.set_2d_mode(True)
-        self.camera.set_projection(orthographic=True)
-        
+        self.renderer.plot(x1, 1.5*y1, color=Color.CYAN, line_width=3.0)
+        self.renderer.plot(x1, -0.75*y1, color=Color.RED, line_width=3.0)
+        self.renderer.scatter(x2, 0.5*y2, color=Color.GREEN, point_size=10.0, shape='square')
+        self.renderer.scatter(x2, -0.25*y2, color=Color.GREEN, point_size=10.0, shape='circle')
+                
     def update_scene(self):
         """ update the scene """
         pass

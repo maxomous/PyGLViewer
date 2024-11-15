@@ -176,6 +176,15 @@ class Renderer:
         for point in points:
             geometry = geometry + Geometry.create_point(point, color).transform(translate, rotate, scale)
         points = self.add_object(geometry, buffer_type, GL_POINTS, point_size=point_size, selectable=selectable, shader=shader)
+        
+        
+        if shader is None:
+            shader = self.point_shader
+            shader.set_point_shape(shape)
+        
+        
+        
+        
         return points
 
     def add_line(self, p0, p1, color, line_width=None, buffer_type=BufferType.Static, 
@@ -858,7 +867,7 @@ class Renderer:
         
         return self.add_linestring(points, color, line_width, buffer_type, translate, rotate, scale, selectable)
 
-    def scatter(self, x, y, color=None, point_size=3.0, buffer_type=BufferType.Static, 
+    def scatter(self, x, y, color=None, point_size=3.0, shape='circle', buffer_type=BufferType.Static, 
                translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
         """Create a scatter plot of x,y points.
         
@@ -884,6 +893,11 @@ class Renderer:
         RenderObject
             Points render object
         """
+        if shape == 'circle':
+            shader = 
+        elif shape == 'square':
+            draw_type = GL_TRIANGLE_FAN
+            
         x = np.atleast_1d(x)
         y = np.atleast_1d(y)
         

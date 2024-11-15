@@ -138,15 +138,33 @@ in vec3 Color;
 
 out vec4 FragColor;
 
+uniform int pointShape = 0;  // 0=circle, 1=square, 2=triangle
+
 void main() {
     // Convert from [0,1] to [-0.5,0.5]
     vec2 coord = gl_PointCoord - vec2(0.5);
-
-    // Discard fragments outside circle radius
-    if(length(coord) > 0.5)
-        discard;
-        
-    // Use the existing color with lighting information
+    
+    // Different shape masks
+    bool inside = false;
+    
+    if (pointShape == 0) {  // Circle
+        inside = length(coord) <= 0.5;
+    }
+    else if (pointShape == 1) {  // Square
+        inside = max(abs(coord.x), abs(coord.y)) <= 0.5;
+    }
+    else if (pointShape == 2) {  // Triangle
+        // Equilateral triangle
+        float height = 0.866025;  // sqrt(3)/2
+        vec2 triCoord = vec2(coord.x / 0.5, coord.y / height + 0.5);
+        inside = triCoord.y >= 0.0 &&
+                triCoord.y <= 1.0 &&
+                triCoord.x >= -triCoord.y &&
+                triCoord.x <= triCoord.y;
+    }
+    
+    if (!inside) discard;
+    
     FragColor = vec4(Color, 1.0);
 }
 """
@@ -321,6 +339,10 @@ class Shader:
             3D camera position vector
         """
         self.set_uniform("viewPos", view_position)
+
+    def set_point_shape(self, shape):
+        """Set point shape: 0=circle, 1=square, 2=triangle."""
+        self.set_uniform("pointShape", shape)
 
     def shutdown(self):
         """Delete shader program and individual shaders."""
