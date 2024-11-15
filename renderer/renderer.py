@@ -7,6 +7,9 @@ from renderer.batch_renderer import BatchRenderer
 from renderer.light import Light, default_lighting
 from typing import Dict, List
 from utils.config import Config
+from renderer.shader import Shader
+from renderer.shader import vertex_shader_lighting, fragment_shader_lighting
+from renderer.shader import vertex_shader_points, fragment_shader_points
 # TODO: buffer_type is not really implemented for static buffer
 # TODO: Remove the 1.01 scaling and replace with a input for every function
 
@@ -24,6 +27,11 @@ class Renderer:
         # Config file 
         config.add("background_colour", [0.21987, 0.34362, 0.40084], "Background colour")
         self.config = config
+
+        # Default shaders
+        self.default_shader = Shader(vertex_shader_lighting, fragment_shader_lighting)
+        self.point_shader = Shader(vertex_shader_points, fragment_shader_points)
+        
         # Set default values or pass arguments to add_x() functions individually
         self.default_point_size = 1.0
         self.default_line_width = 1.0
@@ -115,7 +123,7 @@ class Renderer:
         glClearColor(r, g, b, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    def add_point(self, position, color, point_size=None, buffer_type=BufferType.Static, selectable=True):
+    def add_point(self, position, color, point_size=None, buffer_type=BufferType.Static, selectable=True, shader=None):
         """Add a point primitive to the scene.
         
         Parameters
@@ -135,11 +143,11 @@ class Renderer:
             Point render object
         """
         geometry = Geometry.create_point(position, color)
-        point = self.add_object(geometry, buffer_type, GL_POINTS, point_size=point_size, selectable=selectable)
+        point = self.add_object(geometry, buffer_type, GL_POINTS, point_size=point_size, selectable=selectable, shader=shader)
         return point
 
     def add_points(self, points, color=Color.WHITE, point_size=3.0, buffer_type=BufferType.Static, 
-                   translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
+                   translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False, shader=None):
         """Add a series of points.
         
         Parameters
@@ -167,7 +175,7 @@ class Renderer:
         geometry = Geometry.create_blank()
         for point in points:
             geometry = geometry + Geometry.create_point(point, color).transform(translate, rotate, scale)
-        points = self.add_object(geometry, buffer_type, GL_POINTS, point_size=point_size, selectable=selectable)
+        points = self.add_object(geometry, buffer_type, GL_POINTS, point_size=point_size, selectable=selectable, shader=shader)
         return points
 
     def add_line(self, p0, p1, color, line_width=None, buffer_type=BufferType.Static, 
@@ -928,7 +936,7 @@ class Renderer:
         """
         return ObjectCollection({name: self.add_blank_object(buffer_type, draw_type) for name, draw_type in draw_types.items()})
 
-    def add_object(self, geometry_data, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None, selectable=True):
+    def add_object(self, geometry_data, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None, selectable=True, shader=None):
         """Create and add a new render object to the scene.
 
         Parameters
@@ -944,6 +952,8 @@ class Renderer:
             Width for line primitives (default is self.default_line_width)
         point_size : float, optional
             Size for point primitives
+        shader : Shader, optional
+            Shader for the object (default is self.default_shader)
 
         Returns
         -------
@@ -954,9 +964,9 @@ class Renderer:
         vertices = geometry_data.get_vertices()
         indices = geometry_data.get_indices()
         
-        return self.add_object_base(vertices, indices, buffer_type, draw_type, line_width, point_size, selectable)
+        return self.add_object_base(vertices, indices, buffer_type, draw_type, line_width, point_size, selectable, shader)
 
-    def add_object_base(self, vertices, indices, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None, selectable=True):
+    def add_object_base(self, vertices, indices, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None, selectable=True, shader=None):
         """Create and add a new render object to the scene.
 
         Parameters
@@ -977,6 +987,8 @@ class Renderer:
             Width for line primitives (default is self.default_line_width)
         point_size : float, optional
             Size for point primitives (default is self.default_point_size)
+        shader : Shader, optional
+            Shader for the object (default is self.default_shader)  
 
         Returns
         -------
@@ -987,7 +999,12 @@ class Renderer:
         line_width = line_width or self.default_line_width
         point_size = point_size or self.default_point_size
         
-        obj = Object(vertices, indices, draw_type, line_width, point_size, buffer_type, selectable)
+        # Use point shader for point primitives if no shader specified
+        if shader is None:
+            shader = self.point_shader if (draw_type == GL_POINTS) else self.default_shader
+        
+        obj = Object(vertices, indices, draw_type, line_width, point_size, 
+                    buffer_type, selectable, shader)
          
         self.objects.append(obj)
         return obj

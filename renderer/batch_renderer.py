@@ -2,12 +2,12 @@ from typing import Dict, List, Optional
 import numpy as np
 from OpenGL.GL import *
 from renderer.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, Object
-from renderer.shaders import Shader, vertex_shader_lighting, fragment_shader_lighting  
+from renderer.shader import Shader, vertex_shader_lighting, fragment_shader_lighting  
 
 class BatchRenderer:
     """Efficient batch renderer for OpenGL objects."""
     
-    def __init__(self, max_vertices=10000, max_indices=30000, buffer_type=BufferType.Dynamic, shader=None, shader_point=None):
+    def __init__(self, max_vertices=10000, max_indices=30000, buffer_type=BufferType.Dynamic):
         """Initialize the batch renderer.
         
         Parameters
@@ -28,9 +28,8 @@ class BatchRenderer:
         self.max_overflow_warnings = 3
         
         self.buffer_type = buffer_type
-        self.shader = shader or Shader(vertex_shader_lighting, fragment_shader_lighting) # Default shader if None
         
-        # Batch storage
+        # Batch storage - simple list of objects per batch key
         self.batches: Dict[str, List[Object]] = {}
         
         # Calculate vertex size: 3 (pos) + 3 (color) + 3 (normal) = 9 floats
@@ -148,8 +147,8 @@ class BatchRenderer:
         render_object : RenderObject
             The render object to batch
         """
-        # Create batch key based on draw type and line/point size
-        batch_key = f"{render_object.draw_type}"
+        # Create batch key based on draw type, shader, and line/point size
+        batch_key = f"{render_object.draw_type}_{id(render_object.shader)}"
         
         # Add line width to key if it's a line type
         if render_object.draw_type in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP):
@@ -170,8 +169,8 @@ class BatchRenderer:
         vertex_offset = 0
         
         # First pass: collect all vertex and index data
-        for objects in self.batches.values():
-            for obj in objects:
+        for batch_data in self.batches.values():
+            for obj in batch_data:
                 if obj.vertex_data is None or obj.index_data is None:
                     continue
                     
@@ -249,48 +248,49 @@ class BatchRenderer:
         self.vertex_buffer.bind()
         self.index_buffer.bind()
         
-        # Set up shader
-        self.shader.use()
-        
-        # Set shared uniforms
-        self.shader.set_view_matrix(view_matrix)
-        self.shader.set_projection_matrix(projection_matrix)
-        self.shader.set_view_position(camera_pos)
-        if lights:
-            self.shader.set_light_uniforms(lights)
-            
         # Draw each batch separately
         index_offset = 0
         self.draw_calls = 0
+        current_shader = None
         
         try:
             for batch_key, objects in self.batches.items():
-                if self.debug:
-                    print(f"\nBatch: {batch_key} with {len(objects)} objects")
                 if not objects:
                     continue
-                    
-                # Get draw type from first object
-                draw_type = objects[0].draw_type
+                
+                # Get properties from first object in batch
+                first_obj = objects[0]
+                draw_type = first_obj.draw_type
+                shader = first_obj.shader
+                
+                # Only set up shader if it's different from the current one
+                if shader != current_shader:
+                    shader.use()
+                    shader.set_view_matrix(view_matrix)
+                    shader.set_projection_matrix(projection_matrix)
+                    shader.set_view_position(camera_pos)
+                    if lights:
+                        shader.set_light_uniforms(lights)
+                    current_shader = shader
                 
                 # Set line width or point size if needed
                 if draw_type in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP):
-                    glLineWidth(objects[0].line_width)
+                    glLineWidth(first_obj.line_width)
                 elif draw_type == GL_POINTS:
-                    glPointSize(objects[0].point_size)
+                    glPointSize(first_obj.point_size)
                     
                 # Draw each object in the batch
-                for i, obj in enumerate(objects):
+                for obj in objects:
                     if obj.vertex_data is None or obj.index_data is None:
                         continue
                     # Set model matrix for this object
-                    self.shader.set_model_matrix(obj.model_matrix)
+                    current_shader.set_model_matrix(obj.model_matrix)
                     
                     # Calculate number of indices for this object
                     num_indices = len(obj.index_data)
                     
                     if self.debug:
-                        print(f"  Object {i}: indices={num_indices}, offset={index_offset}")
+                        print(f"  Object {obj.id}: indices={num_indices}, offset={index_offset}")
                     
                     # Draw the object
                     glDrawElements(
@@ -317,7 +317,7 @@ class BatchRenderer:
     def get_stats(self):
         """Get key rendering statistics."""
         # Calculate batch stats
-        total_objects = sum(len(objects) for objects in self.batches.values())
+        total_objects = sum(len(batch_data['objects']) for batch_data in self.batches.values())
         
         # Calculate buffer usage percentages
         vertex_buffer_usage = (self.vertex_count / self.max_vertices * 100) if self.max_vertices > 0 else 0

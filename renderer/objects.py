@@ -128,7 +128,7 @@ class VertexArray:
 
 class Object:
     """Represents a renderable object with vertex, index buffers, and shader."""
-    def __init__(self, vertex_data, index_data, draw_type, line_width, point_size, buffer_type, selectable):
+    def __init__(self, vertex_data, index_data, draw_type, line_width, point_size, buffer_type, selectable, shader=None):
         global global_object_counter
         self.id = global_object_counter
         global_object_counter += 1 
@@ -141,6 +141,7 @@ class Object:
         self.point_size = point_size
         self.model_matrix = np.identity(4, dtype=np.float32)
         self.buffer_type = buffer_type
+        self.shader = shader  # Store shader per object
         # Add selection-related properties
         self.selected = False
         self.selectable = selectable  # Flag to control if object can be selected
