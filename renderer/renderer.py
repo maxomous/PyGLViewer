@@ -7,11 +7,11 @@ from renderer.batch_renderer import BatchRenderer
 from renderer.light import Light, default_lighting
 from typing import Dict, List
 from utils.config import Config
-from renderer.shader import Shader
-from renderer.shader import vertex_shader_lighting, fragment_shader_lighting
-from renderer.shader import vertex_shader_points, fragment_shader_points
+from renderer.shader import Shader, PointShape
+from renderer.shader import vertex_shader_lighting, fragment_shader_lighting, vertex_shader_points, fragment_shader_points
 # TODO: buffer_type is not really implemented for static buffer
 # TODO: Remove the 1.01 scaling and replace with a input for every function
+
 
 class Renderer:
     """OpenGL renderer for managing 3D objects, lights, and scene rendering.
@@ -123,7 +123,7 @@ class Renderer:
         glClearColor(r, g, b, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    def add_point(self, position, color, point_size=None, buffer_type=BufferType.Static, selectable=True, shader=None):
+    def add_point(self, position, color, point_size=None, shape=PointShape.CIRCLE, buffer_type=BufferType.Static, selectable=True, shader=None):
         """Add a point primitive to the scene.
         
         Parameters
@@ -144,9 +144,13 @@ class Renderer:
         """
         geometry = Geometry.create_point(position, color)
         point = self.add_object(geometry, buffer_type, GL_POINTS, point_size=point_size, selectable=selectable, shader=shader)
+        # Set point shape
+        if shader is None:
+            shader = self.point_shader
+            shader.set_point_shape(shape) THIS IS NOT GOING TO WORK AS IT IS NOT IN THE LOOP
         return point
 
-    def add_points(self, points, color=Color.WHITE, point_size=3.0, buffer_type=BufferType.Static, 
+    def add_points(self, points, color=Color.WHITE, point_size=3.0, shape=PointShape.CIRCLE, buffer_type=BufferType.Static, 
                    translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False, shader=None):
         """Add a series of points.
         
@@ -176,14 +180,10 @@ class Renderer:
         for point in points:
             geometry = geometry + Geometry.create_point(point, color).transform(translate, rotate, scale)
         points = self.add_object(geometry, buffer_type, GL_POINTS, point_size=point_size, selectable=selectable, shader=shader)
-        
-        
+        # Set point shape
         if shader is None:
             shader = self.point_shader
             shader.set_point_shape(shape)
-        
-        
-        
         
         return points
 
@@ -867,7 +867,7 @@ class Renderer:
         
         return self.add_linestring(points, color, line_width, buffer_type, translate, rotate, scale, selectable)
 
-    def scatter(self, x, y, color=None, point_size=3.0, shape='circle', buffer_type=BufferType.Static, 
+    def scatter(self, x, y, color=None, point_size=3.0, shape=PointShape.CIRCLE, buffer_type=BufferType.Static, 
                translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
         """Create a scatter plot of x,y points.
         
@@ -881,6 +881,8 @@ class Renderer:
             Point color (default: white)
         point_size : float, optional
             Size of points (default: 3.0)
+        shape : PointShape, optional
+            Shape of points (default: CIRCLE)
         translate : tuple, optional
             Translation vector (x,y,z)
         rotate : tuple, optional
@@ -893,18 +895,13 @@ class Renderer:
         RenderObject
             Points render object
         """
-        if shape == 'circle':
-            shader = 
-        elif shape == 'square':
-            draw_type = GL_TRIANGLE_FAN
-            
         x = np.atleast_1d(x)
         y = np.atleast_1d(y)
         
         if len(x) != len(y):
             raise ValueError("x and y must have same length")
         points = np.column_stack((x, y, np.zeros_like(x)))
-        return self.add_points(points, color, point_size, buffer_type, translate, rotate, scale, selectable)
+        return self.add_points(points, color, point_size, shape, buffer_type, translate, rotate, scale, selectable)
 
     def add_blank_object(self, buffer_type=BufferType.Stream, draw_type=GL_TRIANGLES, 
                         line_width=None, point_size=None, selectable=True):

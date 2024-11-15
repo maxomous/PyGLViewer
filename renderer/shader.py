@@ -1,8 +1,14 @@
+from enum import Enum
 from OpenGL.GL import *
 from OpenGL.GL import shaders
 import numpy as np
 
 
+class PointShape(Enum):
+    CIRCLE = 0
+    SQUARE = 1
+    TRIANGLE = 2
+    
 # Vertex shader for basic lighting and transformations
 vertex_shader_lighting = """
 #version 330 core
@@ -168,7 +174,7 @@ void main() {
     FragColor = vec4(Color, 1.0);
 }
 """
-
+    
 class Shader:
     """OpenGL shader program wrapper supporting vertex and fragment shaders.
     
