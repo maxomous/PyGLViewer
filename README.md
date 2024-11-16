@@ -16,6 +16,7 @@ It includes:
 - Ctrl + left/middle click + drag: Pan camera
 - Scroll wheel: Zoom in/out
 - WASD: Move camera
+- Left click: Select object (2D mode only)
 - ESC: Exit application
 
 ## Installation Instructions
@@ -28,11 +29,13 @@ It includes:
 pip install git+https://github.com/maxomous/pyglviewer.git
 
 #### Note: It installs the following packages:
+   ```bash
    - numpy
    - PyOpenGL
    - PyOpenGL_accelerate  # optional 
    - glfw
    - imgui[glfw]
+   ```
 
 ### 3. For ImGui Docking Branch (Alternative)
    ```bash
