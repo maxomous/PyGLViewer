@@ -778,7 +778,8 @@ class Geometry:
             return [GeometryData(), GeometryData()]  # Return empty geometry if p0 and p1 are the same
             
         # Calculate transforms - note we use midpoint since cube is centered at origin
-        translation, rotation, scale = Geometry.calculate_transform(p0, p1, (width, height))
+        dimensions = (width, height) if direction[0] == 0 and direction[1] == 0 else (height, width) # width & height get swapped if beam is vertical
+        translation, rotation, scale = Geometry.calculate_transform(p0, p1, dimensions)
         # Create body and wireframe using cube, offset by 0.5 in z-direction, and transform to between p0 and p1
         body = Geometry.create_cube(1.0, color) \
             .transform(translate=(0, 0, 0.5)) \

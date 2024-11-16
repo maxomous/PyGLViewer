@@ -97,7 +97,7 @@ class ExampleApplication(Application):
         self.renderer.add_cone(Colour.rgb(255, 165, 0), segments=16, translate=(0, 0.75, 0.5), scale=(0.5, 0.5, 0.5), rotate=(-np.pi/2, 0, 0))
         self.renderer.add_cylinder(Colour.MAGENTA, translate=(2, 1, 0.25), scale=(0.5, 0.5, 0.5))
         self.renderer.add_sphere(translate=(4, 1, 0.5), radius=0.25, subdivisions=4, color=Colour.RED)
-        
+                
         # Create two dynamic object placeholders (body + wireframe)
         self.rotating_cubes = self.renderer.add_blank_objects({'body': GL_TRIANGLES, 'wireframe': GL_LINES})
 
