@@ -1,14 +1,14 @@
+from typing import Dict, List
 from OpenGL.GL import *
 import numpy as np
-from renderer.geometry import Geometry, Vertex
-from utils.colour import Colour
-from renderer.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, Object, ObjectCollection
-from renderer.batch_renderer import BatchRenderer
-from renderer.light import Light, default_lighting
-from typing import Dict, List
-from utils.config import Config
-from renderer.shader import Shader, PointShape
-from renderer.shader import vertex_shader_lighting, fragment_shader_lighting, vertex_shader_points, fragment_shader_points
+from pyglviewer.renderer.geometry import Geometry, Vertex
+from pyglviewer.utils.colour import Colour
+from pyglviewer.renderer.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, Object, ObjectCollection
+from pyglviewer.renderer.batch_renderer import BatchRenderer
+from pyglviewer.renderer.light import Light, default_lighting
+from pyglviewer.utils.config import Config
+from pyglviewer.renderer.shader import Shader, PointShape
+from pyglviewer.renderer.shader import vertex_shader_lighting, fragment_shader_lighting, vertex_shader_points, fragment_shader_points
 # TODO: buffer_type is not really implemented for static buffer
 # TODO: Remove the 1.01 scaling and replace with a input for every function
 

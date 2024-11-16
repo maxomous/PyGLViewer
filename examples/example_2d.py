@@ -1,14 +1,14 @@
 import imgui
 import glfw
 import numpy as np
-from core.application import Application
-from core.object_selection import SelectionSettings
-from renderer.light import default_lighting
-from renderer.objects import ObjectCollection
-from renderer.shader import PointShape
-from utils.colour import Colour
-from utils.config import Config
-from utils.timer import Timer
+from pyglviewer.core.application import Application
+from pyglviewer.core.object_selection import SelectionSettings
+from pyglviewer.renderer.objects import ObjectCollection
+from pyglviewer.renderer.shader import PointShape
+from pyglviewer.utils.colour import Colour
+from pyglviewer.utils.config import Config
+from pyglviewer.utils.timer import Timer
+
 
 class Example2DApplication(Application):
     
@@ -51,7 +51,7 @@ class Example2DApplication(Application):
     def render_ui(self):
         """ render the UI """
         pass
-
+    
 if __name__ == '__main__':
     """  Setup your application. """
     app = Example2DApplication(

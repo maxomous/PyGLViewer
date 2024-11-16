@@ -2,7 +2,7 @@ from typing import Dict, Any, List
 import ctypes
 import numpy as np
 from OpenGL.GL import *
-from utils.transform import Transform
+from pyglviewer.utils.transform import Transform
 
 # At the top of the file, after imports
 _global_object_counter = 0

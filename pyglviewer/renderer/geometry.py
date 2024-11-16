@@ -5,8 +5,8 @@ Includes vertex data structures, geometry containers, and shape factory methods.
 
 import numpy as np
 from OpenGL.GL import *
-from utils.colour import Colour
-from utils.transform import Transform
+from pyglviewer.utils.colour import Colour
+from pyglviewer.utils.transform import Transform
 
 class Vertex:
     """

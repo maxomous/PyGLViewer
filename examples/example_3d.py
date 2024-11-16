@@ -2,18 +2,18 @@ from OpenGL.GL import *
 import imgui
 import glfw
 import numpy as np
-from core.application import Application
-from core.application_ui import render_core_ui
-from core.object_selection import ObjectSelection, SelectionSettings
-from renderer.light import Light, LightType, default_lighting
-from renderer.renderer import Renderer
-from renderer.geometry import Geometry
-from renderer.objects import BufferType, ObjectCollection
-from renderer.shader import PointShape
-from utils.colour import Colour
-from utils.config import Config   
-from utils.timer import Timer
-from utils.transform import Transform
+from pyglviewer.core.application import Application
+from pyglviewer.core.application_ui import render_core_ui
+from pyglviewer.core.object_selection import ObjectSelection, SelectionSettings
+from pyglviewer.renderer.light import Light, LightType, default_lighting
+from pyglviewer.renderer.renderer import Renderer
+from pyglviewer.renderer.geometry import Geometry
+from pyglviewer.renderer.objects import BufferType, ObjectCollection
+from pyglviewer.renderer.shader import PointShape
+from pyglviewer.utils.colour import Colour
+from pyglviewer.utils.config import Config   
+from pyglviewer.utils.timer import Timer
+from pyglviewer.utils.transform import Transform
 
 class ExampleApplication(Application):
     
@@ -174,7 +174,7 @@ class ExampleApplication(Application):
         Creates a UI window for core settings.
         """
         imgui.begin('Core', flags=imgui.WINDOW_HORIZONTAL_SCROLLING_BAR)
-        render_core_ui(self.camera, self.renderer, self.config, self.timer, self.imgui_manager)
+        render_core_ui(self.camera, self.renderer, self.text_renderer, self.config, self.timer, self.imgui_manager)
         imgui.end()
 
     def render_ui_window(self):

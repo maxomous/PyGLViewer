@@ -1,10 +1,10 @@
 import numpy as np
 import imgui
 from OpenGL.GL import GL_POINTS, GL_LINES
-from renderer.renderer import Renderer
-from renderer.geometry import Geometry
-from renderer.objects import BufferType
-from utils.colour import Colour
+from pyglviewer.renderer.renderer import Renderer
+from pyglviewer.renderer.geometry import Geometry
+from pyglviewer.renderer.objects import BufferType
+from pyglviewer.utils.colour import Colour
 
 class SelectionSettings:
     def __init__(self, show_cursor_point=True, select_objects=True, drag_objects=False):

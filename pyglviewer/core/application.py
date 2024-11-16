@@ -1,14 +1,14 @@
 import glfw
 from OpenGL.GL import *
-from core.camera import ThirdPersonCamera
-from core.keyboard import Keyboard
-from core.mouse import Mouse
-from core.object_selection import ObjectSelection, SelectionSettings
-from renderer.renderer import Renderer
-from utils.timer import Timer
-from utils.config import Config
-from gui.imgui_manager import ImGuiManager
-from gui.imgui_text_renderer import ImguiTextRenderer
+from pyglviewer.core.camera import ThirdPersonCamera
+from pyglviewer.core.keyboard import Keyboard
+from pyglviewer.core.mouse import Mouse
+from pyglviewer.core.object_selection import ObjectSelection, SelectionSettings
+from pyglviewer.renderer.renderer import Renderer
+from pyglviewer.utils.timer import Timer
+from pyglviewer.utils.config import Config
+from pyglviewer.gui.imgui_manager import ImGuiManager
+from pyglviewer.gui.imgui_text_renderer import ImguiTextRenderer
 import time
             
 class Application:

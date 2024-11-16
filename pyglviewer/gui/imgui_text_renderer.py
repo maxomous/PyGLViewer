@@ -2,7 +2,7 @@ import imgui
 import numpy as np
 from dataclasses import dataclass
 from typing import Tuple, Optional
-from utils.colour import Colour
+from pyglviewer.utils.colour import Colour
 # TODO: Using ImGui for text rendering means text appears on top of objects, ideally
 #       we should implement our own text rendering so as to account for depth. It 
 #       may also be faster.
@@ -114,3 +114,11 @@ class ImguiTextRenderer:
                 
         # End text rendering batch
         imgui.end()
+
+    def get_stats(self):
+        """Get statistics about the text renderer."""
+        return {
+            "total_batches": len(self.text_batches),
+            "static_items": sum(1 for batch in self.text_batches if batch.static),
+            "dynamic_items": sum(1 for batch in self.text_batches if not batch.static)
+        }

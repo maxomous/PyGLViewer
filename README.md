@@ -24,11 +24,15 @@ It includes:
 - Download from: [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
 - Select "Desktop development with C++" 
 
-### 2. Install Required Packages
-   pip install PyOpenGL
-   pip install PyOpenGL_accelerate  # optional
-   pip install glfw
-   pip install imgui[glfw]
+### 2. Install PyGLViewer
+pip install git+https://github.com/maxomous/pyglviewer.git
+
+#### Note: It installs the following packages:
+   - numpy
+   - PyOpenGL
+   - PyOpenGL_accelerate  # optional 
+   - glfw
+   - imgui[glfw]
 
 ### 3. For ImGui Docking Branch (Alternative)
    git clone --recurse-submodules https://github.com/pyimgui/pyimgui.git
@@ -39,3 +43,8 @@ It includes:
 ### 4. ImGui Intellisense (Optional)
    - Download from: https://github.com/masc-it/pyimgui-interface-generator/blob/master/imgui.pyi
    - Save to: AppData\Roaming\Python\Python312\site-packages\imgui\__init__.pyi 
+
+## Usage
+See the [examples](examples) folder for usage examples.
+example_2d.py gives a simple example of how to use the library in 2D.
+example_3d.py gives a more complete example of how to use the library in both 2D and 3D.

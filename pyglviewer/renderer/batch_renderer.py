@@ -1,8 +1,8 @@
 from typing import Dict, List, Optional
 import numpy as np
 from OpenGL.GL import *
-from renderer.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, Object
-from renderer.shader import Shader, vertex_shader_lighting, fragment_shader_lighting  
+from pyglviewer.renderer.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray, Object
+from pyglviewer.renderer.shader import Shader, vertex_shader_lighting, fragment_shader_lighting  
 
 class BatchRenderer:
     """Batch renderer for OpenGL objects."""

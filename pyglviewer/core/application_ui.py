@@ -1,8 +1,7 @@
 import imgui
-from gui.imgui_widgets import ImGuiWidgets
+from pyglviewer.gui.imgui_widgets import ImGuiWidgets
 
-
-def render_core_ui(camera, renderer, config, timer, imgui_manager):
+def render_core_ui(camera, renderer, text_renderer, config, timer, imgui_manager):
     """Render UI panels."""
     imgui_manager.push_font('arial_rounded_mt_bold-medium')
     
@@ -11,7 +10,7 @@ def render_core_ui(camera, renderer, config, timer, imgui_manager):
         ('CAMERA', render_ui_camera, [camera]),
         ('MOUSE', render_ui_mouse, [config]),
         ('PERFORMANCE', render_ui_performance, [timer.dt]),
-        ('RENDERER', render_ui_renderer, [renderer, config]),
+        ('RENDERER', render_ui_renderer, [config, renderer, text_renderer]),
         ('CONFIGURATION', render_ui_config, [config]),
     ]
     
@@ -189,7 +188,7 @@ def render_ui_performance(dt):
     fps = 1.0 / dt if dt > 0 else 0.0
     imgui.text(f'FPS: {fps:.1f}')
 
-def render_ui_renderer(renderer, config):
+def render_ui_renderer(config, renderer, text_renderer):
     """Render renderer settings panel."""
     # Changed to use a single array of RGB values (each from 0-1)
     _, config["background_colour"] = imgui.color_edit3("Background Colour", *config["background_colour"])
@@ -210,9 +209,18 @@ def render_ui_renderer(renderer, config):
                     imgui.text(f"{key}: {value}")
             imgui.tree_pop()
     
+    def render_batch_renderer_stats(renderer_name, renderer):
+        if imgui.tree_node(renderer_name):
+            stats = renderer.get_stats()
+            for key, value in stats.items():
+                imgui.text(f"{key.replace('_', ' ').title()}: {value}")
+            imgui.tree_pop()    
+    
     render_batch_renderer_stats('Static Buffer Info', renderer.static_batch_renderer)
     render_batch_renderer_stats('Dynamic Buffer Info', renderer.dynamic_batch_renderer)
-        
+    render_batch_renderer_stats('Text Buffer Info', text_renderer)
+
+
 def render_ui_config(config):
     """Render configuration panel to save/load configuration."""
     imgui.push_style_var(imgui.STYLE_FRAME_PADDING, (6, 6))
@@ -229,3 +237,4 @@ def render_ui_config(config):
         config.load()
     
     imgui.pop_style_var()
+

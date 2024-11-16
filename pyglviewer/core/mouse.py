@@ -1,8 +1,8 @@
 import glfw
 import imgui
 import numpy as np
-from core.camera import Camera
-from utils.config import Config
+from pyglviewer.core.camera import Camera
+from pyglviewer.utils.config import Config
 
 # NOTE: Ideally use ImGui instead of glfw to get inputs
 
