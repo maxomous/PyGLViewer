@@ -12,7 +12,7 @@ from utils.timer import Timer
 
 class Example2DApplication(Application):
     
-    GRID_SIZE = 20
+    GRID_SIZE = 25
     GRID_TRANSLATE = (0, 0, -0.002) # Move grid slightly below z=0 to avoid z-fighting
     
     def init(self):
@@ -24,7 +24,7 @@ class Example2DApplication(Application):
         # Grid and axis
         self.text_renderer.add_axis_labels(xlim=[-self.GRID_SIZE, self.GRID_SIZE], ylim=[-self.GRID_SIZE, self.GRID_SIZE], increment=1, colour=Colour.WHITE, static=True)
         self.renderer.add_axis_ticks(size=self.GRID_SIZE, translate=self.GRID_TRANSLATE, scale=(1, 1, 1))
-        self.renderer.add_grid(self.GRID_SIZE*2, translate=self.GRID_TRANSLATE) 
+        self.grid = self.renderer.add_grid(self.GRID_SIZE, translate=self.GRID_TRANSLATE) 
                 
         # Example sine wave scatter plot
         x1 = np.linspace(-self.GRID_SIZE, self.GRID_SIZE, 500)
@@ -38,7 +38,11 @@ class Example2DApplication(Application):
     
     def update_scene(self):
         """ update the scene """
-        pass
+        # Update axis size
+        if self.camera.distance > 2.5:
+            self.grid.set_transform(scale=(10, 10, 1))
+        else:
+            self.grid.set_transform(scale=(1, 1, 1))
   
     def events(self):
         """ Process custom events, such as the keyboard & mouse. """

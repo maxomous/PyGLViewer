@@ -42,14 +42,14 @@ class Renderer:
         self.default_wireframe_color = Colour.BLACK
         self.default_arrow_dimensions = Renderer.ArrowDimensions(shaft_radius=0.03, head_radius=0.06, head_length=0.1)
         self.default_axis_ticks = [
-            { 'increment': 1,    'tick_size': 0.08,   'line_width': 3, 'tick_color': Colour.rgb(200, 200, 200) }, 
+            { 'increment': 1,    'tick_size': 0.08,  'line_width': 3, 'tick_color': Colour.rgb(200, 200, 200) }, 
             { 'increment': 0.5,  'tick_size': 0.04,  'line_width': 3, 'tick_color': Colour.rgb(200, 200, 200) }, 
             { 'increment': 0.1,  'tick_size': 0.02,  'line_width': 3, 'tick_color': Colour.rgb(200, 200, 200) }
         ]
         self.default_grid_params = [ 
-            {'increment': 0, 'color': Colour.rgb(200, 200, 200), 'line_width': 3.0},
-            {'increment': 1, 'color': Colour.rgb(200, 200, 200), 'line_width': 1.0},
-            {'increment': 0.1, 'color': Colour.rgb(150, 150, 150), 'line_width': 1.0}
+            {'increment': 0,    'color': Colour.rgb(200, 200, 200), 'line_width': 3.0},
+            {'increment': 1,    'color': Colour.rgb(200, 200, 200), 'line_width': 1.0},
+            {'increment': 0.1,  'color': Colour.rgb(150, 150, 150), 'line_width': 1.0}
         ]
 
         # Initialize OpenGL state

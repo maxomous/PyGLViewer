@@ -127,7 +127,11 @@ class ExampleApplication(Application):
         Dynamic Text can be rendered here every frame (make sure to set static=False).
         """
         # Update axis size
-        self.grid.set_transform(scale=(10, 10, 1))
+        if self.camera.distance > 5:
+            self.grid.set_transform(scale=(10, 10, 1))
+        else:
+            self.grid.set_transform(scale=(1, 1, 1))
+            
         SCALE_WITH_ZOOM = np.repeat(self.camera.distance, 3) / 10
         self.axis.set_transform(scale=SCALE_WITH_ZOOM)
         
@@ -147,7 +151,7 @@ class ExampleApplication(Application):
         self.rotating_cubes.set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), -3, 0), rotate=rotate_object)
 
         # Text Rendering
-        self.text_renderer.add_text('3D LABEL', (self.timer.oscillate_translation(amplitude=1.5, speed=0.25), -0.5, 0), Colour.ORANGE, font='arial_rounded_mt_bold-medium')
+        self.text_renderer.add_text('3D LABEL', (self.timer.oscillate_translation(amplitude=1.5, speed=0.25), -0.5, 1), Colour.ORANGE, font='arial_rounded_mt_bold-medium')
 
     def events(self):
         """
