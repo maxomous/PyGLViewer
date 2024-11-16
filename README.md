@@ -35,10 +35,12 @@ pip install git+https://github.com/maxomous/pyglviewer.git
    - imgui[glfw]
 
 ### 3. For ImGui Docking Branch (Alternative)
+   ```bash
    git clone --recurse-submodules https://github.com/pyimgui/pyimgui.git
    cd pyimgui
    git checkout docking
    pip install .[glfw]
+   ```
 
 ### 4. ImGui Intellisense (Optional)
    - Download from: https://github.com/masc-it/pyimgui-interface-generator/blob/master/imgui.pyi
@@ -46,5 +48,5 @@ pip install git+https://github.com/maxomous/pyglviewer.git
 
 ## Usage
 See the [examples](examples) folder for usage examples.
-example_2d.py gives a simple example of how to use the library in 2D.
-example_3d.py gives a more complete example of how to use the library in both 2D and 3D.
+- `example_2d.py` gives a simple example of how to use the library in 2D.
+- `example_3d.py` gives a more complete example of how to use the library in both 2D and 3D.
