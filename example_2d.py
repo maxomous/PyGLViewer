@@ -6,11 +6,14 @@ from core.object_selection import SelectionSettings
 from renderer.light import default_lighting
 from renderer.objects import ObjectCollection
 from renderer.shader import PointShape
-from utils.color import Color
+from utils.colour import Colour
 from utils.config import Config
 from utils.timer import Timer
 
 class Example2DApplication(Application):
+    
+    GRID_SIZE = 20
+    GRID_TRANSLATE = (0, 0, -0.002) # Move grid slightly below z=0 to avoid z-fighting
     
     def init(self):
         """ Initialise the application. Create the UI, variables, lighting and geometry. """
@@ -19,25 +22,24 @@ class Example2DApplication(Application):
         self.camera.set_projection(orthographic=True)
         
         # Grid and axis
-        GRID_SIZE = 20
-        GRID_TRANSLATE = (0, 0, -0.002) # Move grid slightly below z=0 to avoid z-fighting
-        self.renderer.add_axis_ticks(size=GRID_SIZE, translate=GRID_TRANSLATE, scale=(1, 1, 1))
-        self.renderer.add_grid(GRID_SIZE*2, translate=GRID_TRANSLATE) 
+        self.text_renderer.add_axis_labels(xlim=[-self.GRID_SIZE, self.GRID_SIZE], ylim=[-self.GRID_SIZE, self.GRID_SIZE], increment=1, colour=Colour.WHITE, static=True)
+        self.renderer.add_axis_ticks(size=self.GRID_SIZE, translate=self.GRID_TRANSLATE, scale=(1, 1, 1))
+        self.renderer.add_grid(self.GRID_SIZE*2, translate=self.GRID_TRANSLATE) 
                 
         # Example sine wave scatter plot
-        x1 = np.linspace(0, 10, 200)
+        x1 = np.linspace(-self.GRID_SIZE, self.GRID_SIZE, 500)
         y1 = np.sin(x1)
-        x2 = np.linspace(0, 10, 50)
+        x2 = np.linspace(-self.GRID_SIZE, self.GRID_SIZE, 200)
         y2 = np.sin(x2)
-        self.renderer.plot(x1, 1.5*y1, color=Color.CYAN, line_width=3.0)
-        self.renderer.plot(x1, -0.75*y1, color=Color.RED, line_width=3.0)
-        self.renderer.scatter(x2, 0.5*y2, color=Color.GREEN, point_size=12.0, shape=PointShape.CIRCLE)
-        self.renderer.scatter(x2, -0.25*y2, color=Color.ORANGE, point_size=12.0, shape=PointShape.TRIANGLE)
-                
+        self.renderer.plot(x1, 2*y1, color=Colour.CYAN, line_width=3.0)
+        self.renderer.plot(x1, -0.5*y1, color=Colour.RED, line_width=3.0)
+        self.renderer.scatter(x2, -1.5*y2, color=Colour.GREEN, point_size=12.0, shape=PointShape.CIRCLE)
+        self.renderer.scatter(x2, 1*y2, color=Colour.ORANGE, point_size=12.0, shape=PointShape.TRIANGLE)
+    
     def update_scene(self):
         """ update the scene """
         pass
-        
+  
     def events(self):
         """ Process custom events, such as the keyboard & mouse. """
         pass

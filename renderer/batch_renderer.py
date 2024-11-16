@@ -5,7 +5,7 @@ from renderer.objects import BufferType, VertexBuffer, IndexBuffer, VertexArray,
 from renderer.shader import Shader, vertex_shader_lighting, fragment_shader_lighting  
 
 class BatchRenderer:
-    """Efficient batch renderer for OpenGL objects."""
+    """Batch renderer for OpenGL objects."""
     
     def __init__(self, max_vertices=10000, max_indices=30000, buffer_type=BufferType.Dynamic):
         """Initialize the batch renderer.
@@ -207,7 +207,7 @@ class BatchRenderer:
             self.overflow_count += 1
             if self.overflow_count <= self.max_overflow_warnings:
                 print(f"Warning: Buffer overflow occurred ({self.overflow_count}/{self.max_overflow_warnings}) - Resizing buffers")
-                print(f"Consider initializing with larger buffers: vertices={new_vertex_count}, indices={new_index_count}")
+                print(f"Warning: You should initialize with larger buffers: vertices={new_vertex_count}, indices={new_index_count}")
         
         # Update buffers with new data
         self.vertex_buffer.update_data(vertex_data.astype(np.float32))
@@ -319,8 +319,8 @@ class BatchRenderer:
 
     def get_stats(self):
         """Get key rendering statistics."""
-        # Calculate batch stats
-        total_objects = sum(len(batch_data['objects']) for batch_data in self.batches.values())
+        # Calculate batch stats - batches contains lists directly, not dictionaries
+        total_objects = sum(len(batch_objects) for batch_objects in self.batches.values())
         
         # Calculate buffer usage percentages
         vertex_buffer_usage = (self.vertex_count / self.max_vertices * 100) if self.max_vertices > 0 else 0

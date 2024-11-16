@@ -8,8 +8,8 @@ from renderer.renderer import Renderer
 from utils.timer import Timer
 from utils.config import Config
 from gui.imgui_manager import ImGuiManager
+from gui.imgui_text_renderer import ImguiTextRenderer
 import time
-
             
 class Application:
     """Base class for OpenGL applications with ImGui integration.
@@ -54,6 +54,7 @@ class Application:
         self.mouse = None
         self.keyboard = None
         self.imgui_manager = None
+        self.text_renderer = None
         self.object_selection = None
         self.timer = Timer()  # Initialize the Timer
         self.config = config
@@ -113,7 +114,7 @@ class Application:
         )
         self.mouse = Mouse(self)
         self.keyboard = Keyboard(self.camera)
-        self.renderer = Renderer(self.config, static_max_vertices=20000, static_max_indices=60000, dynamic_max_vertices=20000, dynamic_max_indices=60000)
+        self.renderer = Renderer(self.config, static_max_vertices=50000, static_max_indices=150000, dynamic_max_vertices=50000, dynamic_max_indices=150000)
         
         self.object_selection = ObjectSelection(self.camera, self.renderer, self.mouse, self.selection_settings)
         self.set_frame_size(self.window, self.window_width, self.window_height)
@@ -121,6 +122,7 @@ class Application:
     def _init_imgui(self):
         self.imgui_manager = ImGuiManager(self.window, enable_docking=self.enable_docking)
         self._load_fonts()
+        self.text_renderer = ImguiTextRenderer(self.mouse, self.imgui_manager)
 
     def _load_fonts(self):
         for name, font in self.fonts.items():
@@ -157,7 +159,14 @@ class Application:
         # Update
         self.timer.update()  # Update the timer to calculate delta time
         self.process_inputs()
+        
+        # Clear text renderer
+        self.text_renderer.clear()
+        # Set object's geometry & transform and set the texts to render
         self.update_scene()
+        
+        # Clear object renderer
+        self.renderer.clear()
         # Render
         self.render_core()
         
@@ -186,11 +195,11 @@ class Application:
         Handles ImGui frame setup, font management, and buffer swapping.
         """
         self.imgui_manager.new_frame()
-        self.renderer.clear()
-
+        
         self.imgui_manager.push_font(self.default_font)
         self.imgui_manager.render_dockspace()
     
+        self.text_renderer.render() 
         self.render_ui()
         self.render_scene()
         

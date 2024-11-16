@@ -4,7 +4,7 @@ from OpenGL.GL import GL_POINTS, GL_LINES
 from renderer.renderer import Renderer
 from renderer.geometry import Geometry
 from renderer.objects import BufferType
-from utils.color import Color
+from utils.colour import Colour
 
 class SelectionSettings:
     def __init__(self, show_cursor_point=True, select_objects=True, drag_objects=False):
@@ -79,7 +79,7 @@ class ObjectSelection:
     def process_cursor_point(self):
         # Draw cursor point
         if hasattr(self.renderer, 'cursor_pos'):
-            self.cursor_point.set_geometry_data(Geometry.create_point(self.renderer.cursor_pos, color=Color.WHITE))
+            self.cursor_point.set_geometry_data(Geometry.create_point(self.renderer.cursor_pos, color=Colour.WHITE))
         
     def process_selection_targets(self):
         # Draw target on selected objects
@@ -93,7 +93,7 @@ class ObjectSelection:
                     width, height, _ = (bounds['max'] - bounds['min']) + np.array([offset, offset, 0])
                     mid_x, mid_y, _ = obj.get_mid_point()
                     edge_length = self.camera.distance * self.target_edge_length
-                    selected_geometry += Geometry.create_rectangle_target(mid_x, mid_y, width, height, edge_length, Color.WHITE) 
+                    selected_geometry += Geometry.create_rectangle_target(mid_x, mid_y, width, height, edge_length, Colour.WHITE) 
 
         self.selected_object.set_geometry_data(selected_geometry)
         

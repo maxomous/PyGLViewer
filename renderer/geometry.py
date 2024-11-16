@@ -5,7 +5,7 @@ Includes vertex data structures, geometry containers, and shape factory methods.
 
 import numpy as np
 from OpenGL.GL import *
-from utils.color import Color
+from utils.colour import Colour
 from utils.transform import Transform
 
 class Vertex:
@@ -570,6 +570,7 @@ class Geometry:
 
         return GeometryData(vertices, indices)
 
+
     @staticmethod
     def create_cylinder(segments, color):
         """Create a cylinder along the Z-axis.
@@ -632,6 +633,7 @@ class Geometry:
         bottom = Geometry.create_circle_wireframe(centre=(0,0,0), radius=0.5, segments=segments, color=color)
         top = Geometry.create_circle_wireframe(centre=(0,0,1), radius=0.5, segments=segments, color=color)
         return bottom + top
+    
     @staticmethod
     def create_cone(segments, color):
         """Create a cone along the Z-axis.
@@ -748,7 +750,44 @@ class Geometry:
             vertex_objects.append(Vertex(position, color, normalized))
 
         return GeometryData(vertex_objects, indices)
-
+    
+    ###########################################################################
+    ###########  MULTIPLE GEOMETRIES  ##########################################
+    ###########################################################################
+    
+    @staticmethod
+    def create_beam(p0, p1, width, height, color=None, wireframe_color=(1,1,1)):
+        """Create a rectangular beam between two points.
+        
+        Args:
+            p0 (tuple): Start point XYZ coordinates
+            p1 (tuple): End point XYZ coordinates
+            width (float): Width of beam cross-section. Defaults to 0.1
+            height (float): Height of beam cross-section. Defaults to 0.1
+            color (tuple): RGB color values for filled geometry
+            wireframe_color (tuple): RGB color values for wireframe. Defaults to white
+        
+        Returns:
+            list: [GeometryData for filled beam, GeometryData for wireframe]
+        """
+        p0, p1 = np.array(p0), np.array(p1)
+        direction = p1 - p0
+        length = np.linalg.norm(direction)
+        
+        if length == 0:
+            return [GeometryData(), GeometryData()]  # Return empty geometry if p0 and p1 are the same
+            
+        # Calculate transforms - note we use midpoint since cube is centered at origin
+        translation, rotation, scale = Geometry.calculate_transform(p0, p1, (width, height))
+        # Create body and wireframe using cube, offset by 0.5 in z-direction, and transform to between p0 and p1
+        body = Geometry.create_cube(1.0, color) \
+            .transform(translate=(0, 0, 0.5)) \
+            .transform(translation, rotation, scale)
+        wireframe = Geometry.create_cube_wireframe(1.0, wireframe_color) \
+            .transform(translate=(0, 0, 0.5)) \
+            .transform(translation, rotation, scale)
+        
+        return [body, wireframe]
             
     @staticmethod
     def create_arrow(p0, p1, color, wireframe_color=(1,1,1), shaft_radius=0.1, head_radius=0.2, head_length=0.4, segments=16):
@@ -771,14 +810,14 @@ class Geometry:
         length = np.linalg.norm(direction)
         
         if length == 0:
-            return GeometryData([], [])  # Return empty geometry if p0 and p1 are the same
+            return [GeometryData(), GeometryData()]  # Return empty geometry if p0 and p1 are the same
     
         unit_direction = direction / length
         pHead = p1 - unit_direction * head_length
 
         # Calculate transforms
-        translation_shaft, rotation_shaft, scale_shaft = Geometry.calculate_transform(p0, pHead, (shaft_radius, shaft_radius, 1))
-        translation_head, rotation_head, scale_head = Geometry.calculate_transform(pHead, p1, (head_radius, head_radius, 1))
+        translation_shaft, rotation_shaft, scale_shaft = Geometry.calculate_transform(p0, pHead, (shaft_radius, shaft_radius))
+        translation_head, rotation_head, scale_head = Geometry.calculate_transform(pHead, p1, (head_radius, head_radius))
 
         # Create shaft (cylinder)
         shaft = Geometry.create_cylinder(segments, color).transform(translation_shaft, rotation_shaft, scale_shaft)

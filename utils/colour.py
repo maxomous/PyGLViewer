@@ -1,4 +1,4 @@
-class Color:
+class Colour:
     """Common color constants."""
     BLACK = (0.0, 0.0, 0.0)
     WHITE = (1.0, 1.0, 1.0)

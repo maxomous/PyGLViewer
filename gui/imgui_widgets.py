@@ -37,7 +37,6 @@ class ImGuiWidgets:
             return True
         return False 
     
-    
 # Additional functions using the imgui module as the namespace
 # e.g. imgui.some_function()
 

@@ -123,7 +123,46 @@ class Mouse:
             if self.last_cursor is not None:
                 glfw.set_cursor(self.app.window, glfw.create_standard_cursor(glfw.ARROW_CURSOR))
                 self.last_cursor = None
+                import numpy as np
+
+    def world_to_screen(self, position):
+        """Convert world coordinates to screen space position.
+        
+        Args:
+            world_pos (tuple or np.ndarray): Position in world space (x, y, z)
+            view_matrix (np.ndarray): 4x4 view matrix
+            projection_matrix (np.ndarray): 4x4 projection matrix
+            window_size (tuple): Window dimensions (width, height)
                 
+        Returns:
+            tuple or None: (x, y) position in screen space (pixels), or None if behind camera
+        """
+        view_matrix = self.app.camera.get_view_matrix().T
+        projection_matrix = self.app.camera.get_projection_matrix().T
+        # Convert world_pos to homogeneous coordinates
+        position = np.append(position, 1.0)
+        
+        # Transform to view space
+        view_pos = view_matrix @ position
+        
+        # Check if point is behind camera
+        if view_pos[2] > 0:  # OpenGL uses negative z for "in front"
+            return (None, None)
+            
+        # Transform to clip space
+        clip_pos = projection_matrix @ view_pos
+        
+        # Perspective divide to get NDC
+        ndc = clip_pos[:3] / clip_pos[3]
+        
+        # Get window size
+        width, height = self.app.window_width, self.app.window_height
+        
+        # Convert NDC to screen coordinates
+        screen_x = (ndc[0] + 1.0) * width * 0.5
+        screen_y = (1.0 - ndc[1]) * height * 0.5  # Flip Y coordinate
+        
+        return (screen_x, screen_y)
                 
     def screen_to_world(self, screen_x, screen_y):
         """Convert screen coordinates to world space position.
