@@ -1,5 +1,4 @@
 import imgui
-import glfw
 import numpy as np
 from pyglviewer.core.application import Application
 from pyglviewer.core.object_selection import SelectionSettings

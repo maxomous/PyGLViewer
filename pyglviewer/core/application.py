@@ -56,7 +56,7 @@ class Application:
         self.imgui_manager = None
         self.text_renderer = None
         self.object_selection = None
-        self.timer = Timer()  # Initialize the Timer
+        self.timer = Timer()
         self.config = config
         self.camera_settings = camera_settings
         self.fonts = fonts
