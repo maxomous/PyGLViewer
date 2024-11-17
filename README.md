@@ -48,7 +48,7 @@ pip install .[glfw]
 ```
 
 ### 4. ImGui Intellisense (Optional)
-Intellisense is not included in the current version of the 'imgui' due to it being a port of the C++ version, you can manually add it by:
+Intellisense is not included in the current version of the 'imgui' due to it being a port from C++, you can manually add it by:
 - Download from: https://github.com/masc-it/pyimgui-interface-generator/blob/master/imgui.pyi
 - Save to: AppData\Roaming\Python\Python312\site-packages\imgui\__init__.pyi 
 
