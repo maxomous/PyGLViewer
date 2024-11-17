@@ -7,7 +7,7 @@ from pyglviewer.renderer.objects import BufferType
 from pyglviewer.utils.colour import Colour
 
 class SelectionSettings:
-    def __init__(self, show_cursor_point=True, select_objects=True, drag_objects=False):
+    def __init__(self, show_cursor_point=True, select_objects=True, drag_objects=True):
         self.show_cursor_point = show_cursor_point
         self.select_objects = select_objects
         self.drag_objects = drag_objects
@@ -29,6 +29,7 @@ class ObjectSelection:
 
         self.process_select()
         self.process_drag()
+        self.process_release()
         self.process_cursor_point()
         self.process_selection_targets()
     
@@ -36,43 +37,43 @@ class ObjectSelection:
         if not self.settings.select_objects or not self.camera.is_2d_mode:
             return
         
-        io = imgui.get_io()
         # Handle object selection on left click
-        if io.mouse_down[imgui.MOUSE_BUTTON_LEFT]:  # Left mouse button
-            picked_object = self.get_object_under_cursor(io.mouse_pos[0], io.mouse_pos[1])
+        if self.mouse.left_click:  # Left mouse click
+            picked_object = self.get_object_under_cursor(self.mouse.position)
             
             # Clear previous selection if not holding shift
-            if not io.key_shift:
+            if not self.mouse.shift_down:
                 for obj in self.renderer.objects:
-                    if hasattr(obj, 'selected'):
-                        obj.selected = False
+                    obj.selected = False
             
             # Select the picked object
             if picked_object:
                 picked_object.toggle_selection()
-            
+        
+            # Get selected objects to set the start positions
+            self.selected_objects = self.renderer.get_selected_objects() 
+            # Set initial object positions
+            if not hasattr(self, 'object_start_pos') or self.object_start_pos is None:
+                self.object_start_pos = [obj.get_translate().copy() for i, obj in enumerate(self.selected_objects)] if len(self.selected_objects) > 0 else None
+
     def process_drag(self):
         '''Drag selected objects with left mouse button pressed.'''
         if not self.settings.drag_objects:
             return
         
         # Drag selected objects
-        if imgui.is_mouse_dragging(imgui.MOUSE_BUTTON_LEFT):
-            selected_objects = self.renderer.get_selected_objects() 
-            # Set initial object positions
-            if not hasattr(self, 'object_start_pos') or self.object_start_pos is None:
-                self.object_start_pos = [obj.get_translate().copy() for i, obj in enumerate(selected_objects)] if len(selected_objects) > 0 else None
-
+        if self.mouse.left_down:
             # Get mouse delta & convert to world space
-            mouse_delta = imgui.get_mouse_drag_delta()
-            print(f'mouse_delta: {mouse_delta}   ')
-            x, y, _ = self.mouse.screen_to_world_delta(mouse_delta.x, mouse_delta.y)
+            mouse_delta = self.mouse.click_position_delta
+            x, y, _ = self.mouse.screen_to_world_delta(mouse_delta[0], mouse_delta[1])
             
-            for i, obj in enumerate(selected_objects):
+            for i, obj in enumerate(self.selected_objects):
                 # Set new object transform
                 translate = self.object_start_pos[i] + np.array([x, y, 0.0])
                 obj.set_translate(translate)
                 
+    def process_release(self):
+        '''Release left mouse button.'''
         if imgui.is_mouse_released(imgui.MOUSE_BUTTON_LEFT):
             self.object_start_pos = None
             
@@ -97,9 +98,9 @@ class ObjectSelection:
 
         self.selected_object.set_geometry_data(selected_geometry)
         
-    def get_object_under_cursor(self, cursor_x, cursor_y):
+    def get_object_under_cursor(self, cursor_pos):
         """Determine which object is under the cursor"""
-        world_pos = self.mouse.screen_to_world(cursor_x, cursor_y)
+        world_pos = self.mouse.screen_to_world(cursor_pos[0], cursor_pos[1])
         self.renderer.cursor_pos = world_pos
         
         # Test intersection with objects

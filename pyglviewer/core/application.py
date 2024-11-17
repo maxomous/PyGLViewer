@@ -65,7 +65,7 @@ class Application:
         self.selection_settings = selection_settings
         
     def init_core(self):
-        """Initialize GLFW, OpenGL context, and application components.
+        """initialise GLFW, OpenGL context, and application components.
         
         Returns:
             bool: True if initialization successful, False otherwise
@@ -77,7 +77,7 @@ class Application:
         return True
 
     def _init_glfw(self):
-        """Initialize GLFW window and context.
+        """initialise GLFW window and context.
         
         Returns:
             bool: True if initialization successful, False otherwise

@@ -15,11 +15,26 @@ class Mouse:
 
     def __init__(self, application):
         self.app = application # Reference to parent application
-        self.last_x = 0
-        self.last_y = 0
-        # Cursor state tracking
+        
+        self.left_click = False
+        self.middle_click = False
+        self.right_click = False
+        
+        self.left_down = 0
+        self.middle_down = 0
+        self.right_down = 0
+        
+        self.ctrl_down = 0
+        self.shift_down = 0
+        self.alt_down = 0
+        
+        self.position = (0, 0)
+        self.position_delta = (0, 0)
+        self.click_position = (0, 0)
+        self.click_position_delta = (0, 0)
+        
+        # Cursor icon
         self.last_cursor = None
-        self.uninitialised = True
         
         # Initialize configuration with defaults
         self.app.config.add("mouse.rotate_sensitivity", 0.1, "Sensitivity for rotation controls")
@@ -55,37 +70,39 @@ class Mouse:
 
         if io.want_capture_mouse:
             return
+        
+        # There seems to be some issue with ImGui's mouse state tracking (click & drag delta)so we need to use our own state
+        self.left_click = (self.left_down == 0) and (io.mouse_down[imgui.MOUSE_BUTTON_LEFT] == 1)
+        self.middle_click = (self.middle_down == 0) and (io.mouse_down[imgui.MOUSE_BUTTON_MIDDLE] == 1)
+        self.right_click = (self.right_down == 0) and (io.mouse_down[imgui.MOUSE_BUTTON_RIGHT] == 1)
+        self.left_down = io.mouse_down[imgui.MOUSE_BUTTON_LEFT]
+        self.middle_down = io.mouse_down[imgui.MOUSE_BUTTON_MIDDLE]
+        self.right_down = io.mouse_down[imgui.MOUSE_BUTTON_RIGHT]
+        
+        self.ctrl_down = io.key_ctrl
+        self.shift_down = io.key_shift
+        self.alt_down = io.key_alt
+        
+        self.position = np.array(io.mouse_pos)
+        self.position_delta = np.array(io.mouse_delta)
+        
+        # Update click position on left click
+        if self.left_click:
+            self.click_position = np.array(self.position)
+            
+        self.click_position_delta = self.position - self.click_position
 
-        mouse_pos = io.mouse_pos
-        mouse_delta = io.mouse_delta
-        left_pressed = io.mouse_down[0]
-        middle_pressed = io.mouse_down[2]
-        ctrl_pressed = io.key_ctrl
-
-        if self.uninitialised:
-            self.last_x, self.last_y = mouse_pos.x, mouse_pos.y
-            self.uninitialised = False
-
-        xoffset = mouse_delta.x
-        yoffset = mouse_delta.y
-
-        if (left_pressed and ctrl_pressed) or (middle_pressed and ctrl_pressed):
-            xoffset *= self.pan_sensitivity
-            yoffset *= self.pan_sensitivity
-            self.app.camera.pan(xoffset, yoffset, self.app.config["mouse.invert_pan"])
-        elif left_pressed or middle_pressed:
-            xoffset *= self.app.config["mouse.rotate_sensitivity"]
-            yoffset *= self.app.config["mouse.rotate_sensitivity"]
-            self.app.camera.rotate(xoffset, yoffset, self.app.config["mouse.invert_yaw_pitch"])
+        if (self.left_down and self.ctrl_down) or (self.middle_down and self.ctrl_down):
+            self.position_delta *= self.pan_sensitivity
+            self.app.camera.pan(self.position_delta[0], self.position_delta[1], self.app.config["mouse.invert_pan"])
+        elif self.left_down or self.middle_down:
+            self.position_delta *= self.app.config["mouse.rotate_sensitivity"]
+            self.app.camera.rotate(self.position_delta[0], self.position_delta[1], self.app.config["mouse.invert_yaw_pitch"])
 
         # Handle scrolling
         wheel = io.mouse_wheel
         if wheel != 0:
             self.app.camera.zoom(-wheel * self.scroll_sensitivity * self.app.config["mouse.invert_scroll"])
-
-        self.last_x, self.last_y = mouse_pos.x, mouse_pos.y
-        
-        
 
 
     def update_cursor(self):
@@ -129,10 +146,7 @@ class Mouse:
         """Convert world coordinates to screen space position.
         
         Args:
-            world_pos (tuple or np.ndarray): Position in world space (x, y, z)
-            view_matrix (np.ndarray): 4x4 view matrix
-            projection_matrix (np.ndarray): 4x4 projection matrix
-            window_size (tuple): Window dimensions (width, height)
+            position (np.ndarray): Position in world space (x, y, z)
                 
         Returns:
             tuple or None: (x, y) position in screen space (pixels), or None if behind camera
@@ -200,6 +214,7 @@ class Mouse:
         return world_pos
     
     def screen_to_world_delta(self, screen_delta_x, screen_delta_y):
+        # TODO: There is likely a simpler, more efficient way to do this
         """Convert a screen space delta to world space delta.
         
         Args:

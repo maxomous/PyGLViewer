@@ -24,7 +24,7 @@ class Timer:
         Returns:
             float: Angle in radians, wrapped between 0 and 2π
         """
-        angle = (speed * self.time * 2 * np.pi + phi) % (2 * np.pi)  # Wrap between 0 and 2π
+        angle = (speed * self.time * 2 * np.pi + phi) 
         return angle if reverse else 2 * np.pi - angle
     
     def oscillate_translation(self, amplitude=1, speed=1, phi=0, reverse=False):

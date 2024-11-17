@@ -158,7 +158,7 @@ class ExampleApplication(Application):
         Process custom events, such as the keyboard & mouse.
         """
         io = imgui.get_io()
-        # If ImGui is capturing input, do not process further
+        # If ImGui is capturing keyboard input, do not process further
         if io.want_capture_keyboard:
             return
 
@@ -168,6 +168,7 @@ class ExampleApplication(Application):
         # Left mouse button pressed
         if imgui.is_mouse_down(glfw.MOUSE_BUTTON_LEFT):
             pass 
+        
             
     def render_core_ui_window(self):
         """
@@ -233,7 +234,7 @@ if __name__ == '__main__':
         selection_settings=SelectionSettings(
             show_cursor_point=True,
             select_objects=True,
-            drag_objects=False
+            drag_objects=True
         )
     )
     

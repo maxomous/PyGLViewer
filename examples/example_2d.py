@@ -34,7 +34,11 @@ class Example2DApplication(Application):
         self.renderer.plot(x1, -0.5*y1, color=Colour.RED, line_width=3.0)
         self.renderer.scatter(x2, -1.5*y2, color=Colour.GREEN, point_size=12.0, shape=PointShape.CIRCLE)
         self.renderer.scatter(x2, 1*y2, color=Colour.ORANGE, point_size=12.0, shape=PointShape.TRIANGLE)
-    
+        # Try dragging these circles
+        self.renderer.add_circle(position=(3, 2, 0), radius=0.2, color=Colour.RED, line_width=3.0, show_wireframe=False)
+        self.renderer.add_circle(position=(4, 2, 0), radius=0.2, color=Colour.GREEN, line_width=3.0, show_wireframe=False)
+        self.renderer.add_circle(position=(5, 2, 0), radius=0.2, color=Colour.BLUE, line_width=3.0, show_wireframe=False)
+        
     def update_scene(self):
         """ update the scene """
         # Update axis size
