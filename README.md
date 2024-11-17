@@ -26,28 +26,31 @@ It includes:
 - Select "Desktop development with C++" 
 
 ### 2. Install PyGLViewer
+```bash
 pip install git+https://github.com/maxomous/pyglviewer.git
+```
 
 #### Note: It installs the following packages:
-   ```bash
-   - numpy
-   - PyOpenGL
-   - PyOpenGL_accelerate  # optional 
-   - glfw
-   - imgui[glfw]
-   ```
+```bash
+- numpy
+- PyOpenGL
+- PyOpenGL_accelerate  # optional 
+- glfw
+- imgui[glfw]
+```
 
 ### 3. For ImGui Docking Branch (Alternative)
-   ```bash
-   git clone --recurse-submodules https://github.com/pyimgui/pyimgui.git
-   cd pyimgui
-   git checkout docking
-   pip install .[glfw]
-   ```
+```bash
+git clone --recurse-submodules https://github.com/pyimgui/pyimgui.git
+cd pyimgui
+git checkout docking
+pip install .[glfw]
+```
 
 ### 4. ImGui Intellisense (Optional)
-   - Download from: https://github.com/masc-it/pyimgui-interface-generator/blob/master/imgui.pyi
-   - Save to: AppData\Roaming\Python\Python312\site-packages\imgui\__init__.pyi 
+Intellisense is not included in the current version of the 'imgui' due to it being a port of the C++ version, you can manually add it by:
+- Download from: https://github.com/masc-it/pyimgui-interface-generator/blob/master/imgui.pyi
+- Save to: AppData\Roaming\Python\Python312\site-packages\imgui\__init__.pyi 
 
 ## Usage
 See the [examples](examples) folder for usage examples.
