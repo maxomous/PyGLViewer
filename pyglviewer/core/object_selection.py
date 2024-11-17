@@ -21,7 +21,8 @@ class ObjectSelection:
         self.settings = settings
         self.target_edge_length = 0.02
         self.cursor_point = self.renderer.add_blank_object(draw_type=GL_POINTS, buffer_type=BufferType.Dynamic, selectable=False)
-        self.selected_object = self.renderer.add_blank_object(draw_type=GL_LINES, buffer_type=BufferType.Dynamic, selectable=False)
+        self.selection_target = self.renderer.add_blank_object(draw_type=GL_LINES, buffer_type=BufferType.Dynamic, selectable=False)
+        self.selected_objects = []
         
     def process_input(self):
         if imgui.get_io().want_capture_mouse:
@@ -60,6 +61,8 @@ class ObjectSelection:
         '''Drag selected objects with left mouse button pressed.'''
         if not self.settings.drag_objects:
             return
+        if self.mouse.is_panning or self.mouse.is_rotating:
+            return
         
         # Drag selected objects
         if self.mouse.left_down:
@@ -96,7 +99,7 @@ class ObjectSelection:
                     edge_length = self.camera.distance * self.target_edge_length
                     selected_geometry += Geometry.create_rectangle_target(mid_x, mid_y, width, height, edge_length, Colour.WHITE) 
 
-        self.selected_object.set_geometry_data(selected_geometry)
+        self.selection_target.set_geometry_data(selected_geometry)
         
     def get_object_under_cursor(self, cursor_pos):
         """Determine which object is under the cursor"""

@@ -33,6 +33,9 @@ class Mouse:
         self.click_position = (0, 0)
         self.click_position_delta = (0, 0)
         
+        self.is_panning = False
+        self.is_rotating = False
+
         # Cursor icon
         self.last_cursor = None
         
@@ -91,11 +94,17 @@ class Mouse:
             self.click_position = np.array(self.position)
             
         self.click_position_delta = self.position - self.click_position
-
+        
+        # Reset flags
+        self.is_panning = False
+        self.is_rotating = False
+        
         if (self.left_down and self.ctrl_down) or (self.middle_down and self.ctrl_down):
+            self.is_panning = True
             self.position_delta *= self.pan_sensitivity
             self.app.camera.pan(self.position_delta[0], self.position_delta[1], self.app.config["mouse.invert_pan"])
-        elif self.left_down or self.middle_down:
+        elif not self.app.camera.is_2d_mode and (self.left_down or self.middle_down):
+            self.is_rotating = True
             self.position_delta *= self.app.config["mouse.rotate_sensitivity"]
             self.app.camera.rotate(self.position_delta[0], self.position_delta[1], self.app.config["mouse.invert_yaw_pitch"])
 
