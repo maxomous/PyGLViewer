@@ -8,6 +8,7 @@ class Transform:
         self.scale = np.array(scale, dtype=np.float32)
         self.dirty = True
         self.cached_matrix = None
+        
     def transform_position(self, position):
         """Transform a 3D position using this transform.
         

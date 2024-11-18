@@ -148,10 +148,10 @@ class ExampleApplication(Application):
             Geometry.create_cube_wireframe(size=0.5, color=Colour.BLACK).transform(translate=(1, 0, 0.5), rotate=rotate_geometry, scale=(1.0001, 1.0001, 1.0001))
         )
         # Translate & rotate cube objects
-        self.rotating_cubes.set_transform(translate=(self.timer.oscillate_translation(amplitude=2, speed=0.25), -3, 0), rotate=rotate_object)
+        self.rotating_cubes.set_transform(translate=(self.timer.oscillate_translation(limits=[-2, 2], speed=0.25), -3, 0), rotate=rotate_object)
 
         # Text Rendering
-        self.text_renderer.add_text('3D LABEL', (self.timer.oscillate_translation(amplitude=1.5, speed=0.25), -0.5, 1), Colour.ORANGE, font='arial_rounded_mt_bold-medium')
+        self.text_renderer.add_text('3D LABEL', (self.timer.oscillate_translation(limits=[-1.5, -1.5], speed=0.25), -0.5, 1), Colour.ORANGE, font='arial_rounded_mt_bold-medium')
 
     def events(self):
         """

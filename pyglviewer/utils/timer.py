@@ -27,16 +27,18 @@ class Timer:
         angle = (speed * self.time * 2 * np.pi + phi) 
         return angle if reverse else 2 * np.pi - angle
     
-    def oscillate_translation(self, amplitude=1, speed=1, phi=0, reverse=False):
+    def oscillate_translation(self, limits=[-1, 1], speed=1, phi=0, reverse=False):
         """Calculate sinusoidal translation (1 oscillation per second).
         
         Args:
-            amplitude (float): Maximum translation distance
+            limits (list): Limits of the oscillation
             speed (float): Speed of oscillation
             phi (float): Phase offset in radians (default: 0)
             reverse (bool): Reverse oscillation direction (default: False)
             
         Returns:
-            float: Translation offset between -amplitude and +amplitude
+            float: Translation offset between between[0] and between[1]
         """
-        return amplitude * np.sin(speed * self.oscillate_angle(phi=phi, reverse=reverse))
+        amplitude = (limits[1] - limits[0]) / 2
+        offset = (limits[0] + limits[1]) / 2
+        return amplitude * np.sin(speed * self.oscillate_angle(phi=phi, reverse=reverse)) + offset
