@@ -8,7 +8,6 @@ setup(
         "numpy",
         "pyopengl",
         "glfw",
-        "glfw-accelerate",
         "imgui[glfw]",
     ],
     extras_require={
