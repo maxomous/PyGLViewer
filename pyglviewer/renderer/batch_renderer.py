@@ -260,7 +260,7 @@ class BatchRenderer:
                 if not objects:
                     continue
                 
-                # Get properties from first object in batch, all objects should have the same properties
+                # Get properties from first object in batch
                 first_obj = objects[0]
                 draw_type = first_obj.draw_type
                 shader = first_obj.shader
@@ -288,6 +288,8 @@ class BatchRenderer:
                         continue
                     # Set model matrix for this object
                     current_shader.set_model_matrix(obj.model_matrix)
+                    # Set alpha for transparency
+                    current_shader.set_alpha(obj.alpha)
                     
                     # Calculate number of indices for this object
                     num_indices = len(obj.index_data)

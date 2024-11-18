@@ -1,4 +1,5 @@
-from typing import Dict, List
+from dataclasses import dataclass, replace
+from typing import Dict, List, Tuple, Optional
 from OpenGL.GL import *
 import numpy as np
 from pyglviewer.renderer.geometry import Geometry, Vertex
@@ -11,7 +12,73 @@ from pyglviewer.renderer.shader import Shader, PointShape
 from pyglviewer.renderer.shader import vertex_shader_lighting, fragment_shader_lighting, vertex_shader_points, fragment_shader_points
 # TODO: buffer_type is not really implemented for static buffer
 # TODO: Remove the 1.01 scaling and replace with a input for every function
+# TODO: transform is not the same for everything, cube vs cylinder for example
 
+@dataclass
+class RenderParams:
+    """Common parameters for rendering objects.
+    
+    Parameters
+    ----------
+    ### Object Parameters
+    line_width : float
+        Width for line primitives
+    point_size : float
+        Size for point primitives
+    point_shape : PointShape
+        Shape for point primitives
+    buffer_type : BufferType
+        Static or Dynamic buffer type
+    selectable : bool
+        Allow object to be selected
+    shader : Optional[Shader]
+        Custom shader for rendering
+    alpha : float
+        Alpha value for transparency
+    
+    ### Transform Parameters
+    translate : Tuple[float, float, float]
+        Translation vector (x,y,z)
+    rotate : Tuple[float, float, float]
+        Rotation angles (x,y,z)
+    scale : Tuple[float, float, float]
+        Scale factors (x,y,z)
+    
+    ### Display Parameters
+    show_body : bool
+        Show filled geometry
+    show_wireframe : bool
+        Show wireframe
+    wireframe_color : Optional[Colour]
+        Color for wireframe
+    """
+    # Object Parameters
+    line_width: float = 1.0
+    point_size: float = 1.0
+    point_shape: PointShape = PointShape.CIRCLE
+    buffer_type: BufferType = BufferType.Static
+    selectable: bool = True
+    shader: Optional[Shader] = None
+    alpha: float = 1.0
+    
+    # Transform Parameters
+    translate: Tuple[float, float, float] = (0, 0, 0)
+    rotate: Tuple[float, float, float] = (0, 0, 0)
+    scale: Tuple[float, float, float] = (1, 1, 1)
+    
+    # Display Parameters
+    show_body: bool = True
+    show_wireframe: bool = True
+    wireframe_color: Optional[Colour] = Colour.BLACK
+
+
+
+@dataclass
+class ArrowDimensions:
+    """Dimensions for arrow objects."""
+    shaft_radius: float
+    head_radius: float
+    head_length: float
 
 class Renderer:
     """OpenGL renderer for managing 3D objects, lights, and scene rendering.
@@ -20,7 +87,7 @@ class Renderer:
     lighting setup, and camera transformations.
     Static objects are updated only once (or very rarely), dynamic objects update often/every frame
     """
-    def __init__(self, config, static_max_vertices=10000, static_max_indices=30000, dynamic_max_vertices=10000, dynamic_max_indices=30000):
+    def __init__(self, config, static_max_vertices, static_max_indices, dynamic_max_vertices, dynamic_max_indices):
         """Initialize renderer with default settings and OpenGL state."""
         self.lights = []
         self.objects = []
@@ -33,14 +100,12 @@ class Renderer:
         self.point_shader = Shader(vertex_shader_points, fragment_shader_points)
         
         # Set default values or pass arguments to add_x() functions individually
-        self.default_point_size = 1.0
-        self.default_line_width = 1.0
-        self.default_point_shape = PointShape.CIRCLE
         self.default_segments = 16
         self.default_subdivisions = 4
+        
         self.default_face_color = Colour.WHITE
         self.default_wireframe_color = Colour.BLACK
-        self.default_arrow_dimensions = Renderer.ArrowDimensions(shaft_radius=0.03, head_radius=0.06, head_length=0.1)
+        self.default_arrow_dimensions = ArrowDimensions(shaft_radius=0.03, head_radius=0.06, head_length=0.1)
         self.default_axis_ticks = [
             { 'increment': 1,    'tick_size': 0.08,  'line_width': 3, 'tick_color': Colour.rgb(200, 200, 200) }, 
             { 'increment': 0.5,  'tick_size': 0.04,  'line_width': 3, 'tick_color': Colour.rgb(200, 200, 200) }, 
@@ -124,7 +189,7 @@ class Renderer:
         glClearColor(r, g, b, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    def add_point(self, position, color, point_size=None, shape=None, buffer_type=BufferType.Static, selectable=True, shader=None):
+    def add_point(self, position, color, params = RenderParams()):
         """Add a point primitive to the scene.
         
         Parameters
@@ -133,23 +198,22 @@ class Renderer:
             3D position of point
         color : Color
             Point color
-        point_size : float, optional
-            Size in pixels (default is self.default_point_size)
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
+        params : RenderParams, optional
+            Rendering parameters
 
         Returns
         -------
         RenderObject
             Point render object
         """
-        shader = shader or self.point_shader
+        # Use point shader if not specified
+        params.shader = params.shader or self.point_shader
+        # Create point geometry
         geometry = Geometry.create_point(position, color)
-        point = self.add_object(geometry, buffer_type, GL_POINTS, point_size=point_size, point_shape=shape, selectable=selectable, shader=shader)
-        return point
+        # Add object to batch renderer
+        return self.add_object(geometry, GL_POINTS, params)
 
-    def add_points(self, points, color=Colour.WHITE, point_size=3.0, shape=None, buffer_type=BufferType.Static, 
-                   translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False, shader=None):
+    def add_points(self, points, color=Colour.WHITE, params = RenderParams()):
         """Add a series of points.
         
         Parameters
@@ -158,33 +222,23 @@ class Renderer:
             Array of points (x,y,z)
         color : Color, optional
             Point color (default: white)
-        point_size : float, optional
-            Size of points (default: 3.0)
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
-
+        params : RenderParams, optional
+            Rendering parameters
+        
         Returns
         -------
         RenderObject
             Points render object
         """
-        shader = shader or self.point_shader
         geometry = Geometry.create_blank()
         for point in points:
-            geometry = geometry + Geometry.create_point(point, color).transform(translate, rotate, scale)
-        points = self.add_object(geometry, buffer_type, GL_POINTS, point_size=point_size, point_shape=shape, selectable=selectable, shader=shader)
+            geometry = geometry + Geometry.create_point(point, color).transform(
+                params.translate, params.rotate, params.scale)
+        
+        return self.add_object(geometry, GL_POINTS, params)
 
-        return points
-
-    def add_line(self, p0, p1, color, line_width=None, buffer_type=BufferType.Static, 
-                translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True):
-        """Add a line segment between two points.
+    def add_line(self, p0, p1, color=Colour.WHITE, params = RenderParams()):
+        """Add a line from p0 to p1.
         
         Parameters
         ----------
@@ -192,30 +246,21 @@ class Renderer:
             Start point
         p1 : tuple
             End point
-        color : Color
+        color : Color, optional
             Line color
-        line_width : float, optional
-            Width in pixels (default is self.default_line_width)
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
+        params : RenderParams, optional
+            Rendering parameters
 
         Returns
         -------
         RenderObject
             Line render object
         """
-        geometry = Geometry.create_line(p0, p1, color).transform(translate, rotate, scale)
-        line = self.add_object(geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
-        return line
+        geometry = Geometry.create_line(p0, p1, color).transform(
+            params.translate, params.rotate, params.scale)
+        return self.add_object(geometry, GL_LINES, params)
 
-    def add_linestring(self, points, color=Colour.WHITE, line_width=None, buffer_type=BufferType.Static, 
-            translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
+    def add_linestring(self, points, color=Colour.WHITE, params = RenderParams()):
         """Add a line through a series of points.
         
         Parameters
@@ -224,14 +269,8 @@ class Renderer:
             Array of points (x,y,z)
         color : Color, optional
             Line color (default: white)
-        line_width : float, optional
-            Width of the line (default: 1.0)
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
+        params : RenderParams, optional
+            Rendering parameters
 
         Returns
         -------
@@ -239,17 +278,14 @@ class Renderer:
             Line render object
         """
         points = np.atleast_2d(points)
-        
         if points.shape[1] != 3:
             raise ValueError("Points must have 3 values (x,y,z) per point")
-            
-        geometry = Geometry.create_linestring(points, color).transform(translate, rotate, scale)
-        linestring = self.add_object(geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
-        return linestring
+        
+        geometry = Geometry.create_linestring(points, color).transform(
+            params.translate, params.rotate, params.scale)
+        return self.add_object(geometry, GL_LINES, params)
 
-    def add_triangle(self, p1, p2, p3, color=None, wireframe_color=None, line_width=None,
-                    buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
-                    translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True):
+    def add_triangle(self, p1, p2, p3, color=None, params = RenderParams()):
         """Add a triangle defined by three points.
         
         Parameters
@@ -258,88 +294,69 @@ class Renderer:
             Triangle vertices
         color : Color, optional
             Fill color
-        wireframe_color : Color, optional
-            Outline color
-        line_width : float, optional
-            Outline width (default is self.default_line_width)
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-        show_body : bool, optional
-            Show filled triangle
-        show_wireframe : bool, optional
-            Show outline
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
+        params : RenderParams, optional
+            Rendering parameters
 
         Returns
         -------
         ObjectCollection
             Collection containing 'body' and 'wireframe' objects
         """
+        color = color or self.default_face_color
         objects = {}
-        if show_body:
-            geometry = Geometry.create_triangle(p1, p2, p3, color or self.default_face_color).transform(translate, rotate, scale)
-            objects['body'] = self.add_object(geometry, buffer_type, GL_TRIANGLES, selectable=selectable)
-        if show_wireframe:
-            geometry = Geometry.create_triangle_wireframe(p1, p2, p3, wireframe_color or self.default_wireframe_color).transform(translate, rotate, scale)
-            objects['wireframe'] = self.add_object(geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
+        
+        if params.show_body:
+            geometry = Geometry.create_triangle(p1, p2, p3, color).transform(
+                params.translate, params.rotate, params.scale)
+            objects['body'] = self.add_object(geometry, GL_TRIANGLES, params)
+        
+        if params.show_wireframe:
+            geometry = Geometry.create_triangle_wireframe(
+                p1, p2, p3, params.wireframe_color or self.default_wireframe_color
+            ).transform(params.translate, params.rotate, params.scale)
+            objects['wireframe'] = self.add_object(geometry, GL_LINES, params)
+        
         return ObjectCollection(objects)
 
-    def add_rectangle(self, position, width, height, color=None, wireframe_color=None, line_width=None, 
-                     buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
-                     translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True):
-        """Add a rectangle in the XY plane.
+    def add_rectangle(self, position, width, height, color=None, params = RenderParams()):
+        """Add a rectangle.
         
         Parameters
         ----------
         position : tuple
-            Bottom-left corner position (x,y)
+            Position (x,y)
         width : float
             Rectangle width
         height : float
             Rectangle height
         color : Color, optional
             Fill color
-        wireframe_color : Color, optional
-            Outline color
-        line_width : float, optional
-            Outline width (default is self.default_line_width)
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-        show_body : bool, optional
-            Show filled rectangle
-        show_wireframe : bool, optional
-            Show outline
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
+        params : RenderParams, optional
+            Rendering parameters
 
         Returns
         -------
         ObjectCollection
             Collection containing 'body' and 'wireframe' objects
         """
+        color = color or self.default_face_color
         objects = {}
-        if show_body:
-            geometry = Geometry.create_rectangle(position[0], position[1], width, height, 
-                                              color or self.default_face_color).transform(translate, rotate, scale)
-            objects['body'] = self.add_object(geometry, buffer_type, GL_TRIANGLES, selectable=selectable)
-        if show_wireframe:
-            geometry = Geometry.create_rectangle_wireframe(position[0], position[1], width * 1.01, height * 1.01, 
-                                                            wireframe_color or self.default_wireframe_color).transform(translate, rotate, scale)
-            objects['wireframe'] = self.add_object(geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
+        
+        if params.show_body:
+            geometry = Geometry.create_rectangle(position[0], position[1], width, height, color).transform(
+                params.translate, params.rotate, params.scale)
+            objects['body'] = self.add_object(geometry, GL_TRIANGLES, params)
+        
+        if params.show_wireframe:
+            geometry = Geometry.create_rectangle_wireframe(
+                position[0], position[1], width * 1.01, height * 1.01, 
+                params.wireframe_color or self.default_wireframe_color
+            ).transform(params.translate, params.rotate, params.scale)
+            objects['wireframe'] = self.add_object(geometry, GL_LINES, params)
+        
         return ObjectCollection(objects)
 
-    def add_circle(self, position, radius, segments=None, color=None, wireframe_color=None, line_width=None, 
-                  buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
-                  translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True ):
+    def add_circle(self, position, radius, color=None, params = RenderParams()):
         """Add a circle in the XY plane.
         
         Parameters
@@ -348,92 +365,67 @@ class Renderer:
             Center position
         radius : float
             Circle radius
-        segments : int
-            Number of segments in circle
         color : Color, optional
             Fill color
-        wireframe_color : Color, optional
-            Outline color
-        line_width : float, optional
-            Outline width (default is self.default_line_width)
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-        show_body : bool, optional
-            Show filled circle
-        show_wireframe : bool, optional
-            Show outline
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
+        params : RenderParams, optional
+            Rendering parameters
 
         Returns
         -------
         ObjectCollection
             Collection containing 'body' and 'wireframe' objects
         """
-        segments = segments or self.default_segments
         color = color or self.default_face_color
-        wireframe_color = wireframe_color or self.default_wireframe_color
+        segments = self.default_segments
         
         objects = {}
-        if show_body:
-            geometry = Geometry.create_circle(position, radius, segments, color).transform(translate, rotate, scale)
-            objects['body'] = self.add_object(geometry, buffer_type, GL_TRIANGLE_FAN, selectable=selectable)
-        if show_wireframe:
-            geometry = Geometry.create_circle_wireframe(position, radius * 1.01, segments, wireframe_color).transform(translate, rotate, scale)
-            objects['wireframe'] = self.add_object(geometry, buffer_type, GL_LINE_LOOP, line_width=line_width, selectable=selectable)
+        if params.show_body:
+            geometry = Geometry.create_circle(position, radius, segments, color).transform(
+                params.translate, params.rotate, params.scale)
+            objects['body'] = self.add_object(geometry, GL_TRIANGLE_FAN, params)
+        
+        if params.show_wireframe:
+            geometry = Geometry.create_circle_wireframe(
+                position, radius * 1.01, segments, 
+                params.wireframe_color or self.default_wireframe_color
+            ).transform(params.translate, params.rotate, params.scale)
+            objects['wireframe'] = self.add_object(geometry, GL_LINE_LOOP, params)
+        
         return ObjectCollection(objects)
 
-    def add_cube(self, color=None, wireframe_color=None, line_width=None,
-                buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
-                translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True):
+    def add_cube(self, color=None, params = RenderParams()):
         """Add a unit cube centered at origin.
         
         Parameters
         ----------
         color : Color, optional
             Fill color
-        wireframe_color : Color, optional
-            Outline color
-        line_width : float, optional
-            Outline width (default is self.default_line_width)
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-        show_body : bool, optional
-            Show filled cube
-        show_wireframe : bool, optional
-            Show outline
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
-
+        params : RenderParams, optional
+            Rendering parameters
+        
         Returns
         -------
         ObjectCollection
             Collection containing 'body' and 'wireframe' objects
         """
         color = color or self.default_face_color
-        wireframe_color = wireframe_color or self.default_wireframe_color
-        
         objects = {}
-        if show_body:
-            geometry = Geometry.create_cube(size=1.0, color=color).transform(translate, rotate, scale)
-            objects['body'] = self.add_object(geometry, buffer_type, GL_TRIANGLES, selectable=selectable)
-        if show_wireframe:
-            geometry = Geometry.create_cube_wireframe(size=1.0, color=wireframe_color).transform(translate, rotate, scale)
-            objects['wireframe'] = self.add_object(geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
+        
+        if params.show_body:
+            geometry = Geometry.create_cube(size=1.0, color=color).transform(
+                params.translate, params.rotate, params.scale)
+            objects['body'] = self.add_object(geometry, GL_TRIANGLES, params)
+        
+        if params.show_wireframe:
+            geometry = Geometry.create_cube_wireframe(size=1.0, 
+                color=params.wireframe_color or self.default_wireframe_color).transform(
+                params.translate, params.rotate, params.scale)
+            objects['wireframe'] = self.add_object(geometry, GL_LINES, params)
+        
         return ObjectCollection(objects)
 
-    def add_beam(self, p0, p1, width, height, color=None, wireframe_color=None,
-                 buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
-                 line_width=None, translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True):
-        """Add an arrow from p0 to p1 with cylindrical shaft and conical head.
+    def add_beam(self, p0, p1, width, height, color=None, params = RenderParams()):
+        """Add a beam from p0 to p1.
         
         Parameters
         ----------
@@ -447,24 +439,8 @@ class Renderer:
             Height of beam cross-section
         color : Color, optional
             Fill color
-        wireframe_color : Color, optional
-            Outline color
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-        show_body : bool, optional
-            Show filled beam
-        show_wireframe : bool, optional
-            Show outline
-        line_width : float, optional
-            Outline width (default is self.default_line_width)
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
-        selectable : bool, optional
-            Allow object to be selected
+        params : RenderParams, optional
+            Rendering parameters
 
         Returns
         -------
@@ -472,379 +448,291 @@ class Renderer:
             Collection containing 'body' and 'wireframe' objects
         """
         color = color or self.default_face_color
-        wireframe_color = wireframe_color or self.default_wireframe_color
         
-        body, wireframe = Geometry.create_beam(p0, p1, width, height, color, wireframe_color)
-        body = body.transform(translate, rotate, scale)
-        wireframe = wireframe.transform(translate, rotate, scale)
+        body, wireframe = Geometry.create_beam(
+            p0, p1, width, height, color, 
+            params.wireframe_color or self.default_wireframe_color
+        )
         
-        beam_body = self.add_object(body, buffer_type, GL_TRIANGLES, selectable=selectable) if show_body else None
-        beam_wireframe = self.add_object(wireframe, buffer_type, GL_LINES, line_width=line_width, selectable=selectable) if show_wireframe else None
-        return ObjectCollection({'body': beam_body, 'wireframe': beam_wireframe})
+        objects = {}
+        if params.show_body:
+            body = body.transform(params.translate, params.rotate, params.scale)
+            objects['body'] = self.add_object(body, GL_TRIANGLES, params)
+        
+        if params.show_wireframe:
+            wireframe = wireframe.transform(params.translate, params.rotate, params.scale)
+            objects['wireframe'] = self.add_object(wireframe, GL_LINES, params)
+        
+        return ObjectCollection(objects)
 
-    def add_cylinder(self, color=None, wireframe_color=None, segments=None, line_width=None, 
-                    buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
-                    translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True):
+    def add_cylinder(self, color=None, params = RenderParams()):
         """Add a unit cylinder centered at origin.
         
         Parameters
         ----------
         color : Color, optional
             Fill color
-        wireframe_color : Color, optional
-            Outline color
-        segments : int, optional
-            Number of segments around circumference
-        line_width : float, optional
-            Outline width (default is self.default_line_width)
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-        show_body : bool, optional
-            Show filled cylinder
-        show_wireframe : bool, optional
-            Show outline
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
+        params : RenderParams, optional
+            Rendering parameters
 
         Returns
         -------
         ObjectCollection
             Collection containing 'body' and 'wireframe' objects
         """
-        segments = segments or self.default_segments
         color = color or self.default_face_color
-        wireframe_color = wireframe_color or self.default_wireframe_color
+        segments = self.default_segments
         
         objects = {}
-        if show_body:
-            geometry = Geometry.create_cylinder(segments, color).transform(translate, rotate, scale)
-            objects['body'] = self.add_object(geometry, buffer_type, GL_TRIANGLES, selectable=selectable)
-        if show_wireframe:
-            geometry = Geometry.create_cylinder_wireframe(segments, wireframe_color).transform(translate, rotate, scale)
-            objects['wireframe'] = self.add_object(geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
+        if params.show_body:
+            geometry = Geometry.create_cylinder(segments, color).transform(
+                params.translate, params.rotate, params.scale)
+            objects['body'] = self.add_object(geometry, GL_TRIANGLES, params)
+        
+        if params.show_wireframe:
+            geometry = Geometry.create_cylinder_wireframe(
+                segments, params.wireframe_color or self.default_wireframe_color
+            ).transform(params.translate, params.rotate, params.scale)
+            objects['wireframe'] = self.add_object(geometry, GL_LINES, params)
+        
         return ObjectCollection(objects)
 
-    def add_cone(self, color=None, wireframe_color=None, segments=16, line_width=None,
-                buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
-                translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True):
+    def add_cone(self, color=None, params = RenderParams()):
         """Add a unit cone centered at origin.
         
         Parameters
         ----------
         color : Color, optional
             Fill color
-        wireframe_color : Color, optional
-            Outline color
-        segments : int, optional
-            Number of segments around circumference
-        line_width : float, optional
-            Outline width (default is self.default_line_width)
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-        show_body : bool, optional
-            Show filled cone
-        show_wireframe : bool, optional
-            Show outline
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
+        params : RenderParams, optional
+            Rendering parameters
 
         Returns
         -------
         ObjectCollection
             Collection containing 'body' and 'wireframe' objects
         """
-        segments = segments or self.default_segments
         color = color or self.default_face_color
-        wireframe_color = wireframe_color or self.default_wireframe_color
+        segments = self.default_segments
         
         objects = {}
-        if show_body:
-            geometry = Geometry.create_cone(segments, color).transform(translate, rotate, scale)
-            objects['body'] = self.add_object(geometry, buffer_type, GL_TRIANGLES, selectable=selectable)
-        if show_wireframe:
-            geometry = Geometry.create_cone_wireframe(segments, wireframe_color).transform(translate, rotate, scale)
-            objects['wireframe'] = self.add_object(geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
+        if params.show_body:
+            geometry = Geometry.create_cone(segments, color).transform(
+                params.translate, params.rotate, params.scale)
+            objects['body'] = self.add_object(geometry, GL_TRIANGLES, params)
+        
+        if params.show_wireframe:
+            geometry = Geometry.create_cone_wireframe(
+                segments, params.wireframe_color or self.default_wireframe_color
+            ).transform(params.translate, params.rotate, params.scale)
+            objects['wireframe'] = self.add_object(geometry, GL_LINES, params)
+        
         return ObjectCollection(objects)
 
-    def add_sphere(self, radius, subdivisions=4, color=None, buffer_type=BufferType.Static, 
-                  translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=True):
+    def add_sphere(self, radius, color=None, params = RenderParams()):
         """Add a sphere centered at origin.
         
         Parameters
         ----------
         radius : float
             Sphere radius
-        subdivisions : int
-            Number of recursive subdivisions (detail level)
         color : Color, optional
             Surface color
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
-        selectable : bool, optional
-            Allow object to be selected
+        params : RenderParams, optional
+            Rendering parameters
 
         Returns
         -------
         RenderObject
             Sphere render object
         """
-        subdivisions = subdivisions or self.default_subdivisions
         color = color or self.default_face_color
-        geometry = Geometry.create_sphere(radius, subdivisions, color).transform(translate, rotate, scale)
-        sphere_body = self.add_object(geometry, buffer_type, GL_TRIANGLES, selectable=selectable)
-        return sphere_body
-
-    class ArrowDimensions:
-        """Stores dimensions for arrow geometry.
+        subdivisions = self.default_subdivisions
         
-        Parameters
-        ----------
-        shaft_radius : float, optional
-            Radius of arrow shaft
-        head_radius : float, optional
-            Radius of arrow head base
-        head_length : float, optional
-            Length of arrow head
-        """
-        def __init__(self, shaft_radius=0.1, head_radius=0.2, head_length=0.4):
-            self.shaft_radius = shaft_radius
-            self.head_radius = head_radius
-            self.head_length = head_length
+        geometry = Geometry.create_sphere(radius, subdivisions, color).transform(
+            params.translate, params.rotate, params.scale)
+        return self.add_object(geometry, GL_TRIANGLES, params)
 
-    def add_arrow(self, p0, p1, arrow_dimensions=None, color=None, wireframe_color=None, segments=None,
-                 buffer_type=BufferType.Static, show_body=True, show_wireframe=True, 
-                 line_width=None, selectable=True):
-        """Add an arrow from p0 to p1 with cylindrical shaft and conical head.
+    def add_arrow(self, p0, p1, arrow_dimensions=None, color=None, params = RenderParams()):
+        """Add an arrow from p0 to p1.
         
         Parameters
         ----------
         p0 : tuple
-            Start point
+            Start point (x,y,z)
         p1 : tuple
-            End point
-        shaft_radius : float, optional
-            Shaft radius
-        head_radius : float, optional
-            Head radius
-        head_length : float, optional
-            Head length
+            End point (x,y,z)
+        arrow_dimensions : ArrowDimensions, optional
+            Arrow dimensions
         color : Color, optional
-            Fill color
-        wireframe_color : Color, optional
-            Outline color
-        segments : int, optional
-            Number of segments in circular cross-sections
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-        show_body : bool, optional
-            Show filled arrow
-        show_wireframe : bool, optional
-            Show outline
-        line_width : float, optional
-            Outline width (default is self.default_line_width)
-        selectable : bool, optional
-            Allow object to be selected
-
+            Arrow color
+        params : RenderParams, optional
+            Rendering parameters
+        
         Returns
         -------
         ObjectCollection
             Collection containing 'body' and 'wireframe' objects
         """
-        segments = segments or self.default_segments
         arrow_dimensions = arrow_dimensions or self.default_arrow_dimensions
         color = color or self.default_face_color
-        wireframe_color = wireframe_color or self.default_wireframe_color
+        segments = self.default_segments
         
-        body, wireframe = Geometry.create_arrow(p0, p1, color, wireframe_color, arrow_dimensions.shaft_radius, 
-                                                arrow_dimensions.head_radius, arrow_dimensions.head_length, segments)
-        arrow_body = self.add_object(body, buffer_type, GL_TRIANGLES, selectable=selectable) if show_body else None
-        arrow_wireframe = self.add_object(wireframe, buffer_type, GL_LINES, line_width=line_width, selectable=selectable) if show_wireframe else None
-        return ObjectCollection({'body': arrow_body, 'wireframe': arrow_wireframe})
+        geometry, wireframe = Geometry.create_arrow(p0, p1, color, params.wireframe_color, 
+                                                  arrow_dimensions.shaft_radius,
+                                                  arrow_dimensions.head_radius, 
+                                                  arrow_dimensions.head_length, segments)
+        
+        objects = {}
+        if params.show_body:
+            geometry = geometry.transform(params.translate, params.rotate, params.scale)
+            objects['body'] = self.add_object(geometry, GL_TRIANGLES, params)
+        
+        if params.show_wireframe:
+            wireframe = wireframe.transform(params.translate, params.rotate, params.scale)
+            objects['wireframe'] = self.add_object(wireframe, GL_LINES, params)
+        
+        return ObjectCollection(objects)
 
-    def add_axis(self, size=1.0, arrow_dimensions=None, segments=None, 
-                origin_radius=0.035, origin_subdivisions=None, 
-                origin_color=Colour.BLACK, wireframe_color=None, buffer_type=BufferType.Static, 
-                show_body=True, show_wireframe=True, line_width=None, translate=(0,0,0), rotate=(0,0,0), 
-                scale=(1,1,1), selectable=False):
-        """Add coordinate axis arrows with sphere at origin.
-
-        Creates RGB arrows along X, Y, Z axes with black sphere at origin.
-
+    def add_axis(self, size=1.0, arrow_dimensions=None, origin_radius=0.035, 
+                origin_color=Colour.BLACK, params = RenderParams()):
+        """Add coordinate axis arrows.
+        
         Parameters
         ----------
         size : float, optional
-            Length of axis arrows
+            Length of axis arrows (default: 1.0)
         arrow_dimensions : ArrowDimensions, optional
-            Dimensions for axis arrows
+            Arrow dimensions
         origin_radius : float, optional
-            Radius of origin sphere
-        origin_subdivisions : int, optional
-            Subdivision level of origin sphere
+            Radius of origin sphere (default: 0.035)
         origin_color : Color, optional
-            Color of origin sphere
-        wireframe_color : Color, optional
-            Outline color
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-        show_body : bool, optional
-            Show filled geometry
-        show_wireframe : bool, optional
-            Show outlines
-        line_width : float, optional
-            Outline width (default is self.default_line_width)
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
-        selectable : bool, optional
-            Allow object to be selected
-
+            Color of origin sphere (default: BLACK)
+        params : RenderParams, optional
+            Rendering parameters
+        
         Returns
         -------
         ObjectCollection
             Collection containing 'body' and 'wireframe' objects
         """
-        segments = segments or self.default_segments
-        origin_subdivisions = origin_subdivisions or self.default_subdivisions
         arrow_dimensions = arrow_dimensions or self.default_arrow_dimensions
-        wireframe_color = wireframe_color or self.default_wireframe_color
+        segments = self.default_segments
+        origin_subdivisions = self.default_subdivisions
         
-        x_geometry, x_wireframe = Geometry.create_arrow((0,0,0), (size,0,0), (1,0,0), wireframe_color, arrow_dimensions.shaft_radius, 
-                                                      arrow_dimensions.head_radius, arrow_dimensions.head_length, segments)
-        y_geometry, y_wireframe = Geometry.create_arrow((0,0,0), (0,size,0), (0,1,0), wireframe_color, arrow_dimensions.shaft_radius, 
-                                                      arrow_dimensions.head_radius, arrow_dimensions.head_length, segments)
-        z_geometry, z_wireframe = Geometry.create_arrow((0,0,0), (0,0,size), (0,0,1), wireframe_color, arrow_dimensions.shaft_radius, 
-                                                      arrow_dimensions.head_radius, arrow_dimensions.head_length, segments)
+        x_geometry, x_wireframe = Geometry.create_arrow(
+            (0,0,0), (size,0,0), (1,0,0), params.wireframe_color,
+            arrow_dimensions.shaft_radius, arrow_dimensions.head_radius,
+            arrow_dimensions.head_length, segments)
+        y_geometry, y_wireframe = Geometry.create_arrow(
+            (0,0,0), (0,size,0), (0,1,0), params.wireframe_color,
+            arrow_dimensions.shaft_radius, arrow_dimensions.head_radius,
+            arrow_dimensions.head_length, segments)
+        z_geometry, z_wireframe = Geometry.create_arrow(
+            (0,0,0), (0,0,size), (0,0,1), params.wireframe_color,
+            arrow_dimensions.shaft_radius, arrow_dimensions.head_radius,
+            arrow_dimensions.head_length, segments)
         
         origin_geometry = Geometry.create_sphere(origin_radius, origin_subdivisions, origin_color)
         
-        geometry = (x_geometry + y_geometry + z_geometry + origin_geometry).transform(translate, rotate, scale)
-        wireframe = (x_wireframe + y_wireframe + z_wireframe).transform(translate, rotate, scale)
+        objects = {}
+        if params.show_body:
+            geometry = (x_geometry + y_geometry + z_geometry + origin_geometry).transform(
+                params.translate, params.rotate, params.scale)
+            objects['body'] = self.add_object(geometry, GL_TRIANGLES, params)
+        
+        if params.show_wireframe:
+            wireframe = (x_wireframe + y_wireframe + z_wireframe).transform(
+                params.translate, params.rotate, params.scale)
+            objects['wireframe'] = self.add_object(wireframe, GL_LINES, params)
+        
+        return ObjectCollection(objects)
 
-        axis_body = self.add_object(geometry, buffer_type, GL_TRIANGLES, selectable=selectable) if show_body else None
-        axis_wireframe = self.add_object(wireframe, buffer_type, GL_LINES, line_width=line_width, selectable=selectable) if show_wireframe else None
-        return ObjectCollection({'body': axis_body, 'wireframe': axis_wireframe})
-
-    def add_axis_ticks(self, size=5.0, axis_tick_params=None, buffer_type=BufferType.Static,
-                     translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
-        """Add ticks to the axis with multiple increment sizes.
+    def add_axis_ticks(self, size=5.0, tick_params=None, params = RenderParams()):
+        """Add axis ticks in the XY plane.
         
         Parameters
         ----------
         size : float, optional
-            Length of axis arrows
-        axis_tick_params : list of dict, optional
-            List of tick specifications, each containing:
-            - 'increment': spacing between ticks
-            - 'tick_size': size of ticks
-            - 'tick_color': color of ticks
-            - 'line_width': width of lines
-            If None, uses self.default_axis_ticks
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
-        selectable : bool, optional
-            Allow object to be selected
+            Axis size (default: 5.0)
+        tick_params : list, optional
+            List of tick parameters for different detail levels
+            Each dict contains: increment, tick_size, line_width (overrides RenderParams.line_width), tick_color
+        params : RenderParams, optional
+            Rendering parameters
 
         Returns
         -------
-        RenderObject
-            Tick render object
+        ObjectCollection
+            Collection containing tick objects at different detail levels
         """
-        tick_geometry = None
+        tick_params = tick_params or self.default_axis_ticks
+        objects = {}
         
-        # Use default ticks if none provided
-        tick_params = axis_tick_params or self.default_axis_ticks
-        
-        # Sort by increment size (largest first) to ensure proper rendering order
-        tick_params = sorted(tick_params, key=lambda x: x['increment'], reverse=True)
-        
-        # Create geometry for each increment level
-        for params in tick_params:
-            increment = params['increment']
-            tick_size = params['tick_size']
-            tick_color = params['tick_color']
-            line_width = params.get('line_width', self.default_line_width)
+        for n, tick_level in enumerate(tick_params):
+            increment = tick_level['increment']
+            tick_size = tick_level['tick_size']
+            line_width = tick_level['line_width'] or params.line_width
+            tick_color = tick_level['tick_color']
             
-            for i in np.arange(-size + increment, size + increment/2, increment):  # Added increment/2 to ensure last tick is included
-                if abs(i) < 1e-10:  # Skip origin
+            # Create new params with updated line width
+            level_params = replace(params, line_width=line_width)
+            
+            tick_geometry = None
+            
+            for i in np.arange(-size + increment, size + increment/2, increment):
+                if abs(i) < 1e-10:  # Skip center
                     continue
                     
-                x_tick = Geometry.create_line((i, -tick_size, 0), (i, tick_size, 0), tick_color)
-                y_tick = Geometry.create_line((-tick_size, i, 0), (tick_size, i, 0), tick_color)
+                x_tick = Geometry.create_line((i, 0, 0), (i, tick_size, 0), tick_color)
+                y_tick = Geometry.create_line((0, i, 0), (tick_size, i, 0), tick_color)
                 
                 if tick_geometry is None:
                     tick_geometry = x_tick + y_tick
                 else:
                     tick_geometry = tick_geometry + x_tick + y_tick
 
-        if tick_geometry is None:
-            return None
+            if tick_geometry is not None:
+                tick_geometry = tick_geometry.transform(params.translate, params.rotate, params.scale)
+                tick_object = self.add_object(tick_geometry, GL_LINES, level_params)
+                
+                # Enable polygon offset to prevent z-fighting
+                tick_object.polygon_offset = True
+                tick_object.polygon_offset_factor = -1.0
+                tick_object.polygon_offset_units = -1.0
+                
+                objects[f'ticks-{n}'] = tick_object
         
-        tick_geometry = tick_geometry.transform(translate, rotate, scale)
-        return self.add_object(tick_geometry, buffer_type, GL_LINES, line_width=line_width, selectable=selectable)
+        return ObjectCollection(objects)
 
-    def add_grid(self, size, grid_params=None, buffer_type=BufferType.Static,
-                translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
-        """Add a grid with multiple increment sizes.
+    def add_grid(self, size=5.0, grid_params=None, params = RenderParams()):
+        """Add a grid in the XY plane.
         
         Parameters
         ----------
-        size : float
-            Size of the grid
-        grid_params : list of dict, optional
-            List of grid specifications, each containing:
-            - 'increment': spacing between grid lines (0 for main axes)
-            - 'color': color of grid lines
-            - 'line_width': width of lines
-            If None, uses self.default_grid_params
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
-        selectable : bool, optional
-            Allow object to be selected
+        size : float, optional
+            Grid size (default: 5.0)
+        grid_params : list, optional
+            List of grid parameters for different detail levels
+            Each dict contains: increment, color, line_width (overrides RenderParams.line_width)
+        params : RenderParams, optional
+            Rendering parameters
 
         Returns
         -------
-        RenderObject
-            Grid render object
+        ObjectCollection
+            Collection containing grid objects at different detail levels
         """
         grid_params = grid_params or self.default_grid_params
-        grid_params = sorted(grid_params, key=lambda x: (x['increment'] == 0, -x['increment']))
+        objects = {}
         
-        objects = {}  # Store separate objects for each line width
-        
-        # Create geometry for each increment level
-        for n, params in enumerate(grid_params):
-            increment = params['increment']
-            color = params['color']
-            line_width = params.get('line_width', self.default_line_width)
+        for n, grid_level in enumerate(grid_params):
+            increment = grid_level['increment']
+            color = grid_level['color']
+            line_width = grid_level['line_width'] or params.line_width
+            
+            # Create new params with updated line width
+            level_params = replace(params, line_width=line_width)
             
             grid_geometry = None
             
@@ -868,9 +756,8 @@ class Renderer:
                         grid_geometry = grid_geometry + vertical_line + horizontal_line
 
             if grid_geometry is not None:
-                grid_geometry = grid_geometry.transform(translate, rotate, scale)
-                grid_object = self.add_object(grid_geometry, buffer_type, GL_LINES, 
-                                            line_width=line_width, selectable=selectable)
+                grid_geometry = grid_geometry.transform(params.translate, params.rotate, params.scale)
+                grid_object = self.add_object(grid_geometry, GL_LINES, level_params)
                 
                 # Enable polygon offset to prevent z-fighting
                 grid_object.polygon_offset = True
@@ -879,49 +766,9 @@ class Renderer:
                 
                 objects[f'grid-{n}'] = grid_object
         
-        # Return an ObjectCollection if multiple objects, otherwise return the single object
-        return ObjectCollection(objects) if len(objects) > 1 else list(objects.values())[0]
+        return ObjectCollection(objects)
 
-    def plot(self, x, y, color=Colour.WHITE, line_width=None, buffer_type=BufferType.Static, 
-            translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
-        """Plot a line through a series of x,y points.
-        
-        Parameters
-        ----------
-        x : float or array-like
-            X coordinates
-        y : float or array-like
-            Y coordinates
-        color : Color, optional
-            Line color (default: white)
-        line_width : float, optional
-            Width of the line (default: 1.0)
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
-        selectable : bool, optional
-            Allow object to be selected
-
-        Returns
-        -------
-        RenderObject
-            Line render object
-        """
-        x = np.atleast_1d(x)
-        y = np.atleast_1d(y)
-        
-        if len(x) != len(y):
-            raise ValueError("x and y must have same length")
-            
-        points = np.column_stack((x, y, np.zeros_like(x)))
-        
-        return self.add_linestring(points, color, line_width, buffer_type, translate, rotate, scale, selectable)
-
-    def scatter(self, x, y, color=None, point_size=3.0, shape=None, buffer_type=BufferType.Static, 
-               translate=(0,0,0), rotate=(0,0,0), scale=(1,1,1), selectable=False):
+    def scatter(self, x, y, color=None, params = RenderParams()):
         """Create a scatter plot of x,y points.
         
         Parameters
@@ -931,21 +778,9 @@ class Renderer:
         y : float or array-like
             Y coordinates
         color : Color, optional
-            Point color (default: white)
-        point_size : float, optional
-            Size of points (default: 3.0)
-        shape : PointShape, optional
-            Shape of points (default: CIRCLE)
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
-        translate : tuple, optional
-            Translation vector (x,y,z)
-        rotate : tuple, optional
-            Rotation angles (x,y,z)
-        scale : tuple, optional
-            Scale factors (x,y,z)
-        selectable : bool, optional
-            Allow object to be selected (default: False)
+            Point color
+        params : RenderParams, optional
+            Rendering parameters
 
         Returns
         -------
@@ -958,56 +793,81 @@ class Renderer:
         if len(x) != len(y):
             raise ValueError("x and y must have same length")
         points = np.column_stack((x, y, np.zeros_like(x)))
-        return self.add_points(points, color, point_size, shape, buffer_type, translate, rotate, scale, selectable)
+        
+        # Use point shader if not specified
+        params.shader = params.shader or self.point_shader
+        geometry = Geometry.create_points(points, color or self.default_face_color)
+        return self.add_object(geometry, GL_POINTS, params)
 
-    def add_blank_objects(self, draw_types, buffer_type=BufferType.Dynamic, line_width=None, point_size=None, point_shape=None):
-        """Add a collection of blank objects for a dynamic / stream buffer.
+    def plot(self, x, y, color=Colour.WHITE, params = RenderParams()):
+        """Plot a line through a series of x,y points.
+        
+        Parameters
+        ----------
+        x : float or array-like
+            X coordinates
+        y : float or array-like
+            Y coordinates
+        color : Color, optional
+            Line color (default: white)
+        params : RenderParams, optional
+            Rendering parameters
+
+        Returns
+        -------
+        RenderObject
+            Line render object
+        """
+        x = np.atleast_1d(x)
+        y = np.atleast_1d(y)
+        
+        if len(x) != len(y):
+            raise ValueError("x and y must have same length")
+        
+        points = np.column_stack((x, y, np.zeros_like(x)))
+        geometry = Geometry.create_linestring(points, color).transform(
+            params.translate, params.rotate, params.scale)
+        
+        return self.add_object(geometry, GL_LINES, params)
+
+    def add_blank_objects(self, draw_types: Dict[str, int], params = RenderParams()):
+        """Add multiple blank objects.
         
         Parameters
         ----------
         draw_types : dict
             Dictionary of draw types for each object
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer
+        params : RenderParams, optional
+            Rendering parameters
 
         Returns
         -------
         ObjectCollection
             Collection of blank objects
         """
-        return ObjectCollection({name: self.add_blank_object(draw_type, buffer_type, line_width, point_size, point_shape) 
-                                 for name, draw_type in draw_types.items()})
+        return ObjectCollection({
+            name: self.add_blank_object(draw_type, params)
+            for name, draw_type in draw_types.items()
+        })
 
-    def add_blank_object(self, draw_type=GL_TRIANGLES, buffer_type=BufferType.Stream, 
-                        line_width=None, point_size=None, point_shape=None, selectable=True, shader=None):
+    def add_blank_object(self, draw_type=GL_TRIANGLES, params = RenderParams()):
         """Add a blank object for a dynamic / stream buffer.
         
         Parameters
         ----------
         draw_type : GL_enum, optional
-            OpenGL primitive type (TRIANGLES, LINES, etc) (default: GL_TRIANGLES)
-        buffer_type : BufferType, optional
-            Static or Dynamic buffer (default: BufferType.Stream)
-        line_width : float, optional
-            Line width (default is self.default_line_width)
-        point_size : float, optional
-            Point size (default is self.default_point_size)
-        point_shape : PointShape, optional
-            Shape for point primitives (default is self.default_point_shape)
-        selectable : bool, optional
-            Allow object to be selected (default: True)
-        shader : Shader, optional
-            Shader for the object (default is self.default_shader)
+            OpenGL primitive type (TRIANGLES, LINES, etc)
+        params : RenderParams, optional
+            Rendering parameters
 
         Returns
         -------
         RenderObject
             Blank render object
         """        
-        blank = self._add_object_base(None, None, buffer_type, draw_type, line_width, point_size, point_shape, selectable, shader)
-        return blank
+        return self._add_object_base(None, None, draw_type, params)
 
-    def add_object(self, geometry_data, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None, point_shape=None, selectable=True, shader=None):
+    def add_object(self, geometry_data, draw_type=GL_TRIANGLES, params = RenderParams()):
         """Create and add a new render object to the scene.
 
         Parameters
@@ -1015,29 +875,22 @@ class Renderer:
         geometry_data : GeometryData
             Vertex and index data for the object
             Set to None for dynamic / stream buffer
-        buffer_type : BufferType
-            Static or Dynamic buffer
         draw_type : GL_enum, optional
             OpenGL primitive type (TRIANGLES, LINES, etc)
-        line_width : float, optional
-            Width for line primitives (default is self.default_line_width)
-        point_size : float, optional
-            Size for point primitives
-        shader : Shader, optional
-            Shader for the object (default is self.default_shader)
-
+        params : RenderParams, optional
+            Rendering parameters
+                     
         Returns
         -------
         RenderObject
             Created render object
         """
-        # Interleave position, color, and normal data
         vertices = geometry_data.get_vertices()
         indices = geometry_data.get_indices()
         
-        return self._add_object_base(vertices, indices, buffer_type, draw_type, line_width, point_size, point_shape, selectable, shader)
+        return self._add_object_base(vertices, indices, draw_type, params)
 
-    def _add_object_base(self, vertices, indices, buffer_type, draw_type=GL_TRIANGLES, line_width=None, point_size=None, point_shape=None, selectable=True, shader=None):
+    def _add_object_base(self, vertices, indices, draw_type=GL_TRIANGLES, params = RenderParams()):
         """Create and add a new render object to the scene.
 
         Parameters
@@ -1046,36 +899,20 @@ class Renderer:
             Vertex data for the object
         indices : np.array or None
             Index data for the object
-        buffer_type : BufferType
-            Static or Dynamic buffer
         draw_type : GL_enum, optional
-            OpenGL primitive type (TRIANGLES, LINES, etc) (default: GL_TRIANGLES)
-        line_width : float, optional
-            Width for line primitives (default is self.default_line_width)
-        point_size : float, optional
-            Size for point primitives (default is self.default_point_size)
-        point_shape : PointShape, optional
-            Shape for point primitives (default is self.default_point_shape)
-        selectable : bool, optional
-            Allow object to be selected (default: True)
-        shader : Shader, optional
-            Shader for the object (default is self.default_shader)
+            OpenGL primitive type (TRIANGLES, LINES, etc)
+        params : RenderParams, optional
+            Rendering parameters
 
         Returns
         -------
         RenderObject
             Created render object
         """
-        
-        line_width = line_width or self.default_line_width
-        point_size = point_size or self.default_point_size
-        point_shape = point_shape or self.default_point_shape
-        # Use point shader for point primitives if no shader specified
-        if shader is None:
-            shader = self.point_shader if (draw_type == GL_POINTS) else self.default_shader
-        
-        obj = Object(vertices, indices, draw_type, line_width, point_size, point_shape,
-                    buffer_type, selectable, shader)
-         
+        params.shader = params.shader or self.default_shader
+        obj = Object(vertices, indices, draw_type, params.line_width, 
+                    params.point_size, params.point_shape, params.buffer_type, 
+                    params.selectable, params.shader, params.alpha)
         self.objects.append(obj)
         return obj
+

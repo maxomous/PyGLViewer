@@ -208,6 +208,21 @@ class Geometry:
         return GeometryData(vertices, indices)
     
     @staticmethod
+    def create_points(positions, color):
+        """Create a series of points in 3D space.
+        
+        Args:
+            positions (list[tuple]): List of XYZ coordinates for each point
+            color (tuple): RGB color values
+        
+        Returns:
+            GeometryData: Point geometry with vertices and indices
+        """
+        vertices = [Vertex(position, color, [0, 0, 1]) for position in positions]
+        indices = list(range(len(vertices)))
+        return GeometryData(vertices, indices)
+    
+    @staticmethod
     def create_line(p0, p1, color):
         """Create a line segment between two points.
         

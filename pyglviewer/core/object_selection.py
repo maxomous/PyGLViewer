@@ -1,7 +1,7 @@
 import numpy as np
 import imgui
 from OpenGL.GL import GL_POINTS, GL_LINES
-from pyglviewer.renderer.renderer import Renderer
+from pyglviewer.renderer.renderer import Renderer, RenderParams
 from pyglviewer.renderer.geometry import Geometry
 from pyglviewer.renderer.objects import BufferType
 from pyglviewer.utils.colour import Colour
@@ -20,8 +20,9 @@ class ObjectSelection:
         self.mouse = mouse
         self.settings = settings
         self.target_edge_length = 0.02
-        self.cursor_point = self.renderer.add_blank_object(draw_type=GL_POINTS, buffer_type=BufferType.Dynamic, selectable=False)
-        self.selection_target = self.renderer.add_blank_object(draw_type=GL_LINES, buffer_type=BufferType.Dynamic, selectable=False)
+        
+        self.cursor_point = self.renderer.add_blank_object(GL_POINTS, params=RenderParams(buffer_type=BufferType.Dynamic, selectable=False))
+        self.selection_target = self.renderer.add_blank_object(GL_LINES, params=RenderParams(buffer_type=BufferType.Dynamic, selectable=False))
         self.selected_objects = []
         
     def process_input(self):

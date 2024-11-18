@@ -3,6 +3,9 @@ import ctypes
 import numpy as np
 from OpenGL.GL import *
 from pyglviewer.utils.transform import Transform
+from pyglviewer.renderer.shader import Shader, PointShape
+from dataclasses import dataclass
+from typing import Optional
 
 # At the top of the file, after imports
 _global_object_counter = 0
@@ -126,10 +129,35 @@ class VertexArray:
         if hasattr(self, 'deleted') and not self.deleted:
             self.shutdown()
 
-
 class Object:
     """Represents a renderable object with vertex, index buffers, and shader."""
-    def __init__(self, vertex_data, index_data, draw_type, line_width, point_size, point_shape, buffer_type, selectable, shader=None):
+    def __init__(self, vertex_data, index_data, draw_type, line_width, point_size, 
+                 point_shape, buffer_type, selectable, shader=None, alpha=1.0):
+        """Initialize object with given data and parameters.
+        
+        Parameters
+        ----------
+        vertex_data : np.ndarray or None
+            Vertex data for the object
+        index_data : np.ndarray or None
+            Index data for the object
+        draw_type : GL_enum
+            OpenGL primitive type (TRIANGLES, LINES, etc)
+        line_width : float
+            Width for line primitives
+        point_size : float
+            Size for point primitives
+        point_shape : PointShape
+            Shape for point primitives
+        buffer_type : BufferType
+            Static or Dynamic buffer type
+        selectable : bool
+            Allow object to be selected
+        shader : Optional[Shader], optional
+            Custom shader for rendering (default: None)
+        alpha : float, optional
+            Alpha value for transparency (default: 1.0)
+        """
         global _global_object_counter
         self.id = _global_object_counter
         _global_object_counter += 1 
@@ -147,6 +175,7 @@ class Object:
         # Add selection-related properties
         self.selected = False
         self.selectable = selectable  # Flag to control if object can be selected
+        self.alpha = alpha  # Add alpha value (1.0 = fully opaque, 0.0 = fully transparent)
 
         # Cache transformed bounds for faster picking
         self._world_bounds = None

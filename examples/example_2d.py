@@ -7,6 +7,7 @@ from pyglviewer.renderer.shader import PointShape
 from pyglviewer.utils.colour import Colour
 from pyglviewer.utils.config import Config
 from pyglviewer.utils.timer import Timer
+from pyglviewer.renderer.renderer import RenderParams
 
 
 class Example2DApplication(Application):
@@ -21,23 +22,54 @@ class Example2DApplication(Application):
         self.camera.set_projection(orthographic=True)
         
         # Grid and axis
-        self.text_renderer.add_axis_labels(xlim=[-self.GRID_SIZE, self.GRID_SIZE], ylim=[-self.GRID_SIZE, self.GRID_SIZE], increment=1, colour=Colour.WHITE, static=True)
-        self.renderer.add_axis_ticks(size=self.GRID_SIZE, translate=self.GRID_TRANSLATE, scale=(1, 1, 1))
-        self.grid = self.renderer.add_grid(self.GRID_SIZE, translate=self.GRID_TRANSLATE) 
+        self.text_renderer.add_axis_labels(
+            xlim=[-self.GRID_SIZE, self.GRID_SIZE], 
+            ylim=[-self.GRID_SIZE, self.GRID_SIZE], 
+            increment=1, 
+            colour=Colour.WHITE, 
+            static=True
+        )
+        
+        # Create grid params with translation
+        grid_params = RenderParams(
+            translate=self.GRID_TRANSLATE,
+            scale=(1, 1, 1)
+        )
+        
+        self.renderer.add_axis_ticks(size=self.GRID_SIZE, params=grid_params)
+        self.grid = self.renderer.add_grid(self.GRID_SIZE, params=grid_params)
                 
         # Example sine wave scatter plot
         x1 = np.linspace(-self.GRID_SIZE, self.GRID_SIZE, 500)
         y1 = np.sin(x1)
         x2 = np.linspace(-self.GRID_SIZE, self.GRID_SIZE, 200)
         y2 = np.sin(x2)
-        self.renderer.plot(x1, 2*y1, color=Colour.CYAN, line_width=3.0)
-        self.renderer.plot(x1, -0.5*y1, color=Colour.RED, line_width=3.0)
-        self.renderer.scatter(x2, -1.5*y2, color=Colour.GREEN, point_size=12.0, shape=PointShape.CIRCLE)
-        self.renderer.scatter(x2, 1*y2, color=Colour.ORANGE, point_size=12.0, shape=PointShape.TRIANGLE)
-        # Try dragging these circles
-        self.renderer.add_circle(position=(3, 2, 0), radius=0.2, color=Colour.RED, line_width=3.0, show_wireframe=False)
-        self.renderer.add_circle(position=(4, 2, 0), radius=0.2, color=Colour.GREEN, line_width=3.0, show_wireframe=False)
-        self.renderer.add_circle(position=(5, 2, 0), radius=0.2, color=Colour.BLUE, line_width=3.0, show_wireframe=False)
+        
+        # Plot lines with custom widths
+        self.renderer.plot(x1, 2*y1, color=Colour.CYAN, 
+                          params=RenderParams(line_width=3.0))
+        self.renderer.plot(x1, -0.5*y1, color=Colour.RED, 
+                          params=RenderParams(line_width=3.0))
+        
+        # Scatter plots with custom point sizes and shapes
+        self.renderer.scatter(x2, -1.5*y2, color=Colour.GREEN, 
+                             params=RenderParams(point_size=12.0, point_shape=PointShape.CIRCLE))
+        self.renderer.scatter(x2, 1*y2, color=Colour.ORANGE, 
+                             params=RenderParams(point_size=12.0, point_shape=PointShape.TRIANGLE))
+        
+        # Add circles with custom rendering parameters
+        circle_params = RenderParams(show_wireframe=False)
+        self.renderer.add_circle(position=(3, 2, 0), radius=0.2, color=Colour.RED, 
+                                params=circle_params)
+        self.renderer.add_circle(position=(4, 2, 0), radius=0.2, color=Colour.GREEN, 
+                                params=circle_params)
+        self.renderer.add_circle(position=(5, 2, 0), radius=0.2, color=Colour.BLUE, 
+                                params=circle_params)
+        
+        # Transparent circle
+        transparent_circle_params = RenderParams(show_wireframe=False, alpha=0.5)
+        self.renderer.add_circle(position=(4, 1.5, 0), radius=3, color=Colour.YELLOW, 
+                                params=transparent_circle_params)
         
     def update_scene(self):
         """ update the scene """

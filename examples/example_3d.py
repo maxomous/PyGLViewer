@@ -6,7 +6,7 @@ from pyglviewer.core.application import Application
 from pyglviewer.core.application_ui import render_core_ui
 from pyglviewer.core.object_selection import ObjectSelection, SelectionSettings
 from pyglviewer.renderer.light import Light, LightType, default_lighting
-from pyglviewer.renderer.renderer import Renderer
+from pyglviewer.renderer.renderer import Renderer, RenderParams, ArrowDimensions
 from pyglviewer.renderer.geometry import Geometry
 from pyglviewer.renderer.objects import BufferType, ObjectCollection
 from pyglviewer.renderer.shader import PointShape
@@ -61,32 +61,31 @@ class ExampleApplication(Application):
         Dynamic text can be updated in update_scene() & set to static=False.
         """
         # Settings
-        self.renderer.default_point_size = 3.0
-        self.renderer.default_line_width = 1.0  # lines & wireframes
         self.renderer.default_segments = 32     # n segments in circle
+        self.renderer.default_subdivisions = 4  # n subdivisions in sphere
     
         GRID_SIZE = 50
         GRID_TRANSLATE = (0, 0, -0.005) # Move grid slightly below z=0 to avoid z-fighting
         # Text Rendering
         self.text_renderer.add_axis_labels(xlim=[-10, 10], ylim=[-10, 10], increment=2, colour=Colour.WHITE, static=True)
         # Grid and axis
-        self.grid = self.renderer.add_grid(GRID_SIZE*2, translate=GRID_TRANSLATE)
-        self.renderer.add_axis_ticks(size=GRID_SIZE, translate=GRID_TRANSLATE)
+        self.grid = self.renderer.add_grid(GRID_SIZE*2, params=RenderParams(translate=GRID_TRANSLATE))
+        self.renderer.add_axis_ticks(size=GRID_SIZE, params=RenderParams(translate=GRID_TRANSLATE))
         self.axis = self.renderer.add_axis()
         
         # Wireframe Shapes (show_body=False) - Top row at y=4
-        self.renderer.add_point((-4, 4, 0), Colour.RED, point_size=15)
-        self.renderer.add_point((-4, 2.5, 0), Colour.GREEN, point_size=15, shape=PointShape.TRIANGLE)
-        self.renderer.add_point((-4, 1, 0), Colour.BLUE, point_size=15, shape=PointShape.SQUARE)
+        self.renderer.add_point((-4, 4, 0), Colour.RED, params=RenderParams(point_size=15))
+        self.renderer.add_point((-4, 2.5, 0), Colour.GREEN, params=RenderParams(point_size=15, point_shape=PointShape.TRIANGLE))
+        self.renderer.add_point((-4, 1, 0), Colour.BLUE, params=RenderParams(point_size=15, point_shape=PointShape.SQUARE))
         
-        self.renderer.add_line((-2.5, 3.5, 0), (-1.5, 4.5, 0), Colour.ORANGE, line_width=5)
+        self.renderer.add_line((-2.5, 3.5, 0), (-1.5, 4.5, 0), Colour.ORANGE, params=RenderParams(line_width=5))
         self.renderer.add_beam((-2.5, 2.0, 0.25), (-1.5, 3.0, 0.75), 0.2, 0.2, color=Colour.YELLOW)
-        arrow_dimensions = self.renderer.ArrowDimensions(shaft_radius=0.2, head_radius=0.35, head_length=0.3)
+        arrow_dimensions = ArrowDimensions(shaft_radius=0.2, head_radius=0.35, head_length=0.3)
         self.renderer.add_arrow((-2.4, 0.6, 0.25), (-1.6, 1.4, 0.75), arrow_dimensions, color=Colour.PURPLE)
         
-        self.renderer.add_triangle((0, 4.433, 0), (-0.5, 3.567, 0), (0.5, 3.567, 0), wireframe_color=Colour.YELLOW, show_body=False)
-        self.renderer.add_rectangle((2, 4), 1, 1, wireframe_color=Colour.GREEN, show_body=False)
-        self.renderer.add_circle(position=(4, 4, 0), radius=0.5, wireframe_color=Colour.BLUE, show_body=False)
+        self.renderer.add_triangle((0, 4.433, 0), (-0.5, 3.567, 0), (0.5, 3.567, 0), params=RenderParams(wireframe_color=Colour.YELLOW, show_body=False))
+        self.renderer.add_rectangle((2, 4), 1, 1, params=RenderParams(wireframe_color=Colour.GREEN, show_body=False))
+        self.renderer.add_circle(position=(4, 4, 0), radius=0.5, params=RenderParams(wireframe_color=Colour.BLUE, show_body=False))
         # Filled versions of wireframe shapes - Middle row at y=2.5
         
         self.renderer.add_triangle((0, 2.933, 0), (-0.5, 2.067, 0), (0.5, 2.067, 0), color=Colour.YELLOW)
@@ -94,9 +93,9 @@ class ExampleApplication(Application):
         self.renderer.add_circle(position=(4, 2.5, 0), radius=0.5, color=Colour.BLUE)
 
         # Filled Shapes with wireframe - Bottom row at y=1
-        self.renderer.add_cone(Colour.rgb(255, 165, 0), segments=16, translate=(0, 0.75, 0.5), scale=(0.5, 0.5, 0.5), rotate=(-np.pi/2, 0, 0))
-        self.renderer.add_cylinder(Colour.MAGENTA, translate=(2, 1, 0.25), scale=(0.5, 0.5, 0.5))
-        self.renderer.add_sphere(translate=(4, 1, 0.5), radius=0.25, subdivisions=4, color=Colour.RED)
+        self.renderer.add_cone(color=Colour.rgb(255, 165, 0), params=RenderParams(translate=(0, 0.75, 0.5), scale=(0.5, 0.5, 0.5), rotate=(-np.pi/2, 0, 0)))
+        self.renderer.add_cylinder(color=Colour.MAGENTA, params=RenderParams(translate=(2, 1, 0.25), scale=(0.5, 0.5, 0.5)))
+        self.renderer.add_sphere(radius=0.25, color=Colour.RED, params=RenderParams(translate=(4, 1, 0.5)))
                 
         # Create two dynamic object placeholders (body + wireframe)
         self.rotating_cubes = self.renderer.add_blank_objects({'body': GL_TRIANGLES, 'wireframe': GL_LINES})
@@ -104,12 +103,12 @@ class ExampleApplication(Application):
         # Example parabola (y = x²) plot
         x = np.linspace(-1.5, 1.5, 100) # x values from -1 to 1
         y = x**2                        # parabola equation: y = x²
-        self.renderer.plot(x, y, color=Colour.GREEN, line_width=2.0, translate=(-3, -2, 0))  # Move to right side
+        self.renderer.plot(x, y, color=Colour.GREEN, params=RenderParams(line_width=2.0, translate=(-3, -2, 0)))  # Move to right side
 
         # Example sine wave scatter plot
         x = np.linspace(0, 3, 50)
         y = np.sin(x * np.pi / 1.5)
-        self.renderer.scatter(x, y, color=Colour.CYAN, point_size=5.0, translate=(1, -1, 0))  # Move to left side
+        self.renderer.scatter(x, y, color=Colour.CYAN, params=RenderParams(point_size=5.0, translate=(1, -1, 0)))  # Move to left side
         
 
     def update_scene(self):
@@ -151,7 +150,7 @@ class ExampleApplication(Application):
         self.rotating_cubes.set_transform(translate=(self.timer.oscillate_translation(limits=[-2, 2], speed=0.25), -3, 0), rotate=rotate_object)
 
         # Text Rendering
-        self.text_renderer.add_text('3D LABEL', (self.timer.oscillate_translation(limits=[-1.5, -1.5], speed=0.25), -0.5, 1), Colour.ORANGE, font='arial_rounded_mt_bold-medium')
+        self.text_renderer.add_text('3D LABEL', (self.timer.oscillate_translation(limits=[-1.5, 1.5], speed=0.25), -0.5, 1), Colour.ORANGE, font='arial_rounded_mt_bold-medium')
 
     def events(self):
         """

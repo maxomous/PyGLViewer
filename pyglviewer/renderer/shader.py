@@ -59,6 +59,7 @@ struct Light {
 uniform Light lights[MAX_LIGHTS];
 uniform int numLights;
 uniform vec3 viewPos;   // Camera position for specular calculation
+uniform float alpha = 1.0;  // Add alpha uniform
 
 vec3 calcLight(Light light, vec3 normal, vec3 fragPos, vec3 viewDir) {
     if (light.type == 0) {  // Ambient light
@@ -106,7 +107,7 @@ void main() {
         result += calcLight(lights[i], norm, FragPos, viewDir);
     }
 
-    FragColor = vec4(result * Color, 1.0);
+    FragColor = vec4(result * Color, alpha);  // Use alpha uniform
 }
 """
 
@@ -145,6 +146,7 @@ in vec3 Color;
 out vec4 FragColor;
 
 uniform int pointShape = 0;  // 0=circle, 1=square, 2=triangle
+uniform float alpha = 1.0;   // Add alpha uniform
 
 void main() {
     // Convert from [0,1] to [-0.5,0.5]
@@ -168,8 +170,7 @@ void main() {
     }
     
     if (!inside) discard;
-    
-    FragColor = vec4(Color, 1.0);
+    FragColor = vec4(Color, alpha);  // Use alpha uniform
 }
 """
     
@@ -358,6 +359,10 @@ class Shader:
             shape = 0
         
         self.set_uniform("pointShape", shape)
+
+    def set_alpha(self, alpha):
+        """Set the alpha (transparency) value for rendering."""
+        self.set_uniform('alpha', alpha)
 
     def shutdown(self):
         """Delete shader program and individual shaders."""
