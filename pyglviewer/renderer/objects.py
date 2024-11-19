@@ -182,11 +182,23 @@ class Object:
         self._bounds_dirty = True
 
     def get_mid_point(self):
-        """Get the mid point of the object."""
+        """Get the mid point of the object.
+        
+        Returns
+        -------
+        np.ndarray
+            Mid point coordinates (x,y,z)
+        """
         return (self.get_bounds()['min'] + self.get_bounds()['max']) / 2
 
     def get_bounds(self):
-        """Calculate accurate bounds in world space."""
+        """Calculate accurate bounds in world space.
+        
+        Returns
+        -------
+        dict or None
+            Dictionary containing 'min' and 'max' bounds as np.ndarray, or None if no vertex data
+        """
         if not hasattr(self, 'vertex_data') or self.vertex_data is None or len(self.vertex_data) == 0:
             return None
         # Return cached bounds if available and not dirty
@@ -214,7 +226,20 @@ class Object:
         return self._world_bounds
 
     def intersect_cursor(self, cursor_pos, scale_factor=1.0):
-        """Intersect ray with object bounds."""
+        """Intersect ray with object bounds.
+        
+        Parameters
+        ----------
+        cursor_pos : np.ndarray
+            Cursor position in world space
+        scale_factor : float, optional
+            Scale factor for point size (default: 1.0)
+        
+        Returns
+        -------
+        tuple
+            (bool, float) - (intersection found, distance to intersection)
+        """
         if not self.selectable:
             return False, float('inf')
             
@@ -241,35 +266,78 @@ class Object:
             return False, float('inf')
         
     def set_vertex_data(self, data):
-        """Update the vertex data."""
+        """Update the vertex data.
+        
+        Parameters
+        ----------
+        data : np.ndarray
+            New vertex data
+        """
         self.vertex_data = np.array(data, dtype=np.float32)
         self._bounds_dirty = True  # Mark bounds for recalculation
 
     def set_index_data(self, data):
-        """Update the index data of this render object."""
+        """Update the index data of this render object.
+        
+        Parameters
+        ----------
+        data : np.ndarray
+            New index data
+        """
         self.index_data = np.array(data, dtype=np.uint32)
 
     def set_geometry_data(self, geometry):
-        """Update the vertex and index data from a geometry object."""
+        """Update the vertex and index data from a geometry object.
+        
+        Parameters
+        ----------
+        geometry : Geometry
+            Geometry object containing vertex and index data
+        """
         self.set_vertex_data(geometry.get_vertices())
         self.set_index_data(geometry.get_indices())
             
     def set_transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
-        """Set the transform matrix."""
+        """Set the transform matrix.
+        
+        Parameters
+        ----------
+        translate : tuple, optional
+            Translation vector (x,y,z) (default: (0,0,0))
+        rotate : tuple, optional
+            Rotation angles (x,y,z) (default: (0,0,0))
+        scale : tuple, optional
+            Scale factors (x,y,z) (default: (1,1,1))
+        """
         self.model_matrix = Transform(translate, rotate, scale).transform_matrix().T
         self._bounds_dirty = True  # Mark bounds for recalculation
 
     def get_translate(self):
-        """Get the translation of the object."""
+        """Get the translation of the object.
+        
+        Returns
+        -------
+        np.ndarray
+            Translation vector (x,y,z)
+        """
         return self.model_matrix[3, :3]
     
     def set_translate(self, translate=(0, 0, 0)):
-        """Set the translation of the object."""
+        """Set the translation of the object.
+        
+        Parameters
+        ----------
+        translate : tuple, optional
+            Translation vector (x,y,z) (default: (0,0,0))
+        """
         self.model_matrix[3, :3] = translate
         self._bounds_dirty = True  # Mark bounds for recalculation
 
     def select(self):
-        """Mark this object as selected."""
+        """Mark this object as selected.
+        
+        Only selects if object's selectable flag is True.
+        """
         if self.selectable:
             self.selected = True
 
@@ -278,7 +346,10 @@ class Object:
         self.selected = False
 
     def toggle_selection(self):
-        """Toggle the selection state of this object."""
+        """Toggle the selection state of this object.
+        
+        Only toggles if object's selectable flag is True.
+        """
         if self.selectable:
             self.selected = not self.selected
 
