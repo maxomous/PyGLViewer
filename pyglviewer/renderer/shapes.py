@@ -407,57 +407,66 @@ class Shapes:
         return Shape(vertices, indices)
 
     @staticmethod
-    def create_rectangle_target(position, width, height, edge_length, colour):
-        """Create a target rectangle with corner edges in the XY plane.
+    def create_target(position, size, edge_length, colour):
+        """Create a target around a 3D shape.
         
         Args:
-            position (tuple): XYZ coordinates of rectangle centre
-            width (float): Total width of rectangle
-            height (float): Total height of rectangle
+            position (tuple): XYZ coordinates of shape centre
+            size (tuple): XYZ size of shape (width, height, length)
             edge_length (float): Length of corner edges
             colour (tuple): RGB colour values
         
         Returns:
-            Shape: Rectangle shape with corner edges
+            Shape: 3D target shape with corner edges
         """
         x, y, z = position[0], position[1], position[2]
-        half_w, half_h = width / 2, height / 2
-        normal = [0, 0, 1]  # Normal pointing outwards
+        width, height, length = size
+        half_w, half_h, half_l = width / 2, height / 2, length / 2
         
-        # Calculate edge ratios to avoid edges longer than the rectangle sides
-        edge_ratio_w = min(edge_length / width, 0.5)        # TODO: This is unused
-        edge_ratio_h = min(edge_length / height, 0.5)       # TODO: This is unused
-        
-        # Corner vertices
+        # Define all 8 corners of the box
         corners = [
-            [x - half_w, y - half_h, z],  # Bottom left
-            [x + half_w, y - half_h, z],  # Bottom right
-            [x + half_w, y + half_h, z],  # Top right
-            [x - half_w, y + half_h, z]   # Top left
+            # Front face (z + half_l)
+            [x - half_w, y - half_h, z + half_l],  # Front bottom left  (0)
+            [x + half_w, y - half_h, z + half_l],  # Front bottom right (1)
+            [x + half_w, y + half_h, z + half_l],  # Front top right    (2)
+            [x - half_w, y + half_h, z + half_l],  # Front top left     (3)
+            # Back face (z - half_l)
+            [x - half_w, y - half_h, z - half_l],  # Back bottom left   (4)
+            [x + half_w, y - half_h, z - half_l],  # Back bottom right  (5)
+            [x + half_w, y + half_h, z - half_l],  # Back top right     (6)
+            [x - half_w, y + half_h, z - half_l],  # Back top left      (7)
         ]
         
         vertices = []
         indices = []
         
-        # Create two edges for each corner
+        # Create three edges for each corner
         for i, corner in enumerate(corners):
             corner = np.array(corner)
-            vertices.append(Vertex(corner.tolist(), colour, normal))  # Corner vertex
+            vertices.append(Vertex(corner.tolist(), colour, [0, 0, 1]))  # Corner vertex
             
-            # For horizontal edges: left for right corners, right for left corners
-            h_direction = np.array([-1 if i in [1, 2] else 1, 0, 0])  # Left for corners 1,2, Right for corners 0,3
-            h_point = corner + h_direction * edge_length
-            vertices.append(Vertex(h_point.tolist(), colour, normal))
+            # For horizontal edges (along x): left for right corners, right for left corners
+            h_direction = np.array([(-1 if i in [1, 2, 5, 6] else 1), 0, 0])
+            h_point = corner + h_direction * min(edge_length, width / 2)
+            vertices.append(Vertex(h_point.tolist(), colour, [0, 1, 0]))
             
-            # For vertical edges: down for top corners, up for bottom corners
-            v_direction = np.array([0, -1 if i in [2, 3] else 1, 0])  # Down for corners 2,3, Up for corners 0,1
-            v_point = corner + v_direction * edge_length
-            vertices.append(Vertex(v_point.tolist(), colour, normal))
+            # For vertical edges (along y): down for top corners, up for bottom corners
+            v_direction = np.array([0, (-1 if i in [2, 3, 6, 7] else 1), 0])
+            v_point = corner + v_direction * min(edge_length, height / 2)
+            vertices.append(Vertex(v_point.tolist(), colour, [1, 0, 0]))
             
-            # Add indices for the two edges from this corner
-            base_idx = i * 3
-            indices.extend([base_idx, base_idx + 1])  # Horizontal edge
-            indices.extend([base_idx, base_idx + 2])  # Vertical edge
+            # For depth edges (along z): back for front corners, forward for back corners
+            d_direction = np.array([0, 0, (-1 if i < 4 else 1)])
+            d_point = corner + d_direction * min(edge_length, length / 2)
+            vertices.append(Vertex(d_point.tolist(), colour, [1, 1, 0]))
+            
+            # Add indices for the three edges from this corner
+            base_idx = i * 4  # Now 4 vertices per corner (corner + 3 edge endpoints)
+            indices.extend([
+                base_idx, base_idx + 1,  # Horizontal edge
+                base_idx, base_idx + 2,  # Vertical edge
+                base_idx, base_idx + 3   # Depth edge
+            ])
         
         return Shape(vertices, indices)
 
@@ -761,7 +770,7 @@ class Shapes:
         return Shapes.create_circle_wireframe(position=position, radius=radius, segments=segments, colour=colour)
 
     @staticmethod
-    def create_sphere(radius, subdivisions, colour, position=(0,0,0)):
+    def create_sphere(position=(0,0,0), radius=0.5, subdivisions=3, colour=(1,1,1)):
         """Create a sphere.
         
         Args:
@@ -815,8 +824,8 @@ class Shapes:
         vertex_objects = []
         for v in vertices:
             normalized = Shapes.normalize(v)
-            position = [x * radius for x in normalized]
-            vertex_objects.append(Vertex(position, colour, normalized))
+            vertex_position = [x * radius for x in normalized]
+            vertex_objects.append(Vertex(vertex_position, colour, normalized))
 
         sphere = Shape(vertex_objects, indices)
         if position != (0,0,0):

@@ -521,7 +521,7 @@ class Renderer:
         
         return ObjectCollection(objects)
 
-    def add_sphere(self, radius, colour=None, params = RenderParams()):
+    def add_sphere(self, position=(0,0,0), radius=0.5, colour=None, params = RenderParams()):
         """Add a sphere centreed at origin.
         
         Parameters
@@ -541,7 +541,7 @@ class Renderer:
         colour = colour or self.default_face_colour
         subdivisions = self.default_subdivisions
         
-        geometry = Shapes.create_sphere(radius, subdivisions, colour).transform(
+        geometry = Shapes.create_sphere(position=position, radius=radius, subdivisions=subdivisions, colour=colour).transform(
             params.translate, params.rotate, params.scale)
         return self.add_object(geometry, GL_TRIANGLES, params)
 
@@ -620,7 +620,7 @@ class Renderer:
             (0,0,0), (0,0,size), arrow_dimensions, 
             (0,0,1), params.wireframe_colour, segments)
         
-        origin_geometry = Shapes.create_sphere(origin_radius, origin_subdivisions, origin_colour)
+        origin_geometry = Shapes.create_sphere(position=(0,0,0), radius=origin_radius, subdivisions=origin_subdivisions, colour=origin_colour)
         
         objects = {}
         if params.show_body:

@@ -19,13 +19,17 @@ class ObjectSelection:
         self.renderer = renderer
         self.mouse = mouse
         self.settings = settings
-        self.target_edge_length = 0.02
+        self.target_edge_length = 0.02 
+        self.min_selection_distance = 2.0
         
         self.cursor_point = self.renderer.add_blank_object(GL_POINTS, params=RenderParams(buffer_type=BufferType.Dynamic, selectable=False))
         self.selection_target = self.renderer.add_blank_object(GL_LINES, params=RenderParams(buffer_type=BufferType.Dynamic, selectable=False))
         self.selected_objects = []
         
     def process_input(self):
+        # Always update selection targets
+        self.process_selection_targets()
+        
         if imgui.get_io().want_capture_mouse:
             return
 
@@ -33,7 +37,6 @@ class ObjectSelection:
         self.process_drag()
         self.process_release()
         self.process_cursor_point()
-        self.process_selection_targets()
     
     def process_select(self):
         if not self.settings.select_objects or not self.camera.is_2d_mode:
@@ -68,12 +71,16 @@ class ObjectSelection:
         # Drag selected objects
         if self.mouse.left_down:
             # Get mouse delta & convert to world space
-            mouse_delta = self.mouse.click_position_delta
-            x, y, _ = self.mouse.screen_to_world_delta(mouse_delta[0], mouse_delta[1])
+            mouse_delta_x = self.mouse.screen_to_world(self.mouse.click_position_delta[0])
+            mouse_delta_y = self.mouse.screen_to_world(-self.mouse.click_position_delta[1])
+            mouse_delta = np.array([mouse_delta_x, mouse_delta_y, 0.0])
+            
+            if not hasattr(self, 'object_start_pos') or self.object_start_pos is None:
+                return
             
             for i, obj in enumerate(self.selected_objects):
                 # Set new object transform
-                translate = self.object_start_pos[i] + np.array([x, y, 0.0])
+                translate = self.object_start_pos[i] + mouse_delta
                 obj.set_translate(translate)
                 
     def process_release(self):
@@ -94,23 +101,30 @@ class ObjectSelection:
             # Create a single geometry with multiple rectangles to indicate each selected object
             for i, obj in enumerate(selected_objects):
                 if bounds := obj.get_bounds():
-                    offset = self.camera.distance * 0.01
-                    width, height, _ = (bounds['max'] - bounds['min']) + np.array([offset, offset, 0])
                     mid_point = obj.get_mid_point()
+                    # Get offset for target size
+                    offset = self.mouse.screen_to_world(10)
+                    if obj.draw_type == GL_POINTS:
+                        offset += self.mouse.screen_to_world(obj.point_size)
+                        
+                    # Get size of target
+                    size = (bounds['max'] - bounds['min']) + np.array([offset, offset, offset])
                     edge_length = self.camera.distance * self.target_edge_length
-                    selected_geometry += Shapes.create_rectangle_target(mid_point, width, height, edge_length, Colour.WHITE) 
+                    selected_geometry += Shapes.create_target(mid_point, size, edge_length, Colour.WHITE) 
 
         self.selection_target.set_geometry_data(selected_geometry)
         
     def get_object_under_cursor(self, cursor_pos):
         """Determine which object is under the cursor"""
-        world_pos = self.mouse.screen_to_world(cursor_pos[0], cursor_pos[1])
-        self.renderer.cursor_pos = world_pos
+        cursor_world_pos = self.mouse.project_screen_to_world(cursor_pos)
+        self.renderer.cursor_pos = cursor_world_pos
+        
+        scale_factor = self.mouse.screen_to_world(1)
         
         # Test intersection with objects
         valid_hits = []
         for obj in self.renderer.objects:
-            hit, distance = obj.intersect_cursor(world_pos, self.camera.distance)
+            hit, distance = self.intersect_cursor(obj, cursor_world_pos, scale_factor, min_distance=self.min_selection_distance)
             if hit and distance > 0 and distance < float('inf'):
                 valid_hits.append((distance, obj))
         
@@ -120,3 +134,50 @@ class ObjectSelection:
         # Sort by distance and get closest
         valid_hits.sort(key=lambda x: x[0])
         return valid_hits[0][1]
+
+    @staticmethod
+    def intersect_cursor(obj, cursor_pos, scale_factor, min_distance):
+        """Intersect ray with object bounds.
+        
+        Parameters
+        ----------
+        obj : Object
+            Object to test intersection with
+        cursor_pos : np.ndarray
+            Cursor position in world space
+        scale_factor : float
+            Scale factor for point size (default: 1.0)
+        min_distance : float
+            Minimum distance to intersection in px
+        
+        Returns
+        -------
+        tuple
+            (bool, float) - (intersection found, distance to intersection)
+        """
+        if not obj.selectable:
+            return False, float('inf')
+        bounds = obj.get_bounds()
+        if bounds is None:
+            return False, float('inf')
+        
+        # Expand bounds by offset
+        scale = scale_factor * min_distance
+        # Expand bounds by point_size if this is a point object
+        if hasattr(obj, 'draw_type') and obj.draw_type == GL_POINTS:
+            scale += scale_factor * obj.point_size / 2
+                    
+        bounds = {
+            'min': bounds['min'] - np.array([scale, scale, scale]),
+            'max': bounds['max'] + np.array([scale, scale, scale])
+        }
+            
+        cursor_pos = np.round(cursor_pos, 3)
+        if cursor_pos[0] >= bounds['min'][0] and cursor_pos[0] <= bounds['max'][0] and \
+           cursor_pos[1] >= bounds['min'][1] and cursor_pos[1] <= bounds['max'][1]:
+            midpoint = (bounds['min'] + bounds['max']) / 2
+            distance = np.linalg.norm(cursor_pos - midpoint)
+            return True, distance
+        else:
+            return False, float('inf')
+        

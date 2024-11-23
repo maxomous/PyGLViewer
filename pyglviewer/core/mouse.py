@@ -151,7 +151,7 @@ class Mouse:
                 self.last_cursor = None
                 import numpy as np
 
-    def world_to_screen(self, position):
+    def project_world_to_screen(self, world_position):
         """Convert world coordinates to screen space position.
         
         Args:
@@ -163,10 +163,10 @@ class Mouse:
         view_matrix = self.app.camera.get_view_matrix().T
         projection_matrix = self.app.camera.get_projection_matrix().T
         # Convert world_pos to homogeneous coordinates
-        position = np.append(position, 1.0)
+        world_position = np.append(world_position, 1.0)
         
         # Transform to view space
-        view_pos = view_matrix @ position
+        view_pos = view_matrix @ world_position
         
         # Check if point is behind camera
         if view_pos[2] > 0:  # OpenGL uses negative z for "in front"
@@ -187,12 +187,11 @@ class Mouse:
         
         return (screen_x, screen_y)
                 
-    def screen_to_world(self, screen_x, screen_y):
+    def project_screen_to_world(self, screen_pos):
         """Convert screen coordinates to world space position.
         
         Args:
-            screen_x (float): X coordinate in screen space (px)
-            screen_y (float): Y coordinate in screen space (px)
+            screen_pos (tuple): Position in screen space (x, y)
             
         Returns:
             np.ndarray: Position in world space (x, y, z)
@@ -201,8 +200,8 @@ class Mouse:
         view_matrix = self.app.camera.get_view_matrix()
         projection_matrix = self.app.camera.get_projection_matrix()
         width, height = self.app.window_width, self.app.window_height
-
         # Convert screen coordinates to NDC
+        screen_x, screen_y = screen_pos
         ndc_x = (2.0 * screen_x) / width - 1.0
         ndc_y = 1.0 - (2.0 * screen_y) / height  # Flip Y coordinate
         
@@ -222,29 +221,21 @@ class Mouse:
         
         return world_pos
     
-    def screen_to_world_delta(self, screen_delta_x, screen_delta_y):
-        # TODO: There is likely a simpler, more efficient way to do this
-        """Convert a screen space delta to world space delta.
+        
+    def screen_to_world(self, value, dimension=1):
+        """Convert a value in screen space (px) to world space. 
         
         Args:
-            screen_delta_x (float): Change in X position in screen space (px)
-            screen_delta_y (float): Change in Y position in screen space (px)
+            value (float): Value in screen space (px)
+            dimension (int): Number of dimensions to scale (1, 2 or 3) (i.e [scale, scale, scale])
             
         Returns:
-            np.ndarray: Change in position in world space (x, y, z)
+            float: Value in world space
         """
-        # Get current mouse position
-        io = imgui.get_io()
-        current_x, current_y = io.mouse_pos.x, io.mouse_pos.y
+        world_scale = value * self.app.camera.distance / self.app.window_height
         
-        # Convert current position to world space
-        current_world = self.screen_to_world(current_x, current_y)
-        
-        # Convert position + delta to world space
-        next_world = self.screen_to_world(current_x + screen_delta_x, current_y + screen_delta_y)
-        
-        # Calculate the difference in world space
-        world_delta = next_world - current_world
-        
-        return world_delta
+        if dimension > 1:
+            world_scale = np.repeat(world_scale, dimension)
+            
+        return world_scale
     

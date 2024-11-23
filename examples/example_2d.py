@@ -33,7 +33,8 @@ class Example2DApplication(Application):
         # Create grid params with translation
         grid_params = RenderParams(
             translate=self.GRID_TRANSLATE,
-            scale=(1, 1, 1)
+            scale=(1, 1, 1),
+            selectable=False
         )
         
         self.renderer.add_axis_ticks(size=self.GRID_SIZE, params=grid_params)

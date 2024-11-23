@@ -225,46 +225,6 @@ class Object:
         self._bounds_needs_update = False
         return self._world_bounds
 
-    def intersect_cursor(self, cursor_pos, scale_factor=1.0):
-        """Intersect ray with object bounds.
-        
-        Parameters
-        ----------
-        cursor_pos : np.ndarray
-            Cursor position in world space
-        scale_factor : float, optional
-            Scale factor for point size (default: 1.0)
-        
-        Returns
-        -------
-        tuple
-            (bool, float) - (intersection found, distance to intersection)
-        """
-        if not self.selectable:
-            return False, float('inf')
-            
-        bounds = self.get_bounds()
-        # print(f'bounds = {bounds}')
-        if bounds is None:
-            return False, float('inf')
-
-        # Expand bounds by point_size if this is a point object
-        if hasattr(self, 'draw_type') and self.draw_type == GL_POINTS:
-            half_size = scale_factor / (10 * self.point_size)
-            bounds = {
-                'min': bounds['min'] - np.array([half_size, half_size, 0]),
-                'max': bounds['max'] + np.array([half_size, half_size, 0])
-            }
-            # print(f'expanded bounds = {bounds}')
-
-        if cursor_pos[0] > bounds['min'][0] and cursor_pos[0] < bounds['max'][0] and \
-           cursor_pos[1] > bounds['min'][1] and cursor_pos[1] < bounds['max'][1]:
-            midpoint = (bounds['min'] + bounds['max']) / 2
-            distance = np.linalg.norm(cursor_pos - midpoint)
-            return True, distance
-        else:
-            return False, float('inf')
-        
     def set_vertex_data(self, data):
         """Update the vertex data.
         

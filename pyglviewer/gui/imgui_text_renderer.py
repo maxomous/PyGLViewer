@@ -103,7 +103,7 @@ class ImguiTextRenderer:
                 self.imgui_manager.push_font(batch.font)
                 
             # Project 3D position to screen space
-            screen_pos = self.mouse.world_to_screen(batch.world_pos)
+            screen_pos = self.mouse.project_world_to_screen(batch.world_pos)
             if screen_pos != (None, None):
                 # Adjust window position
                 screen_pos = np.array(screen_pos) - np.array(self.window_pos) + np.array(batch.align_text)

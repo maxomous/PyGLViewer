@@ -69,9 +69,9 @@ class ExampleApplication(Application):
         # Text Rendering
         self.text_renderer.add_axis_labels(xlim=[-10, 10], ylim=[-10, 10], increment=2, colour=Colour.WHITE, static=True)
         # Grid and axis
-        self.grid = self.renderer.add_grid(GRID_SIZE*2, params=RenderParams(translate=GRID_TRANSLATE))
-        self.renderer.add_axis_ticks(size=GRID_SIZE, params=RenderParams(translate=GRID_TRANSLATE))
-        self.axis = self.renderer.add_axis()
+        self.grid = self.renderer.add_grid(GRID_SIZE*2, params=RenderParams(translate=GRID_TRANSLATE, selectable=False))
+        self.renderer.add_axis_ticks(size=GRID_SIZE, params=RenderParams(translate=GRID_TRANSLATE, selectable=False))
+        self.axis = self.renderer.add_axis(params=RenderParams(selectable=False))
         
         # Points with different shapes
         self.renderer.add_point(position=(-4, 4, 0), colour=Colour.RED, 
@@ -118,8 +118,8 @@ class ExampleApplication(Application):
         self.renderer.add_cylinder(colour=Colour.MAGENTA, 
                                  params=RenderParams(translate=(2, 1, 0.25), 
                                                    scale=(0.5, 0.5, 0.5)))
-        self.renderer.add_sphere(radius=0.25, colour=Colour.RED, 
-                               params=RenderParams(translate=(4, 1, 0.5)))
+        self.renderer.add_sphere(position=(4, 1, 0.5), radius=0.25, colour=Colour.RED, 
+                               params=RenderParams())
                 
         # Dynamic objects
         self.rotating_cubes = self.renderer.add_blank_objects({
@@ -158,8 +158,8 @@ class ExampleApplication(Application):
         else:
             self.grid.set_transform_matrix(scale=(1, 1, 1))
             
-        SCALE_WITH_ZOOM = np.repeat(self.camera.distance, 3) / 10
-        self.axis.set_transform_matrix(scale=SCALE_WITH_ZOOM)
+        scale_axis = self.mouse.screen_to_world(100, dimension=3)
+        self.axis.set_transform_matrix(scale=scale_axis)
         
         # Rotating cube
         rotate_geometry = (0, 0, self.timer.oscillate_angle(speed=0.6))
