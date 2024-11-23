@@ -72,30 +72,30 @@ class Example2DApplication(Application):
         # Add circles with custom rendering parameters
         circle_params = RenderParams(show_wireframe=False)
         self.renderer.add_circle(
+            position=(3, 2, 0),
             radius=0.2, 
             colour=Colour.RED, 
-            position=(3, 2, 0),
             params=circle_params
         )
         self.renderer.add_circle(
+            position=(4, 2, 0),
             radius=0.2, 
             colour=Colour.GREEN, 
-            position=(4, 2, 0),
             params=circle_params
         )
         self.renderer.add_circle(
+            position=(5, 2, 0),
             radius=0.2, 
             colour=Colour.BLUE, 
-            position=(5, 2, 0),
             params=circle_params
         )
         
         # Transparent circle
         transparent_circle_params = RenderParams(show_wireframe=False, alpha=0.5)
         self.renderer.add_circle(
+            position=(4, 1.5, 0),
             radius=3, 
             colour=Colour.YELLOW, 
-            position=(4, 1.5, 0),
             params=transparent_circle_params
         )
         

@@ -96,7 +96,7 @@ class ObjectSelection:
                 if bounds := obj.get_bounds():
                     offset = self.camera.distance * 0.01
                     width, height, _ = (bounds['max'] - bounds['min']) + np.array([offset, offset, 0])
-                    mid_point = obj.get_mid_point()[:2]
+                    mid_point = obj.get_mid_point()
                     edge_length = self.camera.distance * self.target_edge_length
                     selected_geometry += Shapes.create_rectangle_target(mid_point, width, height, edge_length, Colour.WHITE) 
 
