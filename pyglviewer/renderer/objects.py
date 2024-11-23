@@ -179,7 +179,7 @@ class Object:
 
         # Cache transformed bounds for faster picking
         self._world_bounds = None
-        self._bounds_dirty = True
+        self._bounds_needs_update = True
 
     def get_mid_point(self):
         """Get the mid point of the object.
@@ -201,8 +201,8 @@ class Object:
         """
         if not hasattr(self, 'vertex_data') or self.vertex_data is None or len(self.vertex_data) == 0:
             return None
-        # Return cached bounds if available and not dirty
-        if not self._bounds_dirty:
+        # Return cached bounds if available and doesnt need update
+        if not self._bounds_needs_update:
             return self._world_bounds
         
         # Get local bounds from actual vertex data
@@ -222,7 +222,7 @@ class Object:
             'min': bounds_min,
             'max': bounds_max
         }
-        self._bounds_dirty = False
+        self._bounds_needs_update = False
         return self._world_bounds
 
     def intersect_cursor(self, cursor_pos, scale_factor=1.0):
@@ -274,7 +274,7 @@ class Object:
             New vertex data
         """
         self.vertex_data = np.array(data, dtype=np.float32)
-        self._bounds_dirty = True  # Mark bounds for recalculation
+        self._bounds_needs_update = True  # Mark bounds for recalculation
 
     def set_index_data(self, data):
         """Update the index data of this render object.
@@ -297,7 +297,7 @@ class Object:
         self.set_vertex_data(geometry.get_vertices())
         self.set_index_data(geometry.get_indices())
             
-    def set_transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
+    def set_transform_matrix(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
         """Set the transform matrix.
         
         Parameters
@@ -310,7 +310,7 @@ class Object:
             Scale factors (x,y,z) (default: (1,1,1))
         """
         self.model_matrix = Transform(translate, rotate, scale).transform_matrix().T
-        self._bounds_dirty = True  # Mark bounds for recalculation
+        self._bounds_needs_update = True  # Mark bounds for recalculation
 
     def get_translate(self):
         """Get the translation of the object.
@@ -331,7 +331,7 @@ class Object:
             Translation vector (x,y,z) (default: (0,0,0))
         """
         self.model_matrix[3, :3] = translate
-        self._bounds_dirty = True  # Mark bounds for recalculation
+        self._bounds_needs_update = True  # Mark bounds for recalculation
 
     def select(self):
         """Mark this object as selected.
@@ -364,6 +364,6 @@ class ObjectCollection:
     def __setitem__(self, key: str, value: Object):
         self.objects[key] = value
         
-    def set_transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
+    def set_transform_matrix(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
         for object in self.objects.values():
-            object.set_transform(translate, rotate, scale)
+            object.set_transform_matrix(translate, rotate, scale)

@@ -13,12 +13,12 @@ class PointShape(Enum):
 vertex_shader_lighting = """
 #version 330 core
 layout (location = 0) in vec3 aPos;      // Vertex position
-layout (location = 1) in vec3 aColor;    // Vertex color
+layout (location = 1) in vec3 aColour;    // Vertex colour
 layout (location = 2) in vec3 aNormal;   // Vertex normal
 
 out vec3 FragPos;   // Fragment position in world space
 out vec3 Normal;    // Fragment normal in world space
-out vec3 Color;     // Fragment color
+out vec3 Colour;     // Fragment colour
 
 // Transformation matrices
 uniform mat4 model;
@@ -29,7 +29,7 @@ void main() {
     vec4 worldPos = model * vec4(aPos, 1.0);
     FragPos = worldPos.xyz;
     Normal = mat3(transpose(inverse(model))) * aNormal;
-    Color = aColor;
+    Colour = aColour;
     gl_Position = projection * view * worldPos;
 }
 """
@@ -39,9 +39,9 @@ fragment_shader_lighting = """
 #version 330 core
 in vec3 FragPos;    // Fragment position in world space
 in vec3 Normal;     // Fragment normal in world space
-in vec3 Color;      // Fragment color
+in vec3 Colour;      // Fragment colour
 
-out vec4 FragColor;
+out vec4 FragColour;
 
 #define MAX_LIGHTS 10
 
@@ -50,7 +50,7 @@ struct Light {
     int type;           // 0=ambient, 1=directional, 2=point, 3=spot
     vec3 position;      // Position for point/spot lights
     vec3 direction;     // Direction for directional/spot lights
-    vec3 color;        // Light color
+    vec3 colour;        // Light colour
     float intensity;    // Light intensity multiplier
     vec3 attenuation;   // Distance attenuation factors (constant, linear, quadratic)
     float cutoff;       // Spotlight cone angle in radians
@@ -63,7 +63,7 @@ uniform float alpha = 1.0;  // Add alpha uniform
 
 vec3 calcLight(Light light, vec3 normal, vec3 fragPos, vec3 viewDir) {
     if (light.type == 0) {  // Ambient light
-        return light.color * light.intensity;
+        return light.colour * light.intensity;
     }
     
     vec3 lightDir;
@@ -86,14 +86,14 @@ vec3 calcLight(Light light, vec3 normal, vec3 fragPos, vec3 viewDir) {
     }
 
     // Blinn-Phong lighting calculation
-    vec3 ambient = 0.1 * light.color;
+    vec3 ambient = 0.1 * light.colour;
 
     float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = diff * light.color;
+    vec3 diffuse = diff * light.colour;
 
     vec3 halfwayDir = normalize(lightDir + viewDir);
     float spec = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
-    vec3 specular = spec * light.color;
+    vec3 specular = spec * light.colour;
 
     return (ambient + diffuse + specular) * light.intensity * attenuation;
 }
@@ -107,19 +107,19 @@ void main() {
         result += calcLight(lights[i], norm, FragPos, viewDir);
     }
 
-    FragColor = vec4(result * Color, alpha);  // Use alpha uniform
+    FragColour = vec4(result * Colour, alpha);  // Use alpha uniform
 }
 """
 
 vertex_shader_points = """
 #version 330 core
 layout (location = 0) in vec3 aPos;      // Vertex position
-layout (location = 1) in vec3 aColor;    // Vertex color
+layout (location = 1) in vec3 aColour;    // Vertex colour
 layout (location = 2) in vec3 aNormal;   // Vertex normal
 
 out vec3 FragPos;   // Fragment position in world space
 out vec3 Normal;    // Fragment normal in world space
-out vec3 Color;     // Fragment color
+out vec3 Colour;     // Fragment colour
 
 // Transformation matrices
 uniform mat4 model;
@@ -131,7 +131,7 @@ void main() {
     vec4 worldPos = model * vec4(aPos, 1.0);
     FragPos = worldPos.xyz;
     Normal = mat3(transpose(inverse(model))) * aNormal;
-    Color = aColor;
+    Colour = aColour;
     gl_Position = projection * view * worldPos;
     gl_PointSize = pointSize;  // Set the point size
 }
@@ -141,9 +141,9 @@ fragment_shader_points = """
 #version 330 core
 in vec3 FragPos;
 in vec3 Normal;
-in vec3 Color;
+in vec3 Colour;
 
-out vec4 FragColor;
+out vec4 FragColour;
 
 uniform int pointShape = 0;  // 0=circle, 1=square, 2=triangle
 uniform float alpha = 1.0;   // Add alpha uniform
@@ -170,7 +170,7 @@ void main() {
     }
     
     if (!inside) discard;
-    FragColor = vec4(Color, alpha);  // Use alpha uniform
+    FragColour = vec4(Colour, alpha);  // Use alpha uniform
 }
 """
     

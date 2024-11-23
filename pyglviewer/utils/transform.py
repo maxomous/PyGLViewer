@@ -6,7 +6,7 @@ class Transform:
         self.translate = np.array(translate, dtype=np.float32)
         self.rotate = np.array(rotate, dtype=np.float32)  # In radians
         self.scale = np.array(scale, dtype=np.float32)
-        self.dirty = True
+        self.needs_update = True
         self.cached_matrix = None
         
     def transform_position(self, position):
@@ -26,7 +26,7 @@ class Transform:
         Returns:
             np.array: 4x4 transformation matrix
         """
-        if self.dirty:
+        if self.needs_update:
             tx, ty, tz = self.translate
             rx, ry, rz = self.rotate
             sx, sy, sz = self.scale
@@ -47,7 +47,7 @@ class Transform:
                 [0, 0, 0, 1]
             ], dtype=np.float32)  # Ensure float32 type
 
-            self.dirty = False
+            self.needs_update = False
             self.cached_matrix = transform
             
         return self.cached_matrix
@@ -55,35 +55,35 @@ class Transform:
     def set_translate(self, x, y, z):
         """Set absolute translation values."""
         self.translate = np.array([x, y, z], dtype=np.float32)
-        self.dirty = True
+        self.needs_update = True
         return self
 
     def translate(self, x, y, z):
         """Update position by the given amounts."""
         self.translate += np.array([x, y, z], dtype=np.float32)
-        self.dirty = True
+        self.needs_update = True
         return self
     
     def set_rotate(self, rx, ry, rz):
         """Set absolute rotation values."""
         self.rotate = np.array([rx, ry, rz], dtype=np.float32)
-        self.dirty = True
+        self.needs_update = True
         return self
 
     def rotate(self, rx, ry, rz):
         """Update rotation by the given angles (in radians)."""
         self.rotate += np.array([rx, ry, rz], dtype=np.float32)
-        self.dirty = True
+        self.needs_update = True
         return self
 
     def set_scale(self, x, y, z):
         """Set absolute scale values."""
         self.scale = np.array([x, y, z], dtype=np.float32)
-        self.dirty = True
+        self.needs_update = True
         return self
 
     def scale(self, x, y, z):
         """Scale relatively by multiplying current scale."""
         self.scale *= np.array([x, y, z], dtype=np.float32)
-        self.dirty = True
+        self.needs_update = True
         return self

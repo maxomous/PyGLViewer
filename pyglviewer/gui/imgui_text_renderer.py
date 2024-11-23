@@ -13,7 +13,7 @@ class TextInfo:
     text: str
     world_pos: Tuple[float, float, float]
     align_text: Tuple[float, float]
-    color: int  # ImGui packed color
+    colour: int  # ImGui packed colour
     font: str = None
     static: bool = False
 
@@ -26,7 +26,7 @@ class ImguiTextRenderer:
         self.imgui_manager = imgui_manager
         self.text_batches = []  # Store text information for batch rendering
     
-    def add_text(self, text, world_pos, color, align_text=(0, 0), font=None, static=False):
+    def add_text(self, text, world_pos, colour, align_text=(0, 0), font=None, static=False):
         """Add text to be rendered at a 3D world position. 
         Stores text data to later (in that frame) be rendered in imgui window.
         Can be called any time in frame,
@@ -34,18 +34,18 @@ class ImguiTextRenderer:
         Args:
             text (str): Text to display
             world_pos (tuple): 3D world position (x,y,z)
-            color (tuple): RGBA color values (0-1)
+            colour (tuple): RGBA colour values (0-1)
             align_text (tuple): Text alignment (x,y)
             font (imgui.Font, optional): ImGui font to use. Uses default if None.
             static (bool): If True, text will not be removed when clearing text batches
         """
-        # Convert color to ImGui format (packed 32-bit RGBA)
-        if len(color) == 3:
-            color = (*color, 1.0)
-        imgui_color = imgui.get_color_u32_rgba(*color)
+        # Convert colour to ImGui format (packed 32-bit RGBA)
+        if len(colour) == 3:
+            colour = (*colour, 1.0)
+        imgui_colour = imgui.get_color_u32_rgba(*colour)
               
         # Store text information instead of rendering immediately
-        self.text_batches.append(TextInfo(text=text, world_pos=world_pos, align_text=align_text, color=imgui_color, font=font, static=static))
+        self.text_batches.append(TextInfo(text=text, world_pos=world_pos, align_text=align_text, colour=imgui_colour, font=font, static=static))
     
     
     def add_axis_labels(self, xlim=[-10, 10], ylim=[-10, 10], increment=1, colour=Colour.WHITE, font=None, static=False):
@@ -107,7 +107,7 @@ class ImguiTextRenderer:
             if screen_pos != (None, None):
                 # Adjust window position
                 screen_pos = np.array(screen_pos) - np.array(self.window_pos) + np.array(batch.align_text)
-                draw_list.add_text(screen_pos[0], screen_pos[1], batch.color, batch.text)
+                draw_list.add_text(screen_pos[0], screen_pos[1], batch.colour, batch.text)
          
             if batch.font:
                 self.imgui_manager.pop_font()

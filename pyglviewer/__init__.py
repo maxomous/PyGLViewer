@@ -7,7 +7,7 @@ from .core.object_selection import ObjectSelection, SelectionSettings
 from .gui.imgui_manager import ImGuiManager
 from .gui.imgui_text_renderer import ImguiTextRenderer
 from .gui.imgui_widgets import ImGuiWidgets
-from .renderer.geometry import Geometry
+from .renderer.shapes import Shapes
 from .renderer.light import Light, LightType, default_lighting
 from .renderer.objects import BufferType, ObjectCollection
 from .renderer.renderer import Renderer
@@ -30,7 +30,7 @@ __all__ = [
     "ImGuiManager",
     "ImguiTextRenderer",
     "ImGuiWidgets",
-    "Geometry",
+    "Shapes",
     "Light",
     "LightType",
     "BufferType",

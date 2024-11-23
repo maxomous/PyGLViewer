@@ -32,7 +32,7 @@ class BatchRenderer:
         # Batch storage - simple list of objects per batch key
         self.batches: Dict[str, List[Object]] = {}
         
-        # Calculate vertex size: 3 (pos) + 3 (color) + 3 (normal) = 9 floats
+        # Calculate vertex size: 3 (pos) + 3 (colour) + 3 (normal) = 9 floats
         self.vertex_size = 9 * np.dtype(np.float32).itemsize  # Size in bytes
         
         # Create initial buffers
@@ -71,7 +71,7 @@ class BatchRenderer:
                 'stride': self.vertex_size,
                 'offset': 0
             },
-            # Color attribute (location=1)
+            # Colour attribute (location=1)
             {
                 'index': 1,
                 'size': 3,

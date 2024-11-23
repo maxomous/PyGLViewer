@@ -2,7 +2,7 @@ import numpy as np
 import imgui
 from OpenGL.GL import GL_POINTS, GL_LINES
 from pyglviewer.renderer.renderer import Renderer, RenderParams
-from pyglviewer.renderer.geometry import Geometry
+from pyglviewer.renderer.shapes import Shapes
 from pyglviewer.renderer.objects import BufferType
 from pyglviewer.utils.colour import Colour
 
@@ -84,11 +84,11 @@ class ObjectSelection:
     def process_cursor_point(self):
         # Draw cursor point
         if hasattr(self.renderer, 'cursor_pos'):
-            self.cursor_point.set_geometry_data(Geometry.create_point(self.renderer.cursor_pos, color=Colour.WHITE))
+            self.cursor_point.set_geometry_data(Shapes.create_point(self.renderer.cursor_pos, colour=Colour.WHITE))
         
     def process_selection_targets(self):
         # Draw target on selected objects
-        selected_geometry = Geometry.create_blank()
+        selected_geometry = Shapes.create_blank()
         # Get object under cursor
         if selected_objects := self.renderer.get_selected_objects():
             # Create a single geometry with multiple rectangles to indicate each selected object
@@ -96,9 +96,9 @@ class ObjectSelection:
                 if bounds := obj.get_bounds():
                     offset = self.camera.distance * 0.01
                     width, height, _ = (bounds['max'] - bounds['min']) + np.array([offset, offset, 0])
-                    mid_x, mid_y, _ = obj.get_mid_point()
+                    mid_point = obj.get_mid_point()[:2]
                     edge_length = self.camera.distance * self.target_edge_length
-                    selected_geometry += Geometry.create_rectangle_target(mid_x, mid_y, width, height, edge_length, Colour.WHITE) 
+                    selected_geometry += Shapes.create_rectangle_target(mid_point, width, height, edge_length, Colour.WHITE) 
 
         self.selection_target.set_geometry_data(selected_geometry)
         

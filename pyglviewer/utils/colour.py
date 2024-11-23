@@ -1,5 +1,5 @@
 class Colour:
-    """Common color constants."""
+    """Common colour constants."""
     BLACK = (0.0, 0.0, 0.0)
     WHITE = (1.0, 1.0, 1.0)
     RED = (1.0, 0.0, 0.0)
@@ -44,21 +44,21 @@ class Colour:
         return (r / 255.0, g / 255.0, b / 255.0, a / 255.0)
 
     @staticmethod
-    def interpolate(color_1, color_2, t):
-        """Linearly interpolate between two colors.
+    def interpolate(colour_1, colour_2, t):
+        """Linearly interpolate between two colours.
         
         Args:
-            color_1 (tuple): First color (r,g,b) or (r,g,b,a)
-            color_2 (tuple): Second color (r,g,b) or (r,g,b,a)
+            colour_1 (tuple): First colour (r,g,b) or (r,g,b,a)
+            colour_2 (tuple): Second colour (r,g,b) or (r,g,b,a)
             t (float): Interpolation factor (0.0-1.0)
-                      0.0 returns color_1
-                      1.0 returns color_2
+                      0.0 returns colour_1
+                      1.0 returns colour_2
         
         Returns:
-            tuple: Interpolated color with same dimensions as inputs
+            tuple: Interpolated colour with same dimensions as inputs
         """
         # Ensure t is clamped between 0 and 1
         t = max(0.0, min(1.0, t))
         
-        # Handle both RGB and RGBA colors   
-        return tuple(c1 + (c2 - c1) * t for c1, c2 in zip(color_1, color_2))
+        # Handle both RGB and RGBA colours   
+        return tuple(c1 + (c2 - c1) * t for c1, c2 in zip(colour_1, colour_2))

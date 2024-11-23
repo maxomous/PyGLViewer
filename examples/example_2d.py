@@ -13,7 +13,7 @@ from pyglviewer.renderer.renderer import RenderParams
 class Example2DApplication(Application):
     
     GRID_SIZE = 25
-    GRID_TRANSLATE = (0, 0, -0.002) # Move grid slightly below z=0 to avoid z-fighting
+    GRID_TRANSLATE = (0, 0, -0.002)  # Move grid slightly below z=0 to avoid z-fighting
     
     def init(self):
         """ Initialise the application. Create the UI, variables, lighting and geometry. """
@@ -46,38 +46,66 @@ class Example2DApplication(Application):
         y2 = np.sin(x2)
         
         # Plot lines with custom widths
-        self.renderer.plot(x1, 2*y1, color=Colour.CYAN, 
-                          params=RenderParams(line_width=3.0))
-        self.renderer.plot(x1, -0.5*y1, color=Colour.RED, 
-                          params=RenderParams(line_width=3.0))
+        self.renderer.plot(
+            x=x1, y=2*y1, 
+            colour=Colour.CYAN, 
+            params=RenderParams(line_width=3.0)
+        )
+        self.renderer.plot(
+            x=x1, y=-0.5*y1, 
+            colour=Colour.RED, 
+            params=RenderParams(line_width=3.0)
+        )
         
         # Scatter plots with custom point sizes and shapes
-        self.renderer.scatter(x2, -1.5*y2, color=Colour.GREEN, 
-                             params=RenderParams(point_size=12.0, point_shape=PointShape.CIRCLE))
-        self.renderer.scatter(x2, 1*y2, color=Colour.ORANGE, 
-                             params=RenderParams(point_size=12.0, point_shape=PointShape.TRIANGLE))
+        self.renderer.scatter(
+            x=x2, y=-1.5*y2, 
+            colour=Colour.GREEN, 
+            params=RenderParams(point_size=12.0, point_shape=PointShape.CIRCLE)
+        )
+        self.renderer.scatter(
+            x=x2, y=1*y2, 
+            colour=Colour.ORANGE, 
+            params=RenderParams(point_size=12.0, point_shape=PointShape.TRIANGLE)
+        )
         
         # Add circles with custom rendering parameters
         circle_params = RenderParams(show_wireframe=False)
-        self.renderer.add_circle(position=(3, 2, 0), radius=0.2, color=Colour.RED, 
-                                params=circle_params)
-        self.renderer.add_circle(position=(4, 2, 0), radius=0.2, color=Colour.GREEN, 
-                                params=circle_params)
-        self.renderer.add_circle(position=(5, 2, 0), radius=0.2, color=Colour.BLUE, 
-                                params=circle_params)
+        self.renderer.add_circle(
+            radius=0.2, 
+            colour=Colour.RED, 
+            position=(3, 2, 0),
+            params=circle_params
+        )
+        self.renderer.add_circle(
+            radius=0.2, 
+            colour=Colour.GREEN, 
+            position=(4, 2, 0),
+            params=circle_params
+        )
+        self.renderer.add_circle(
+            radius=0.2, 
+            colour=Colour.BLUE, 
+            position=(5, 2, 0),
+            params=circle_params
+        )
         
         # Transparent circle
         transparent_circle_params = RenderParams(show_wireframe=False, alpha=0.5)
-        self.renderer.add_circle(position=(4, 1.5, 0), radius=3, color=Colour.YELLOW, 
-                                params=transparent_circle_params)
+        self.renderer.add_circle(
+            radius=3, 
+            colour=Colour.YELLOW, 
+            position=(4, 1.5, 0),
+            params=transparent_circle_params
+        )
         
     def update_scene(self):
         """ update the scene """
         # Update axis size
         if self.camera.distance > 2.5:
-            self.grid.set_transform(scale=(10, 10, 1))
+            self.grid.set_transform_matrix(scale=(10, 10, 1)) # TODO: Only update on change
         else:
-            self.grid.set_transform(scale=(1, 1, 1))
+            self.grid.set_transform_matrix(scale=(1, 1, 1))
   
     def events(self):
         """ Process custom events, such as the keyboard & mouse. """

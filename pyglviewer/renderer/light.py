@@ -18,19 +18,19 @@ default_lighting = {
         'type': LightType.DIRECTIONAL, 
         'position': (10, 10, 10), 
         'target': (0, 0, 0), 
-        'color': (1.0, 0.95, 0.8),
+        'colour': (1.0, 0.95, 0.8),
         'intensity': 0.4
     },
     'ambient': {
         'type': LightType.AMBIENT, 
-        'color': (1, 1, 1), 
+        'colour': (1, 1, 1), 
         'intensity': 0.7
     },
     'fill': {
         'type': LightType.DIRECTIONAL, 
         'position': (-5, 5, -5), 
         'target': (0, 0, 0), 
-        'color': (0.8, 0.9, 1.0), 
+        'colour': (0.8, 0.9, 1.0), 
         'intensity': 0.3
     }
 }
@@ -39,7 +39,7 @@ class Light:
     """Represents a light source in 3D space.
     
     Supports ambient, directional, point, and spot lights with various properties
-    like color, intensity, attenuation, and cutoff angles.
+    like colour, intensity, attenuation, and cutoff angles.
     
     Args:
         type (LightType): 
@@ -50,8 +50,8 @@ class Light:
             Direction vector for directional/spot lights
         target (tuple, optional): 
             Target point to calculate direction
-        color (tuple, optional): 
-            RGB color values (0-1). Defaults to white
+        colour (tuple, optional): 
+            RGB colour values (0-1). Defaults to white
         intensity (float, optional): 
             Light brightness multiplier. Defaults to 1.0
         attenuation (tuple, optional): 
@@ -59,13 +59,13 @@ class Light:
         cutoff (float, optional): 
             Spotlight cone angle in degrees
     """
-    def __init__(self, type, position=None, direction=None, target=None, color=(1, 1, 1), intensity=1.0, 
+    def __init__(self, type, position=None, direction=None, target=None, colour=(1, 1, 1), intensity=1.0, 
                  attenuation=(1.0, 0.0, 0.0), cutoff=None):
         self.type = type
         # Convert position/target to numpy arrays if provided
         self.position = np.array(position, dtype=np.float32) if position is not None else None
         self.target = np.array(target, dtype=np.float32) if target is not None else None
-        self.color = np.array(color, dtype=np.float32)
+        self.colour = np.array(colour, dtype=np.float32)
         self.intensity = float(intensity)
         self.attenuation = np.array(attenuation, dtype=np.float32)  # (constant, linear, quadratic)
         self.cutoff = float(cutoff) if cutoff is not None else None  # for spot light
@@ -98,7 +98,7 @@ class Light:
         # Basic properties for all light types
         data = {
             'type': self.type,
-            'color': self.color,
+            'colour': self.colour,
             'intensity': self.intensity,
         }
         
