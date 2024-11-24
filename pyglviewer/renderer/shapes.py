@@ -57,12 +57,13 @@ class Shape:
         vertices (list[Vertex]): List of vertices defining the shape
         indices (np.array): Indices of the vertices to render
     """
-    def __init__(self, vertices=None, indices=None):
+    def __init__(self, draw_type,vertices=None, indices=None):
         """
         Args:
             vertices (list[Vertex]): List of vertices
             indices (list[int]): List of indices
         """
+        self.draw_type = draw_type
         self.vertices = np.array(vertices, dtype=Vertex) if vertices is not None else []
         self.indices = np.array(indices, dtype=np.uint32) if indices is not None else []
         self.vertex_count = len(vertices) if vertices is not None else 0
@@ -83,6 +84,9 @@ class Shape:
         if not isinstance(other, Shape):
             raise TypeError("Can only add Shape to Shape")
 
+        if self.draw_type != other.draw_type:
+            raise ValueError("Cannot combine shapes with different draw types")
+
         # Combine vertices
         combined_vertices = np.concatenate((self.vertices, other.vertices))
 
@@ -93,7 +97,7 @@ class Shape:
         # Combine indices
         combined_indices = np.concatenate((self.indices, adjusted_other_indices))
 
-        result = Shape(combined_vertices, combined_indices)
+        result = Shape(self.draw_type, combined_vertices, combined_indices)
         return result
 
     def get_vertices(self):
@@ -181,6 +185,7 @@ class Shape:
             Shape: New shape with copied vertex and index data
         """
         return Shape(
+            self.draw_type,
             [Vertex(v.position.copy(), v.colour.copy(), v.normal.copy()) 
              for v in self.vertices],
             self.indices.copy()
@@ -191,16 +196,18 @@ class Shapes:
     """
     Factory class providing static methods to create various 3D shapes.
     All shapes are centreed at origin unless specified otherwise.
-    Includes both solid and wireframe generation methods.
     """
     @staticmethod
-    def create_blank():
+    def create_blank(draw_type):
         """Create a blank shape.
         
+        Args:
+            draw_type (int): OpenGL draw type
+            
         Returns:
             Shape: Empty shape with no vertices or indices
         """
-        return Shape()
+        return Shape(draw_type)
     
     @staticmethod
     def create_grid(size, increment, colour):
@@ -230,7 +237,7 @@ class Shapes:
             index = i * 4
             indices.extend([index, index + 1, index + 2, index + 3])
 
-        return Shape(vertices, indices)
+        return Shape(GL_LINES, vertices, indices)
 
     @staticmethod
     def create_point(position, colour):
@@ -245,7 +252,7 @@ class Shapes:
         """
         vertices = [Vertex(position, colour, [0, 0, 1])]
         indices = [0]
-        return Shape(vertices, indices)
+        return Shape(GL_POINTS, vertices, indices)
     
     @staticmethod
     def create_points(positions, colour):
@@ -260,7 +267,7 @@ class Shapes:
         """
         vertices = [Vertex(position, colour, [0, 0, 1]) for position in positions]
         indices = list(range(len(vertices)))
-        return Shape(vertices, indices)
+        return Shape(GL_POINTS, vertices, indices)
     
     @staticmethod
     def create_line(p0, p1, colour):
@@ -289,7 +296,7 @@ class Shapes:
             Vertex(p1, colour, normal)
         ]
         indices = [0, 1]
-        return Shape(vertices, indices)
+        return Shape(GL_LINES, vertices, indices)
 
     @staticmethod
     def create_linestring(points, colour):
@@ -340,7 +347,7 @@ class Shapes:
             base_idx = i - 1
             indices.extend([base_idx, base_idx + 1])
         
-        return Shape(vertices, indices)
+        return Shape(GL_LINES, vertices, indices)
 
     @staticmethod
     def create_triangle(p1, p2, p3, colour):
@@ -364,7 +371,7 @@ class Shapes:
             Vertex(p3, colour, normal)
         ]
         indices = [0, 1, 2]
-        return Shape(vertices, indices)
+        return Shape(GL_TRIANGLES, vertices, indices)
 
     @staticmethod
     def create_triangle_wireframe(p1, p2, p3, colour):
@@ -404,7 +411,7 @@ class Shapes:
             Vertex([x - half_w, y + half_h, z], colour, normal)
         ]
         indices = [0, 1, 2, 2, 3, 0]
-        return Shape(vertices, indices)
+        return Shape(GL_TRIANGLES, vertices, indices)
 
     @staticmethod
     def create_target(position, size, edge_length, colour):
@@ -468,7 +475,7 @@ class Shapes:
                 base_idx, base_idx + 3   # Depth edge
             ])
         
-        return Shape(vertices, indices)
+        return Shape(GL_LINES,vertices, indices)
 
     @staticmethod
     def create_rectangle_wireframe(position, width, height, colour):
@@ -493,7 +500,7 @@ class Shapes:
             Vertex([x - half_w, y + half_h, z], colour, normal)
         ]
         indices = [0, 1, 1, 2, 2, 3, 3, 0]
-        return Shape(vertices, indices)
+        return Shape(GL_LINES, vertices, indices)
 
     @staticmethod
     def create_circle(position, radius, segments, colour):
@@ -519,7 +526,7 @@ class Shapes:
             if i > 0:
                 indices.extend([0, i, i + 1])
         indices.extend([0, segments, 1])
-        return Shape(vertices, indices)
+        return Shape(GL_TRIANGLES, vertices, indices)
         
     @staticmethod
     def create_circle_wireframe(position, radius, segments, colour):
@@ -543,7 +550,7 @@ class Shapes:
             y = position[1] + radius * np.sin(angle)
             vertices.append(Vertex([x, y, position[2]], colour, normal))
             indices.extend([i, (i + 1) % segments])
-        return Shape(vertices, indices)
+        return Shape(GL_LINES, vertices, indices)
 
     @staticmethod
     def create_cube(position=(0,0,0), size=1.0, colour=(1,1,1)):
@@ -601,7 +608,7 @@ class Shapes:
             20, 21, 22, 22, 23, 20  # Bottom face
         ]
 
-        return Shape(vertices, indices)
+        return Shape(GL_TRIANGLES, vertices, indices)
 
     @staticmethod
     def create_cube_wireframe(position=(0,0,0), size=1.0, colour=(1,1,1)):
@@ -635,7 +642,7 @@ class Shapes:
             0, 4, 1, 5, 2, 6, 3, 7   # Connecting edges
         ]
 
-        return Shape(vertices, indices)
+        return Shape(GL_LINES, vertices, indices)
 
 
     @staticmethod
@@ -676,7 +683,7 @@ class Shapes:
             i4 = (i * 2 + 3) % (segments * 2 + 2)
             indices.extend([i1, i2, i3, i2, i4, i3])
 
-        cylinder = Shape(vertices, indices)
+        cylinder = Shape(GL_TRIANGLES, vertices, indices)
         bottom = Shapes.create_circle(position=(0,0,0), radius=radius, segments=segments, colour=colour).transform(rotate=(np.pi,0,0))
         top = Shapes.create_circle(position=(0,0,1), radius=radius, segments=segments, colour=colour)
         # Transform to position
@@ -745,7 +752,7 @@ class Shapes:
             i2 = (i + 1) % segments + 1
             indices.extend([0, i1, i2])
 
-        cone = Shape(vertices, indices)
+        cone = Shape(GL_TRIANGLES, vertices, indices)
         # Create bottom circle
         bottom = Shapes.create_circle(position=(0,0,0), radius=0.5, segments=segments, colour=colour).transform(rotate=(np.pi,0,0))
         # Transform to position
@@ -827,7 +834,7 @@ class Shapes:
             vertex_position = [x * radius for x in normalized]
             vertex_objects.append(Vertex(vertex_position, colour, normalized))
 
-        sphere = Shape(vertex_objects, indices)
+        sphere = Shape(GL_TRIANGLES, vertex_objects, indices)
         if position != (0,0,0):
             sphere.transform(translate=position)
         return sphere
@@ -856,7 +863,7 @@ class Shapes:
         length = np.linalg.norm(direction)
         
         if length == 0:
-            return [Shape(), Shape()]  # Return empty shape if p0 and p1 are the same
+            return [Shape(GL_TRIANGLES), Shape(GL_LINES)]  # Return empty shape if p0 and p1 are the same
             
         # Calculate transforms - note we use midpoint since cube is centreed at origin
         dimensions = (width, height) if direction[0] == 0 and direction[1] == 0 else (height, width) # width & height get swapped if beam is vertical
@@ -891,7 +898,7 @@ class Shapes:
         length = np.linalg.norm(direction)
         
         if length == 0:
-            return [Shape(), Shape()]  # Return empty shape if p0 and p1 are the same
+            return [Shape(GL_TRIANGLES), Shape(GL_LINES)]  # Return empty shape if p0 and p1 are the same
     
         unit_direction = direction / length
         pHead = p1 - unit_direction * dimensions.head_length

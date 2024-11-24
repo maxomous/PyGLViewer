@@ -46,7 +46,7 @@ class RenderParams:
     
     ### Display Parameters
     show_body : bool
-        Show filled geometry
+        Show filled shape
     show_wireframe : bool
         Show wireframe
     wireframe_colour : Optional[Colour]
@@ -181,6 +181,10 @@ class Renderer:
         glClearColor(r, g, b, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
+
+
+
+
     def add_point(self, position, colour, params = RenderParams()):
         """Add a point primitive to the scene.
         
@@ -200,10 +204,10 @@ class Renderer:
         """
         # Use point shader if not specified
         params.shader = params.shader or self.point_shader
-        # Create point geometry
-        geometry = Shapes.create_point(position, colour)
+        # Create point shape
+        shape = Shapes.create_point(position, colour)
         # Add object to batch renderer
-        return self.add_object(geometry, GL_POINTS, params)
+        return self.add_object(shape, params)
 
     def add_points(self, points, colour=Colour.WHITE, params = RenderParams()):
         """Add a series of points.
@@ -222,12 +226,12 @@ class Renderer:
         RenderObject
             Points render object
         """
-        geometry = Shapes.create_blank()
+        shape = Shapes.create_blank(GL_POINTS)
         for point in points:
-            geometry = geometry + Shapes.create_point(point, colour).transform(
+            shape = shape + Shapes.create_point(point, colour).transform(
                 params.translate, params.rotate, params.scale)
         
-        return self.add_object(geometry, GL_POINTS, params)
+        return self.add_object(shape, params)
 
     def add_line(self, p0, p1, colour=Colour.WHITE, params = RenderParams()):
         """Add a line from p0 to p1.
@@ -248,9 +252,9 @@ class Renderer:
         RenderObject
             Line render object
         """
-        geometry = Shapes.create_line(p0, p1, colour).transform(
+        shape = Shapes.create_line(p0, p1, colour).transform(
             params.translate, params.rotate, params.scale)
-        return self.add_object(geometry, GL_LINES, params)
+        return self.add_object(shape, params)
 
     def add_linestring(self, points, colour=Colour.WHITE, params = RenderParams()):
         """Add a line through a series of points.
@@ -273,9 +277,9 @@ class Renderer:
         if points.shape[1] != 3:
             raise ValueError("Points must have 3 values (x,y,z) per point")
         
-        geometry = Shapes.create_linestring(points, colour).transform(
+        shape = Shapes.create_linestring(points, colour).transform(
             params.translate, params.rotate, params.scale)
-        return self.add_object(geometry, GL_LINES, params)
+        return self.add_object(shape, params)
 
     def add_triangle(self, p1, p2, p3, colour=None, params = RenderParams()):
         """Add a triangle defined by three points.
@@ -298,15 +302,15 @@ class Renderer:
         objects = {}
         
         if params.show_body:
-            geometry = Shapes.create_triangle(p1, p2, p3, colour).transform(
+            shape = Shapes.create_triangle(p1, p2, p3, colour).transform(
                 params.translate, params.rotate, params.scale)
-            objects['body'] = self.add_object(geometry, GL_TRIANGLES, params)
+            objects['body'] = self.add_object(shape, params)
         
         if params.show_wireframe:
-            geometry = Shapes.create_triangle_wireframe(
+            shape = Shapes.create_triangle_wireframe(
                 p1, p2, p3, params.wireframe_colour or self.default_wireframe_colour
             ).transform(params.translate, params.rotate, params.scale)
-            objects['wireframe'] = self.add_object(geometry, GL_LINES, params)
+            objects['wireframe'] = self.add_object(shape, params)
         
         return ObjectCollection(objects)
 
@@ -335,16 +339,16 @@ class Renderer:
         objects = {}
         
         if params.show_body:
-            geometry = Shapes.create_rectangle(position, width, height, colour).transform(
+            shape = Shapes.create_rectangle(position, width, height, colour).transform(
                 params.translate, params.rotate, params.scale)
-            objects['body'] = self.add_object(geometry, GL_TRIANGLES, params)
+            objects['body'] = self.add_object(shape, params)
         
         if params.show_wireframe:
-            geometry = Shapes.create_rectangle_wireframe(
+            shape = Shapes.create_rectangle_wireframe(
                 position, width * 1.01, height * 1.01, 
                 params.wireframe_colour or self.default_wireframe_colour
             ).transform(params.translate, params.rotate, params.scale)
-            objects['wireframe'] = self.add_object(geometry, GL_LINES, params)
+            objects['wireframe'] = self.add_object(shape, params)
         
         return ObjectCollection(objects)
 
@@ -372,24 +376,26 @@ class Renderer:
         
         objects = {}
         if params.show_body:
-            geometry = Shapes.create_circle(position, radius, segments, colour).transform(
+            shape = Shapes.create_circle(position, radius, segments, colour).transform(
                 params.translate, params.rotate, params.scale)
-            objects['body'] = self.add_object(geometry, GL_TRIANGLE_FAN, params)
+            objects['body'] = self.add_object(shape, params)
         
         if params.show_wireframe:
-            geometry = Shapes.create_circle_wireframe(
+            shape = Shapes.create_circle_wireframe(
                 position, radius * 1.01, segments, 
                 params.wireframe_colour or self.default_wireframe_colour
             ).transform(params.translate, params.rotate, params.scale)
-            objects['wireframe'] = self.add_object(geometry, GL_LINE_LOOP, params)
+            objects['wireframe'] = self.add_object(shape, params)
         
         return ObjectCollection(objects)
 
-    def add_cube(self, colour=None, params = RenderParams()):
-        """Add a unit cube centreed at origin.
+    def add_cube(self, position=(0,0,0), colour=None, params=RenderParams()):
+        """Add a cube at specified position.
         
         Parameters
         ----------
+        position : tuple
+            XYZ coordinates of cube centre
         colour : Colour, optional
             Fill colour
         params : RenderParams, optional
@@ -404,15 +410,16 @@ class Renderer:
         objects = {}
         
         if params.show_body:
-            geometry = Shapes.create_cube(colour=colour).transform(
+            shape = Shapes.create_cube(position=position, colour=colour).transform(
                 params.translate, params.rotate, params.scale)
-            objects['body'] = self.add_object(geometry, GL_TRIANGLES, params)
+            objects['body'] = self.add_object(shape, params)
         
         if params.show_wireframe:
-            geometry = Shapes.create_cube_wireframe(
+            shape = Shapes.create_cube_wireframe(
+                position=position,
                 colour=params.wireframe_colour or self.default_wireframe_colour
             ).transform(params.translate, params.rotate, params.scale)
-            objects['wireframe'] = self.add_object(geometry, GL_LINES, params)
+            objects['wireframe'] = self.add_object(shape, params)
         
         return ObjectCollection(objects)
 
@@ -449,19 +456,21 @@ class Renderer:
         objects = {}
         if params.show_body:
             body = body.transform(params.translate, params.rotate, params.scale)
-            objects['body'] = self.add_object(body, GL_TRIANGLES, params)
+            objects['body'] = self.add_object(body, params)
         
         if params.show_wireframe:
             wireframe = wireframe.transform(params.translate, params.rotate, params.scale)
-            objects['wireframe'] = self.add_object(wireframe, GL_LINES, params)
+            objects['wireframe'] = self.add_object(wireframe, params)
         
         return ObjectCollection(objects)
 
-    def add_cylinder(self, colour=None, params = RenderParams()):
-        """Add a unit cylinder centreed at origin.
+    def add_cylinder(self, position=(0,0,0), colour=None, params=RenderParams()):
+        """Add a cylinder at specified position.
         
         Parameters
         ----------
+        position : tuple
+            XYZ coordinates of cylinder centre
         colour : Colour, optional
             Fill colour
         params : RenderParams, optional
@@ -477,23 +486,27 @@ class Renderer:
         
         objects = {}
         if params.show_body:
-            geometry = Shapes.create_cylinder(segments=segments, colour=colour).transform(
-                params.translate, params.rotate, params.scale)
-            objects['body'] = self.add_object(geometry, GL_TRIANGLES, params)
+            shape = Shapes.create_cylinder(
+                position=position, segments=segments, colour=colour
+            ).transform(params.translate, params.rotate, params.scale)
+            objects['body'] = self.add_object(shape, params)
         
         if params.show_wireframe:
-            geometry = Shapes.create_cylinder_wireframe(
-                segments=segments, colour=params.wireframe_colour or self.default_wireframe_colour
+            shape = Shapes.create_cylinder_wireframe(
+                position=position, segments=segments,
+                colour=params.wireframe_colour or self.default_wireframe_colour
             ).transform(params.translate, params.rotate, params.scale)
-            objects['wireframe'] = self.add_object(geometry, GL_LINES, params)
+            objects['wireframe'] = self.add_object(shape, params)
         
         return ObjectCollection(objects)
 
-    def add_cone(self, colour=None, params = RenderParams()):
-        """Add a unit cone centreed at origin.
+    def add_cone(self, position=(0,0,0), colour=None, params=RenderParams()):
+        """Add a cone at specified position.
         
         Parameters
         ----------
+        position : tuple
+            XYZ coordinates of cone centre
         colour : Colour, optional
             Fill colour
         params : RenderParams, optional
@@ -509,23 +522,27 @@ class Renderer:
         
         objects = {}
         if params.show_body:
-            geometry = Shapes.create_cone(segments=segments, colour=colour).transform(
-                params.translate, params.rotate, params.scale)
-            objects['body'] = self.add_object(geometry, GL_TRIANGLES, params)
+            shape = Shapes.create_cone(
+                position=position, segments=segments, colour=colour
+            ).transform(params.translate, params.rotate, params.scale)
+            objects['body'] = self.add_object(shape, params)
         
         if params.show_wireframe:
-            geometry = Shapes.create_cone_wireframe(
-                segments=segments, colour=params.wireframe_colour or self.default_wireframe_colour
+            shape = Shapes.create_cone_wireframe(
+                position=position, segments=segments,
+                colour=params.wireframe_colour or self.default_wireframe_colour
             ).transform(params.translate, params.rotate, params.scale)
-            objects['wireframe'] = self.add_object(geometry, GL_LINES, params)
+            objects['wireframe'] = self.add_object(shape, params)
         
         return ObjectCollection(objects)
 
-    def add_sphere(self, position=(0,0,0), radius=0.5, colour=None, params = RenderParams()):
-        """Add a sphere centreed at origin.
+    def add_sphere(self, position=(0,0,0), radius=0.5, colour=None, params=RenderParams()):
+        """Add a sphere at specified position.
         
         Parameters
         ----------
+        position : tuple
+            XYZ coordinates of sphere centre
         radius : float
             Sphere radius
         colour : Colour, optional
@@ -541,9 +558,11 @@ class Renderer:
         colour = colour or self.default_face_colour
         subdivisions = self.default_subdivisions
         
-        geometry = Shapes.create_sphere(position=position, radius=radius, subdivisions=subdivisions, colour=colour).transform(
-            params.translate, params.rotate, params.scale)
-        return self.add_object(geometry, GL_TRIANGLES, params)
+        shape = Shapes.create_sphere(
+            position=position, radius=radius, 
+            subdivisions=subdivisions, colour=colour
+        ).transform(params.translate, params.rotate, params.scale)
+        return self.add_object(shape, params)
 
     def add_arrow(self, p0, p1, dimensions=None, colour=None, params = RenderParams()):
         """Add an arrow from p0 to p1.
@@ -570,17 +589,17 @@ class Renderer:
         colour = colour or self.default_face_colour
         segments = self.default_segments
         
-        geometry, wireframe = Shapes.create_arrow(p0, p1, dimensions, colour, 
+        body, wireframe = Shapes.create_arrow(p0, p1, dimensions, colour, 
                                                   params.wireframe_colour, segments)
         
         objects = {}
         if params.show_body:
-            geometry = geometry.transform(params.translate, params.rotate, params.scale)
-            objects['body'] = self.add_object(geometry, GL_TRIANGLES, params)
+            body = body.transform(params.translate, params.rotate, params.scale)
+            objects['body'] = self.add_object(body, params)
         
         if params.show_wireframe:
             wireframe = wireframe.transform(params.translate, params.rotate, params.scale)
-            objects['wireframe'] = self.add_object(wireframe, GL_LINES, params)
+            objects['wireframe'] = self.add_object(wireframe, params)
         
         return ObjectCollection(objects)
 
@@ -610,28 +629,28 @@ class Renderer:
         segments = self.default_segments
         origin_subdivisions = self.default_subdivisions
         
-        x_geometry, x_wireframe = Shapes.create_arrow(
+        x_body, x_wireframe = Shapes.create_arrow(
             (0,0,0), (size,0,0), arrow_dimensions, 
             (1,0,0), params.wireframe_colour, segments)
-        y_geometry, y_wireframe = Shapes.create_arrow(
+        y_body, y_wireframe = Shapes.create_arrow(
             (0,0,0), (0,size,0), arrow_dimensions, 
             (0,1,0), params.wireframe_colour, segments)
-        z_geometry, z_wireframe = Shapes.create_arrow(
+        z_body, z_wireframe = Shapes.create_arrow(
             (0,0,0), (0,0,size), arrow_dimensions, 
             (0,0,1), params.wireframe_colour, segments)
         
-        origin_geometry = Shapes.create_sphere(position=(0,0,0), radius=origin_radius, subdivisions=origin_subdivisions, colour=origin_colour)
+        origin_shape = Shapes.create_sphere(position=(0,0,0), radius=origin_radius, subdivisions=origin_subdivisions, colour=origin_colour)
         
         objects = {}
         if params.show_body:
-            geometry = (x_geometry + y_geometry + z_geometry + origin_geometry).transform(
+            shape = (x_body + y_body + z_body + origin_shape).transform(
                 params.translate, params.rotate, params.scale)
-            objects['body'] = self.add_object(geometry, GL_TRIANGLES, params)
+            objects['body'] = self.add_object(shape, params)
         
         if params.show_wireframe:
             wireframe = (x_wireframe + y_wireframe + z_wireframe).transform(
                 params.translate, params.rotate, params.scale)
-            objects['wireframe'] = self.add_object(wireframe, GL_LINES, params)
+            objects['wireframe'] = self.add_object(wireframe, params)
         
         return ObjectCollection(objects)
 
@@ -665,7 +684,7 @@ class Renderer:
             # Create new params with updated line width
             level_params = replace(params, line_width=line_width)
             
-            tick_geometry = None
+            tick_shape = None
             
             for i in np.arange(-size + increment, size + increment/2, increment):
                 if abs(i) < 1e-10:  # Skip centre
@@ -674,14 +693,14 @@ class Renderer:
                 x_tick = Shapes.create_line((i, 0, 0), (i, tick_size, 0), tick_colour)
                 y_tick = Shapes.create_line((0, i, 0), (tick_size, i, 0), tick_colour)
                 
-                if tick_geometry is None:
-                    tick_geometry = x_tick + y_tick
+                if tick_shape is None:
+                    tick_shape = x_tick + y_tick
                 else:
-                    tick_geometry = tick_geometry + x_tick + y_tick
+                    tick_shape = tick_shape + x_tick + y_tick
 
-            if tick_geometry is not None:
-                tick_geometry = tick_geometry.transform(params.translate, params.rotate, params.scale)
-                tick_object = self.add_object(tick_geometry, GL_LINES, level_params)
+            if tick_shape is not None:
+                tick_shape = tick_shape.transform(params.translate, params.rotate, params.scale)
+                tick_object = self.add_object(tick_shape, level_params)
                 
                 objects[f'ticks-{n}'] = tick_object
         
@@ -716,24 +735,24 @@ class Renderer:
             # Create new params with updated line width
             level_params = replace(params, line_width=line_width)
             
-            grid_geometry = Shapes.create_blank()
+            grid_shape = Shapes.create_blank(GL_LINES)
             
             if increment == 0:
                 # Draw main axes
-                grid_geometry += Shapes.create_line((-size, 0, 0), (size, 0, 0), colour)
-                grid_geometry += Shapes.create_line((0, -size, 0), (0, size, 0), colour)
+                grid_shape += Shapes.create_line((-size, 0, 0), (size, 0, 0), colour)
+                grid_shape += Shapes.create_line((0, -size, 0), (0, size, 0), colour)
             else:
                 # Draw regular grid lines
                 for i in np.arange(-size + increment, size + increment/2, increment):
                     if abs(i) < 1e-10:  # Skip centre lines
                         continue
                         
-                    grid_geometry += Shapes.create_line((i, -size, 0), (i, size, 0), colour)
-                    grid_geometry += Shapes.create_line((-size, i, 0), (size, i, 0), colour)
+                    grid_shape += Shapes.create_line((i, -size, 0), (i, size, 0), colour)
+                    grid_shape += Shapes.create_line((-size, i, 0), (size, i, 0), colour)
 
-            if grid_geometry is not None:
-                grid_geometry = grid_geometry.transform(params.translate, params.rotate, params.scale)
-                grid_object = self.add_object(grid_geometry, GL_LINES, level_params)
+            if grid_shape is not None:
+                grid_shape = grid_shape.transform(params.translate, params.rotate, params.scale)
+                grid_object = self.add_object(grid_shape, level_params)
             
                 objects[f'grid-{n}'] = grid_object
         
@@ -767,8 +786,8 @@ class Renderer:
         
         # Use point shader if not specified
         params.shader = params.shader or self.point_shader
-        geometry = Shapes.create_points(points, colour or self.default_face_colour)
-        return self.add_object(geometry, GL_POINTS, params)
+        shape = Shapes.create_points(points, colour or self.default_face_colour)
+        return self.add_object(shape, params)
 
     def plot(self, x, y, colour=Colour.WHITE, params = RenderParams()):
         """Plot a line through a series of x,y points.
@@ -796,10 +815,10 @@ class Renderer:
             raise ValueError("x and y must have same length")
         
         points = np.column_stack((x, y, np.zeros_like(x)))
-        geometry = Shapes.create_linestring(points, colour).transform(
+        shape = Shapes.create_linestring(points, colour).transform(
             params.translate, params.rotate, params.scale)
         
-        return self.add_object(geometry, GL_LINES, params)
+        return self.add_object(shape, params)
 
     def add_blank_objects(self, draw_types: Dict[str, int], params = RenderParams()):
         """Add multiple blank objects.
@@ -817,8 +836,7 @@ class Renderer:
             Collection of blank objects
         """
         return ObjectCollection({
-            name: self.add_blank_object(draw_type, params)
-            for name, draw_type in draw_types.items()
+            name: self.add_blank_object(draw_type, params) for name, draw_type in draw_types.items()
         })
 
     def add_blank_object(self, draw_type=GL_TRIANGLES, params = RenderParams()):
@@ -838,16 +856,14 @@ class Renderer:
         """        
         return self._add_object_base(None, None, draw_type, params)
 
-    def add_object(self, geometry_data, draw_type=GL_TRIANGLES, params = RenderParams()):
+    def add_object(self, shape_data, params = RenderParams()):
         """Create and add a new render object to the scene.
 
         Parameters
         ----------
-        geometry_data : GeometryData
+        shape_data : shapeData
             Vertex and index data for the object
             Set to None for dynamic / stream buffer
-        draw_type : GL_enum, optional
-            OpenGL primitive type (TRIANGLES, LINES, etc)
         params : RenderParams, optional
             Rendering parameters
                      
@@ -856,12 +872,13 @@ class Renderer:
         RenderObject
             Created render object
         """
-        vertices = geometry_data.get_vertices()
-        indices = geometry_data.get_indices()
+        vertices = shape_data.get_vertices()
+        indices = shape_data.get_indices()
+        draw_type = shape_data.draw_type
         
         return self._add_object_base(vertices, indices, draw_type, params)
 
-    def _add_object_base(self, vertices, indices, draw_type=GL_TRIANGLES, params = RenderParams()):
+    def _add_object_base(self, vertices, indices, draw_type, params = RenderParams()):
         """Create and add a new render object to the scene.
 
         Parameters

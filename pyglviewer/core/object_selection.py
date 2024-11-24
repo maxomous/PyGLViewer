@@ -95,7 +95,7 @@ class ObjectSelection:
         
     def process_selection_targets(self):
         # Draw target on selected objects
-        selected_geometry = Shapes.create_blank()
+        selected_geometry = Shapes.create_blank(GL_LINES)
         # Get object under cursor
         if selected_objects := self.renderer.get_selected_objects():
             # Create a single geometry with multiple rectangles to indicate each selected object
