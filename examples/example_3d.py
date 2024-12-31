@@ -6,14 +6,17 @@ from pyglviewer.core.application import Application
 from pyglviewer.core.application_ui import render_core_ui
 from pyglviewer.core.object_selection import ObjectSelection, SelectionSettings
 from pyglviewer.renderer.light import Light, LightType, default_lighting
-from pyglviewer.renderer.renderer import Renderer, RenderParams
+from pyglviewer.renderer.renderer import Renderer
 from pyglviewer.renderer.shapes import Shapes, ArrowDimensions
-from pyglviewer.renderer.objects import BufferType, ObjectCollection
+from pyglviewer.renderer.objects import ObjectContainer
 from pyglviewer.renderer.shader import PointShape
 from pyglviewer.utils.colour import Colour
 from pyglviewer.utils.config import Config   
 from pyglviewer.utils.timer import Timer
 from pyglviewer.utils.transform import Transform
+
+# TODO: UPDATE __init__.py
+
 
 class ExampleApplication(Application):
     
@@ -60,83 +63,100 @@ class ExampleApplication(Application):
         To ensure text persists between frames, set static=True.
         Dynamic text can be updated in update_scene() & set to static=False.
         """
-        # Settings
-        self.renderer.default_segments = 32     # n segments in circle
-        self.renderer.default_subdivisions = 4  # n subdivisions in sphere
+        # Set default shape settings
+        Shapes.DEFAULT_SEGMENTS = 32     # n segments in circle
+        Shapes.DEFAULT_SUBDIVISIONS = 4  # n subdivisions in sphere
     
-        GRID_SIZE = 50
+        self.GRID_SIZE = 50
         GRID_TRANSLATE = (0, 0, -0.005) # Move grid slightly below z=0 to avoid z-fighting
         # Text Rendering
         self.text_renderer.add_axis_labels(xlim=[-10, 10], ylim=[-10, 10], increment=2, colour=Colour.WHITE, static=True)
-        # Grid and axis
-        self.grid = self.renderer.add_grid(GRID_SIZE*2, params=RenderParams(translate=GRID_TRANSLATE, selectable=False))
-        self.renderer.add_axis_ticks(size=GRID_SIZE, params=RenderParams(translate=GRID_TRANSLATE, selectable=False))
-        self.axis = self.renderer.add_axis(params=RenderParams(selectable=False))
         
-        # Points with different shapes
-        self.renderer.add_point(position=(-4, 4, 0), colour=Colour.RED, 
-                              params=RenderParams(point_size=15))
-        self.renderer.add_point(position=(-4, 2.5, 0), colour=Colour.GREEN, 
-                              params=RenderParams(point_size=15, point_shape=PointShape.TRIANGLE))
-        self.renderer.add_point(position=(-4, 1, 0), colour=Colour.BLUE, 
-                              params=RenderParams(point_size=15, point_shape=PointShape.SQUARE))
         
-        # Lines and beams
-        self.renderer.add_line(p0=(-2.5, 3.5, 0), p1=(-1.5, 4.5, 0), colour=Colour.ORANGE, 
-                             params=RenderParams(line_width=5))
-        self.renderer.add_beam(p0=(-2.5, 2.0, 0.25), p1=(-1.5, 3.0, 0.75), 
-                             width=0.2, height=0.2, colour=Colour.YELLOW)
         
-        # Arrow with dimensions
-        arrow_dims = ArrowDimensions(
-            shaft_radius=0.2,
-            head_radius=0.35,
-            head_length=0.3
-        )
-        self.renderer.add_arrow(p0=(-2.4, 0.6, 0.25), p1=(-1.6, 1.4, 0.75), 
-                              dimensions=arrow_dims, colour=Colour.PURPLE)
         
-        # Basic shapes - wireframe only
-        self.renderer.add_triangle(p1=(0, 4.433, 0), p2=(-0.5, 3.567, 0), p3=(0.5, 3.567, 0), 
-                                 params=RenderParams(wireframe_colour=Colour.YELLOW, show_body=False))
-        self.renderer.add_rectangle(position=(2, 4, 0), width=1, height=1, 
-                                  params=RenderParams(wireframe_colour=Colour.GREEN, show_body=False))
-        self.renderer.add_circle(position=(4, 4, 0), radius=0.5, 
-                               params=RenderParams(wireframe_colour=Colour.BLUE, show_body=False))
         
-        # Basic shapes - filled
-        self.renderer.add_triangle(p1=(0, 2.933, 0), p2=(-0.5, 2.067, 0), p3=(0.5, 2.067, 0), 
-                                 colour=Colour.YELLOW)
-        self.renderer.add_rectangle(position=(2, 2.5, 0), width=1, height=1, colour=Colour.GREEN)
-        self.renderer.add_circle(position=(4, 2.5, 0), radius=0.5, colour=Colour.BLUE)
+        
+        # object starts with no size
+        # when set_shape is called, number of objects is set
+        
+        
+        # Static object
+        static_object = self.renderer.add_object(static=True).set_shape(Shapes.grid(size=self.GRID_SIZE, increment=1, colour=Colour.WHITE))
+        # Dynamic object
+        self.dynamic_object = self.renderer.add_object()
+        
+    
+        
+        # # Grid and axis
+        # self.grid = self.renderer.add_grid(GRID_SIZE*2, params=RenderParams(translate=GRID_TRANSLATE, selectable=False))
+        # self.renderer.add_axis_ticks(size=GRID_SIZE, params=RenderParams(translate=GRID_TRANSLATE, selectable=False))
+        # self.axis = self.renderer.add_axis(params=RenderParams(selectable=False))
+        
+        # # Points with different shapes
+        # self.renderer.add_point(position=(-4, 4, 0), colour=Colour.RED, 
+        #                       params=RenderParams(point_size=15))
+        # self.renderer.add_point(position=(-4, 2.5, 0), colour=Colour.GREEN, 
+        #                       params=RenderParams(point_size=15, point_shape=PointShape.TRIANGLE))
+        # self.renderer.add_point(position=(-4, 1, 0), colour=Colour.BLUE, 
+        #                       params=RenderParams(point_size=15, point_shape=PointShape.SQUARE))
+        
+        # # Lines and beams
+        # self.renderer.add_line(p0=(-2.5, 3.5, 0), p1=(-1.5, 4.5, 0), colour=Colour.ORANGE, 
+        #                      params=RenderParams(line_width=5))
+        # self.renderer.add_beam(p0=(-2.5, 2.0, 0.25), p1=(-1.5, 3.0, 0.75), 
+        #                      width=0.2, height=0.2, colour=Colour.YELLOW)
+        
+        # # Arrow with dimensions
+        # arrow_dims = ArrowDimensions(
+        #     shaft_radius=0.2,
+        #     head_radius=0.35,
+        #     head_length=0.3
+        # )
+        # self.renderer.add_arrow(p0=(-2.4, 0.6, 0.25), p1=(-1.6, 1.4, 0.75), 
+        #                       dimensions=arrow_dims, colour=Colour.PURPLE)
+        
+        # # Basic shapes - wireframe only
+        # self.renderer.add_triangle(p1=(0, 4.433, 0), p2=(-0.5, 3.567, 0), p3=(0.5, 3.567, 0), 
+        #                          params=RenderParams(wireframe_colour=Colour.YELLOW, show_body=False))
+        # self.renderer.add_rectangle(position=(2, 4, 0), width=1, height=1, 
+        #                           params=RenderParams(wireframe_colour=Colour.GREEN, show_body=False))
+        # self.renderer.add_circle(position=(4, 4, 0), radius=0.5, 
+        #                        params=RenderParams(wireframe_colour=Colour.BLUE, show_body=False))
+        
+        # # Basic shapes - filled
+        # self.renderer.add_triangle(p1=(0, 2.933, 0), p2=(-0.5, 2.067, 0), p3=(0.5, 2.067, 0), 
+        #                          colour=Colour.YELLOW)
+        # self.renderer.add_rectangle(position=(2, 2.5, 0), width=1, height=1, colour=Colour.GREEN)
+        # self.renderer.add_circle(position=(4, 2.5, 0), radius=0.5, colour=Colour.BLUE)
 
-        # 3D shapes with transforms
-        self.renderer.add_cone(colour=Colour.rgb(255, 165, 0), 
-                             params=RenderParams(translate=(0, 0.75, 0.5), 
-                                               scale=(0.5, 0.5, 0.5), 
-                                               rotate=(-np.pi/2, 0, 0)))
-        self.renderer.add_cylinder(colour=Colour.MAGENTA, 
-                                 params=RenderParams(translate=(2, 1, 0.25), 
-                                                   scale=(0.5, 0.5, 0.5)))
-        self.renderer.add_sphere(position=(4, 1, 0.5), radius=0.25, colour=Colour.RED, 
-                               params=RenderParams())
+        # # 3D shapes with transforms
+        # self.renderer.add_cone(colour=Colour.rgb(255, 165, 0), 
+        #                      params=RenderParams(translate=(0, 0.75, 0.5), 
+        #                                        scale=(0.5, 0.5, 0.5), 
+        #                                        rotate=(-np.pi/2, 0, 0)))
+        # self.renderer.add_cylinder(colour=Colour.MAGENTA, 
+        #                          params=RenderParams(translate=(2, 1, 0.25), 
+        #                                            scale=(0.5, 0.5, 0.5)))
+        # self.renderer.add_sphere(position=(4, 1, 0.5), radius=0.25, colour=Colour.RED, 
+        #                        params=RenderParams())
                 
-        # Dynamic objects
-        self.rotating_cubes = self.renderer.add_blank_objects({
-            'body': GL_TRIANGLES, 
-            'wireframe': GL_LINES
-        })
+        # # Dynamic objects
+        # self.rotating_cubes = self.renderer.add_blank_objects({
+        #     'body': GL_TRIANGLES, 
+        #     'wireframe': GL_LINES
+        # })
 
-        # Plots
-        x = np.linspace(-1.5, 1.5, 100)
-        y = x**2
-        self.renderer.plot(x, y, colour=Colour.GREEN, 
-                         params=RenderParams(line_width=2.0, translate=(-3, -2, 0)))
+        # # Plots
+        # x = np.linspace(-1.5, 1.5, 100)
+        # y = x**2
+        # self.renderer.plot(x, y, colour=Colour.GREEN, 
+        #                  params=RenderParams(line_width=2.0, translate=(-3, -2, 0)))
 
-        x = np.linspace(0, 3, 50)
-        y = np.sin(x * np.pi / 1.5)
-        self.renderer.scatter(x, y, colour=Colour.CYAN, 
-                            params=RenderParams(point_size=5.0, translate=(1, -1, 0)))
+        # x = np.linspace(0, 3, 50)
+        # y = np.sin(x * np.pi / 1.5)
+        # self.renderer.scatter(x, y, colour=Colour.CYAN, 
+        #                     params=RenderParams(point_size=5.0, translate=(1, -1, 0)))
 
     def update_scene(self):
         """
@@ -152,33 +172,36 @@ class ExampleApplication(Application):
             
         Dynamic Text can be rendered here every frame (make sure to set static=False).
         """
+        self.dynamic_object.set_shape(Shapes.cube(size=0.5, colour=Colour.WHITE))
+
+        return
         # Update axis size
         if self.camera.distance > 5:
-            self.grid.set_transform_matrix(scale=(10, 10, 1))
+            self.grid.set_transform_matrix(Transform(scale=(10, 10, 1)))
         else:
-            self.grid.set_transform_matrix(scale=(1, 1, 1))
+            self.grid.set_transform_matrix(Transform(scale=(1, 1, 1)))
             
         scale_axis = self.mouse.screen_to_world(100, dimension=3)
-        self.axis.set_transform_matrix(scale=scale_axis)
+        self.axis.set_transform_matrix(Transform(scale=scale_axis))
         
         # Rotating cube
         rotate_geometry = (0, 0, self.timer.oscillate_angle(speed=0.6))
         rotate_object = (0, 0, self.timer.oscillate_angle(speed=0.5))
         # Rotating cubes
         self.rotating_cubes['body'].set_geometry_data(
-            Shapes.create_cube(size=0.5, colour=Colour.YELLOW)
+            Shapes.cube(size=0.5, colour=Colour.YELLOW)
                 .transform(translate=(-1, 0, 0.5), rotate=rotate_geometry) +
-            Shapes.create_cube(size=0.5, colour=Colour.GREEN)
+            Shapes.cube(size=0.5, colour=Colour.GREEN)
                 .transform(translate=(1, 0, 0.5), rotate=rotate_geometry)
         )
         self.rotating_cubes['wireframe'].set_geometry_data(
-            Shapes.create_cube_wireframe(size=0.5, colour=Colour.BLACK)
+            Shapes.cube_wireframe(size=0.5, colour=Colour.BLACK)
                 .transform(translate=(-1, 0, 0.5), rotate=rotate_geometry, scale=(1.0001, 1.0001, 1.0001)) +
-            Shapes.create_cube_wireframe(size=0.5, colour=Colour.BLACK)
+            Shapes.cube_wireframe(size=0.5, colour=Colour.BLACK)
                 .transform(translate=(1, 0, 0.5), rotate=rotate_geometry, scale=(1.0001, 1.0001, 1.0001))
         )
         # Translate & rotate cube objects
-        self.rotating_cubes.set_transform_matrix(translate=(self.timer.oscillate_translation(limits=[-2, 2], speed=0.25), -3, 0), rotate=rotate_object)
+        self.rotating_cubes.set_transform_matrix(Transform(translate=(self.timer.oscillate_translation(limits=[-2, 2], speed=0.25), -3, 0), rotate=rotate_object))
 
         # Text Rendering
         self.text_renderer.add_text('3D LABEL', (self.timer.oscillate_translation(limits=[-1.5, 1.5], speed=0.25), -0.5, 1), Colour.ORANGE, font='arial_rounded_mt_bold-medium')

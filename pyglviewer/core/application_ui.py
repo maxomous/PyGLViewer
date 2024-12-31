@@ -216,8 +216,8 @@ def render_ui_renderer(config, renderer, text_renderer):
                 imgui.text(f"{key.replace('_', ' ').title()}: {value}")
             imgui.tree_pop()    
     
-    render_batch_renderer_stats('Static Buffer Info', renderer.static_batch_renderer)
-    render_batch_renderer_stats('Dynamic Buffer Info', renderer.dynamic_batch_renderer)
+    render_batch_renderer_stats('Static Buffer Info', renderer.batch_renderer.static_buffer)
+    render_batch_renderer_stats('Dynamic Buffer Info', renderer.batch_renderer.dynamic_buffer)
     render_batch_renderer_stats('Text Buffer Info', text_renderer)
 
 

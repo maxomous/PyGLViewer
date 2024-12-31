@@ -2,11 +2,12 @@ import imgui
 import numpy as np
 from pyglviewer.core.application import Application
 from pyglviewer.core.object_selection import SelectionSettings
-from pyglviewer.renderer.objects import ObjectCollection
+from pyglviewer.renderer.objects import ObjectContainer
 from pyglviewer.renderer.shader import PointShape
 from pyglviewer.utils.colour import Colour
 from pyglviewer.utils.config import Config
 from pyglviewer.utils.timer import Timer
+from pyglviewer.utils.transform import Transform
 from pyglviewer.renderer.renderer import RenderParams
 
 
@@ -104,9 +105,9 @@ class Example2DApplication(Application):
         """ update the scene """
         # Update axis size
         if self.camera.distance > 2.5:
-            self.grid.set_transform_matrix(scale=(10, 10, 1)) # TODO: Only update on change
+            self.grid.set_transform_matrix(Transform(scale=(10, 10, 1))) # TODO: Only update on change
         else:
-            self.grid.set_transform_matrix(scale=(1, 1, 1))
+            self.grid.set_transform_matrix(Transform(scale=(1, 1, 1)))
   
     def events(self):
         """ Process custom events, such as the keyboard & mouse. """

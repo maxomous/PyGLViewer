@@ -114,7 +114,7 @@ class Application:
         )
         self.mouse = Mouse(self)
         self.keyboard = Keyboard(self.camera)
-        self.renderer = Renderer(self.config, static_max_vertices=50000, static_max_indices=150000, dynamic_max_vertices=50000, dynamic_max_indices=150000)
+        self.renderer = Renderer(self.config, max_static_vertices=50000, max_static_indices=150000, max_dynamic_vertices=50000, max_dynamic_indices=150000)
         
         self.object_selection = ObjectSelection(self.camera, self.renderer, self.mouse, self.selection_settings)
         self.set_frame_size(self.window, self.window_width, self.window_height)

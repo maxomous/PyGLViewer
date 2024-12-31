@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from OpenGL.GL import *
 from pyglviewer.utils.colour import Colour
 from pyglviewer.utils.transform import Transform
-
+from pyglviewer.renderer.shader import Shader, DefaultShaders
 
 @dataclass
 class ArrowDimensions:
@@ -47,9 +47,16 @@ class Vertex:
             normal=data[offset+6:offset+9]
         )
 
+    @staticmethod
+    def vertex_size():
+        """Get the size of a vertex in bytes."""
+        return 9 * np.dtype(np.float32).itemsize
+    
 class Shape:
+    
     """
     Container for 3D shape data including vertices and indices.
+    Use the Shapes factory class for helper functions to create shape objects.
     Provides methods for combining and transforming shapes.
     Vertices are stored in their transformed state.
 
@@ -57,13 +64,14 @@ class Shape:
         vertices (list[Vertex]): List of vertices defining the shape
         indices (np.array): Indices of the vertices to render
     """
-    def __init__(self, draw_type,vertices=None, indices=None):
+    def __init__(self, draw_type, vertices=None, indices=None, shader=None):
         """
         Args:
             vertices (list[Vertex]): List of vertices
             indices (list[int]): List of indices
         """
         self.draw_type = draw_type
+        self.shader = shader or DefaultShaders.default_shader
         self.vertices = np.array(vertices, dtype=Vertex) if vertices is not None else []
         self.indices = np.array(indices, dtype=np.uint32) if indices is not None else []
         self.vertex_count = len(vertices) if vertices is not None else 0
@@ -87,6 +95,9 @@ class Shape:
         if self.draw_type != other.draw_type:
             raise ValueError("Cannot combine shapes with different draw types")
 
+        if self.shader != other.shader:
+            raise ValueError("Cannot combine shapes with different shaders")
+
         # Combine vertices
         combined_vertices = np.concatenate((self.vertices, other.vertices))
 
@@ -97,7 +108,7 @@ class Shape:
         # Combine indices
         combined_indices = np.concatenate((self.indices, adjusted_other_indices))
 
-        result = Shape(self.draw_type, combined_vertices, combined_indices)
+        result = Shape(self.draw_type, self.shader, combined_vertices, combined_indices)
         return result
 
     def get_vertices(self):
@@ -188,59 +199,43 @@ class Shape:
             self.draw_type,
             [Vertex(v.position.copy(), v.colour.copy(), v.normal.copy()) 
              for v in self.vertices],
-            self.indices.copy()
+            self.indices.copy(),
+            self.shader
         )
-    
-    
+
 class Shapes:
+    
     """
     Factory class providing static methods to create various 3D shapes.
     All shapes are centreed at origin unless specified otherwise.
-    """
+    """    
+    
+    # Default values moved from Renderer
+    DEFAULT_SEGMENTS = 16
+    DEFAULT_SUBDIVISIONS = 4
+    DEFAULT_POINT_COLOUR = Colour.BLACK
+    DEFAULT_LINE_COLOUR = Colour.BLACK
+    DEFAULT_FACE_COLOUR = Colour.WHITE
+    DEFAULT_WIREFRAME_COLOUR = Colour.BLACK
+    DEFAULT_ARROW_DIMENSIONS = ArrowDimensions(shaft_radius=0.03, head_radius=0.06, head_length=0.1)
+    DEFAULT_AXIS_TICKS = [
+        { 'increment': 1,    'tick_size': 0.08,  'line_width': 3, 'tick_colour': Colour.rgb(200, 200, 200) }, 
+        { 'increment': 0.5,  'tick_size': 0.04,  'line_width': 3, 'tick_colour': Colour.rgb(200, 200, 200) }, 
+        { 'increment': 0.1,  'tick_size': 0.02,  'line_width': 3, 'tick_colour': Colour.rgb(200, 200, 200) }
+    ]
+    DEFAULT_GRID_PARAMS = [ 
+        {'increment': 0,    'colour': Colour.rgb(200, 200, 200), 'line_width': 3.0},
+        {'increment': 1,    'colour': Colour.rgb(200, 200, 200), 'line_width': 1.0},
+        {'increment': 0.1,  'colour': Colour.rgb(150, 150, 150), 'line_width': 1.0}
+    ]
+    
     @staticmethod
-    def create_blank(draw_type):
-        """Create a blank shape.
-        
-        Args:
-            draw_type (int): OpenGL draw type
-            
-        Returns:
-            Shape: Empty shape with no vertices or indices
-        """
+    def blank(draw_type):
+        """Create a blank shape with default shader."""
         return Shape(draw_type)
     
     @staticmethod
-    def create_grid(size, increment, colour):
-        """Create a grid in the XY plane centreed at origin.
-        
-        Args:
-            size (float): Total size of the grid
-            increment (float): Space between grid lines
-            colour (tuple): RGB colour for the grid lines
-        
-        Returns:
-            Shape: Grid shape with line segments
-        """
-        vertices = []
-        indices = []
-        num_lines = int(size / increment) + 1
-        
-        for i in range(num_lines):
-            x = i * increment - size/2
-            vertices.append(Vertex([x, -size/2, 0], colour, [0, 0, 1]))
-            vertices.append(Vertex([x, size/2, 0], colour, [0, 0, 1]))
-            
-            y = i * increment - size/2
-            vertices.append(Vertex([-size/2, y, 0], colour, [0, 0, 1]))
-            vertices.append(Vertex([size/2, y, 0], colour, [0, 0, 1]))
-            
-            index = i * 4
-            indices.extend([index, index + 1, index + 2, index + 3])
-
-        return Shape(GL_LINES, vertices, indices)
-
-    @staticmethod
-    def create_point(position, colour):
+    def point(position, colour=DEFAULT_POINT_COLOUR):
         """Create a single point in 3D space.
         
         Args:
@@ -252,10 +247,10 @@ class Shapes:
         """
         vertices = [Vertex(position, colour, [0, 0, 1])]
         indices = [0]
-        return Shape(GL_POINTS, vertices, indices)
+        return Shape(GL_POINTS, vertices, indices, DefaultShaders.default_point_shader)
     
     @staticmethod
-    def create_points(positions, colour):
+    def points(positions, colour=DEFAULT_POINT_COLOUR):
         """Create a series of points in 3D space.
         
         Args:
@@ -267,10 +262,10 @@ class Shapes:
         """
         vertices = [Vertex(position, colour, [0, 0, 1]) for position in positions]
         indices = list(range(len(vertices)))
-        return Shape(GL_POINTS, vertices, indices)
+        return Shape(GL_POINTS, vertices, indices, DefaultShaders.default_point_shader)
     
     @staticmethod
-    def create_line(p0, p1, colour):
+    def line(p0, p1, colour=DEFAULT_LINE_COLOUR):
         """Create a line segment between two points.
         
         Args:
@@ -299,7 +294,7 @@ class Shapes:
         return Shape(GL_LINES, vertices, indices)
 
     @staticmethod
-    def create_linestring(points, colour):
+    def linestring(points, colour=DEFAULT_LINE_COLOUR):
         """Create a connected series of line segments through points.
         
         Args:
@@ -350,7 +345,7 @@ class Shapes:
         return Shape(GL_LINES, vertices, indices)
 
     @staticmethod
-    def create_triangle(p1, p2, p3, colour):
+    def triangle(p1, p2, p3, colour=DEFAULT_FACE_COLOUR):
         """Create a filled triangle from three points.
         
         Args:
@@ -374,7 +369,7 @@ class Shapes:
         return Shape(GL_TRIANGLES, vertices, indices)
 
     @staticmethod
-    def create_triangle_wireframe(p1, p2, p3, colour):
+    def triangle_wireframe(p1, p2, p3, colour=DEFAULT_WIREFRAME_COLOUR):
         """Create a triangle wireframe from three points.
         
         Args:
@@ -386,10 +381,10 @@ class Shapes:
         Returns:
             Shape: Combined line segments forming triangle outline
         """
-        return Shapes.create_line(p1, p2, colour) + Shapes.create_line(p2, p3, colour) + Shapes.create_line(p3, p1, colour)
+        return Shapes.line(p1, p2, colour) + Shapes.line(p2, p3, colour) + Shapes.line(p3, p1, colour)
 
     @staticmethod
-    def create_rectangle(position, width, height, colour):
+    def rectangle(position, width, height, colour=DEFAULT_FACE_COLOUR):
         """Create a 2D rectangle in the XY plane.
         
         Args:
@@ -414,7 +409,472 @@ class Shapes:
         return Shape(GL_TRIANGLES, vertices, indices)
 
     @staticmethod
-    def create_target(position, size, edge_length, colour):
+    def rectangle_wireframe(position, width, height, colour=DEFAULT_WIREFRAME_COLOUR):
+        """Create a 2D rectangle wireframe in the XY plane.
+        
+        Args:
+            position (tuple): XYZ coordinates of rectangle centre
+            width (float): Total width of rectangle
+            height (float): Total height of rectangle
+            colour (tuple): RGB colour values
+        
+        Returns:
+            Shape: Rectangle wireframe shape
+        """
+        x, y, z = position[0], position[1], position[2]
+        half_w, half_h = width / 2, height / 2
+        normal = [0, 0, 1]  # Normal pointing outwards
+        vertices = [
+            Vertex([x - half_w, y - half_h, z], colour, normal),
+            Vertex([x + half_w, y - half_h, z], colour, normal),
+            Vertex([x + half_w, y + half_h, z], colour, normal),
+            Vertex([x - half_w, y + half_h, z], colour, normal)
+        ]
+        indices = [0, 1, 1, 2, 2, 3, 3, 0]
+        return Shape(GL_LINES, vertices, indices)
+
+    @staticmethod
+    def circle(position, radius, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR):
+        """Create a filled circle in the XY plane.
+        
+        Args:
+            position (tuple): XYZ coordinates of circle centre
+            radius (float): Circle radius
+            segments (int): Number of segments around circumference
+            colour (tuple): RGB colour values
+        
+        Returns:
+            Shape: Circle shape made of triangular segments
+        """
+        normal = [0, 0, 1]  # Normal pointing outwards
+        vertices = [Vertex(position, colour, normal)]
+        indices = []
+        for i in range(segments):
+            angle = 2 * np.pi * i / segments
+            x = position[0] + radius * np.cos(angle)
+            y = position[1] + radius * np.sin(angle)
+            vertices.append(Vertex([x, y, position[2]], colour, normal))
+            if i > 0:
+                indices.extend([0, i, i + 1])
+        indices.extend([0, segments, 1])
+        return Shape(GL_TRIANGLES, vertices, indices)
+        
+    @staticmethod
+    def circle_wireframe(position, radius, segments=DEFAULT_SEGMENTS, colour=DEFAULT_WIREFRAME_COLOUR):
+        """Create a circle wireframe in the XY plane.
+        
+        Args:
+            position (tuple): XYZ coordinates of circle centre
+            radius (float): Circle radius
+            segments (int): Number of segments around circumference
+            colour (tuple): RGB colour values
+        
+        Returns:
+            Shape: Circle wireframe shape
+        """
+        normal = [0, 0, 1]  # Normal pointing outwards
+        vertices = []
+        indices = []
+        for i in range(segments):
+            angle = 2 * np.pi * i / segments
+            x = position[0] + radius * np.cos(angle)
+            y = position[1] + radius * np.sin(angle)
+            vertices.append(Vertex([x, y, position[2]], colour, normal))
+            indices.extend([i, (i + 1) % segments])
+        return Shape(GL_LINES, vertices, indices)
+
+    @staticmethod
+    def cube(position=(0,0,0), size=1.0, colour=DEFAULT_FACE_COLOUR):
+        """Create a cube.
+        
+        Args:
+            position (tuple): XYZ coordinates of cube centre. Defaults to origin
+            size (float): Length of cube sides. Defaults to 1.0
+            colour (tuple): RGB colour values. Defaults to white
+        
+        Returns:
+            Shape: Cube shape
+        """
+        s = size / 2
+        x, y, z = position
+        vertices = [
+            # Front face
+            Vertex([x-s, y-s, z+s], colour, [0, 0, 1]),
+            Vertex([x+s, y-s, z+s], colour, [0, 0, 1]),
+            Vertex([x+s, y+s, z+s], colour, [0, 0, 1]),
+            Vertex([x-s, y+s, z+s], colour, [0, 0, 1]),
+            # Back face
+            Vertex([x-s, y-s, z-s], colour, [0, 0, -1]),
+            Vertex([x+s, y-s, z-s], colour, [0, 0, -1]),
+            Vertex([x+s, y+s, z-s], colour, [0, 0, -1]),
+            Vertex([x-s, y+s, z-s], colour, [0, 0, -1]),
+            # Left face
+            Vertex([x-s, y-s, z-s], colour, [-1, 0, 0]),
+            Vertex([x-s, y-s, z+s], colour, [-1, 0, 0]),
+            Vertex([x-s, y+s, z+s], colour, [-1, 0, 0]),
+            Vertex([x-s, y+s, z-s], colour, [-1, 0, 0]),
+            # Right face
+            Vertex([x+s, y-s, z+s], colour, [1, 0, 0]),
+            Vertex([x+s, y-s, z-s], colour, [1, 0, 0]),
+            Vertex([x+s, y+s, z-s], colour, [1, 0, 0]),
+            Vertex([x+s, y+s, z+s], colour, [1, 0, 0]),
+            # Top face
+            Vertex([x-s, y+s, z+s], colour, [0, 1, 0]),
+            Vertex([x+s, y+s, z+s], colour, [0, 1, 0]),
+            Vertex([x+s, y+s, z-s], colour, [0, 1, 0]),
+            Vertex([x-s, y+s, z-s], colour, [0, 1, 0]),
+            # Bottom face
+            Vertex([x-s, y-s, z-s], colour, [0, -1, 0]),
+            Vertex([x+s, y-s, z-s], colour, [0, -1, 0]),
+            Vertex([x+s, y-s, z+s], colour, [0, -1, 0]),
+            Vertex([x-s, y-s, z+s], colour, [0, -1, 0])
+        ]
+
+        indices = [
+            0, 1, 2, 2, 3, 0,    # Front face
+            4, 7, 6, 6, 5, 4,    # Back face
+            8, 9, 10, 10, 11, 8, # Left face
+            12, 13, 14, 14, 15, 12, # Right face 
+            16, 17, 18, 18, 19, 16, # Top face
+            20, 21, 22, 22, 23, 20  # Bottom face
+        ]
+
+        return Shape(GL_TRIANGLES, vertices, indices)
+
+    @staticmethod
+    def cube_wireframe(position=(0,0,0), size=1.0, colour=DEFAULT_WIREFRAME_COLOUR):
+        """Create a cube wireframe.
+        
+        Args:
+            position (tuple): XYZ coordinates of cube centre. Defaults to origin
+            size (float): Length of cube edges. Defaults to 1.0
+            colour (tuple): RGB colour values. Defaults to white
+        
+        Returns:
+            Shape: Cube wireframe shape with eight vertices and twelve edges
+        """
+        s = size / 2
+        x, y, z = position
+        normal = [0, 0, 1]  # Normal pointing outwards
+        vertices = [
+            Vertex([x-s, y-s, z-s], colour, normal),
+            Vertex([x+s, y-s, z-s], colour, normal),
+            Vertex([x+s, y+s, z-s], colour, normal),
+            Vertex([x-s, y+s, z-s], colour, normal),
+            Vertex([x-s, y-s, z+s], colour, normal),
+            Vertex([x+s, y-s, z+s], colour, normal),
+            Vertex([x+s, y+s, z+s], colour, normal),
+            Vertex([x-s, y+s, z+s], colour, normal)
+        ]
+
+        indices = [
+            0, 1, 1, 2, 2, 3, 3, 0,  # Back face
+            4, 5, 5, 6, 6, 7, 7, 4,  # Front face
+            0, 4, 1, 5, 2, 6, 3, 7   # Connecting edges
+        ]
+
+        return Shape(GL_LINES, vertices, indices)
+
+
+    @staticmethod
+    def cylinder(position=(0,0,0), radius=0.5, height=1.0, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR):
+        """Create a cylinder.
+        
+        Args:
+            position (tuple): XYZ coordinates of base centre. Defaults to origin
+            radius (float): Radius of cylinder. Defaults to 0.5
+            height (float): Height of cylinder. Defaults to 1.0
+            segments (int): Number of segments around circumference. Defaults to 32
+            colour (tuple): RGB colour values. Defaults to white
+        
+        Returns:
+            Shape: Cylinder shape
+        """
+        vertices = []
+        indices = []
+
+        # Create vertices for the cylinder body
+        for i in range(segments + 1):  # +1 to close the cylinder
+            angle = 2 * np.pi * i / segments
+            x = radius * np.cos(angle)
+            y = radius * np.sin(angle)
+            normal = np.array([x, y, 0])
+            normal = normal / np.linalg.norm(normal)  # Normalize the normal
+            
+            # Bottom vertex
+            vertices.append(Vertex([x, y, 0], colour, normal))
+            # Top vertex
+            vertices.append(Vertex([x, y, height], colour, normal))
+
+        # Indices for the side faces
+        for i in range(segments):
+            i1 = i * 2
+            i2 = (i * 2 + 2) % (segments * 2 + 2)
+            i3 = i * 2 + 1
+            i4 = (i * 2 + 3) % (segments * 2 + 2)
+            indices.extend([i1, i2, i3, i2, i4, i3])
+
+        cylinder = Shape(GL_TRIANGLES, vertices, indices)
+        bottom = Shapes.circle(position=(0,0,0), radius=radius, segments=segments, colour=colour).transform(rotate=(np.pi,0,0))
+        top = Shapes.circle(position=(0,0,1), radius=radius, segments=segments, colour=colour)
+        # Transform to position
+        if position != (0,0,0):
+            cylinder.transform(translate=position)
+            bottom.transform(translate=position)
+            top.transform(translate=position)
+        return cylinder + bottom + top
+    
+
+    @staticmethod
+    def cylinder_wireframe(position=(0,0,0), radius=0.5, height=1.0, segments=DEFAULT_SEGMENTS, colour=DEFAULT_WIREFRAME_COLOUR):
+        """Create a cylinder wireframe.
+        
+        Args:
+            position (tuple): XYZ coordinates of cylinder centre. Defaults to origin
+            radius (float): Radius of cylinder. Defaults to 0.5
+            segments (int): Number of segments around circumference. Defaults to 32
+            colour (tuple): RGB colour values. Defaults to white
+        
+        Returns:
+            Shape: Combined wireframe for cylinder outline
+        """
+        bottom = Shapes.circle_wireframe(position=position, radius=radius, segments=segments, colour=colour)
+        top_position = np.array(position) + np.array([0,0,height])
+        top = Shapes.circle_wireframe(position=top_position, radius=radius, segments=segments, colour=colour)
+        return bottom + top
+    
+    @staticmethod
+    def cone(position=(0,0,0), radius=0.5, height=1.0, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR):
+        """Create a cone.
+        
+        Args:
+            position (tuple): XYZ coordinates of base centre. Defaults to origin
+            radius (float): Radius of cone base. Defaults to 0.5
+            height (float): Height of cone. Defaults to 1.0
+            segments (int): Number of segments around base circumference. Defaults to 32
+            colour (tuple): RGB colour values. Defaults to white
+        
+        Returns:
+            Shape: Cone shape
+        """
+        assert isinstance(segments, int) and segments > 2, "segments must be an integer greater than 2"
+        assert len(colour) == 3, "colour must be a tuple of 3 values"
+        
+        vertices = []
+        indices = []
+        normal_apex = [0, 0, 1]  # Normal pointing outwards
+        # Apex
+        vertices.append(Vertex([0, 0, height], colour, normal_apex))
+        # Side vertices
+        for i in range(segments):
+            angle = 2 * np.pi * i / segments
+            x = radius * np.cos(angle)
+            y = radius * np.sin(angle)
+            normal = [x, y, 0.5]  # Adjusted normal for smooth shading
+            normal = normal / np.linalg.norm(normal)
+            vertices.append(Vertex([x, y, 0], colour, normal))
+
+        # Base centre vertex
+        vertices.append(Vertex([0, 0, 0], colour, [0, 0, -1]))  # Base centre with normal pointing down
+
+        # Indices for the sides
+        for i in range(segments):
+            i1 = i + 1
+            i2 = (i + 1) % segments + 1
+            indices.extend([0, i1, i2])
+
+        cone = Shape(GL_TRIANGLES, vertices, indices)
+        # Create bottom circle
+        base_circle = Shapes.circle(position=(0,0,0), radius=0.5, segments=segments, colour=colour).transform(rotate=(np.pi,0,0))
+        # Transform to position
+        if position != (0,0,0):
+            cone.transform(translate=position)
+            base_circle.transform(translate=position)
+        return cone + base_circle
+
+    @staticmethod
+    def cone_wireframe(position=(0,0,0), radius=0.5, segments=DEFAULT_SEGMENTS, colour=DEFAULT_WIREFRAME_COLOUR):
+        """Create a cone wireframe.
+        
+        Args:
+            position (tuple): XYZ coordinates of cone base centre. Defaults to origin
+            radius (float): Radius of cone base. Defaults to 0.5
+            segments (int): Number of segments around base circumference. Defaults to 32
+            colour (tuple): RGB colour values. Defaults to white
+        
+        Returns:
+            Shape: Cone wireframe shape
+        """
+        return Shapes.circle_wireframe(position=position, radius=radius, segments=segments, colour=colour)
+
+    @staticmethod
+    def sphere(position=(0,0,0), radius=0.5, subdivisions=DEFAULT_SUBDIVISIONS, colour=DEFAULT_FACE_COLOUR):
+        """Create a sphere.
+        
+        Args:
+            radius (float): Sphere radius
+            subdivisions (int): Number of subdivision iterations
+            colour (tuple): RGB colour values
+            position (tuple): XYZ coordinates of sphere centre. Defaults to origin
+        
+        Returns:
+            Shape: Sphere shape with normalized vertices
+        """
+        
+        def normalize(v):
+            # Normalize a vector to unit length
+            length = np.linalg.norm(v)
+            return [x / length for x in v] if length != 0 else v
+
+        vertices = []
+        indices = []
+
+        # Create initial icosahedron
+        t = (1.0 + np.sqrt(5.0)) / 2.0
+        vertices = [
+            [-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0],
+            [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t],
+            [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]
+        ]
+        indices = [
+            0, 11, 5, 0, 5, 1, 0, 1, 7, 0, 7, 10, 0, 10, 11,
+            1, 5, 9, 5, 11, 4, 11, 10, 2, 10, 7, 6, 7, 1, 8,
+            3, 9, 4, 3, 4, 2, 3, 2, 6, 3, 6, 8, 3, 8, 9,
+            4, 9, 5, 2, 4, 11, 6, 2, 10, 8, 6, 7, 9, 8, 1
+        ]
+
+        # Subdivide
+        for _ in range(subdivisions):
+            new_indices = []
+            for i in range(0, len(indices), 3):
+                v1 = vertices[indices[i]]
+                v2 = vertices[indices[i+1]]
+                v3 = vertices[indices[i+2]]
+                
+                v12 = normalize([(v1[0] + v2[0])/2, (v1[1] + v2[1])/2, (v1[2] + v2[2])/2])
+                v23 = normalize([(v2[0] + v3[0])/2, (v2[1] + v3[1])/2, (v2[2] + v3[2])/2])
+                v31 = normalize([(v3[0] + v1[0])/2, (v3[1] + v1[1])/2, (v3[2] + v1[2])/2])
+                
+                vertices.extend([v12, v23, v31])
+                
+                i1, i2, i3 = indices[i], indices[i+1], indices[i+2]
+                i12, i23, i31 = len(vertices) - 3, len(vertices) - 2, len(vertices) - 1
+                
+                new_indices.extend([i1, i12, i31, i2, i23, i12, i3, i31, i23, i12, i23, i31])
+            
+            indices = new_indices
+
+        # Normalize all vertices to the sphere surface and create Vertex objects
+        vertex_objects = []
+        for v in vertices:
+            normalized = normalize(v)
+            vertex_position = [x * radius for x in normalized]
+            vertex_objects.append(Vertex(vertex_position, colour, normalized))
+
+        sphere = Shape(GL_TRIANGLES, vertex_objects, indices)
+        if position != (0,0,0):
+            sphere.transform(translate=position)
+        return sphere
+    
+    @staticmethod
+    def grid(size, increment, colour):
+        """Create a grid in the XY plane centreed at origin.
+        
+        Args:
+            size (float): Total size of the grid
+            increment (float): Space between grid lines
+            colour (tuple): RGB colour for the grid lines
+        
+        Returns:
+            Shape: Grid shape with line segments
+        """
+        vertices = []
+        indices = []
+        num_lines = int(size / increment) + 1
+        
+        for i in range(num_lines):
+            x = i * increment - size/2
+            vertices.append(Vertex([x, -size/2, 0], colour, [0, 0, 1]))
+            vertices.append(Vertex([x, size/2, 0], colour, [0, 0, 1]))
+            
+            y = i * increment - size/2
+            vertices.append(Vertex([-size/2, y, 0], colour, [0, 0, 1]))
+            vertices.append(Vertex([size/2, y, 0], colour, [0, 0, 1]))
+            
+            index = i * 4
+            indices.extend([index, index + 1, index + 2, index + 3])
+
+        return Shape(GL_LINES, vertices, indices)
+
+    # # TODO: Move to grid class
+    # def add_grid(self, size=5.0, grid_params=None, params = RenderParams()):
+    #     """Add a grid in the XY plane.
+        
+    #     Parameters
+    #     ----------
+    #     size : float, optional
+    #         Grid size (default: 5.0)
+    #     grid_params : list, optional
+    #         List of grid parameters for different detail levels
+    #         Each dict contains: increment, colour, line_width (overrides RenderParams.line_width)
+    #     params : RenderParams, optional
+    #         Rendering parameters
+
+    #     Returns
+    #     -------
+    #     ObjectContainer
+    #         Collection containing grid objects at different detail levels
+    #     """
+    #     grid_params = grid_params or self.default_grid_params
+    #     objects = {}
+        
+    #     for n, grid_level in enumerate(grid_params):
+    #         increment = grid_level['increment']
+    #         colour = grid_level['colour']
+    #         line_width = grid_level['line_width'] or params.line_width
+            
+            
+    #         # Create new params with updated line width
+    #         level_params = replace(params, line_width=line_width)
+            
+    #         grid_shape = Shapes.create_blank(GL_LINES)
+            
+    #         if increment == 0:
+    #             # Draw main axes
+    #             grid_shape += Shapes.create_line((-size, 0, 0), (size, 0, 0), colour)
+    #             grid_shape += Shapes.create_line((0, -size, 0), (0, size, 0), colour)
+    #         else:
+    #             # Draw regular grid lines
+    #             for i in np.arange(-size + increment, size + increment/2, increment):
+    #                 if abs(i) < 1e-10:  # Skip centre lines
+    #                     continue
+                        
+    #                 grid_shape += Shapes.create_line((i, -size, 0), (i, size, 0), colour)
+    #                 grid_shape += Shapes.create_line((-size, i, 0), (size, i, 0), colour)
+
+    #         if grid_shape is not None:
+    #             grid_shape = grid_shape.transform(params.translate, params.rotate, params.scale)
+    #             grid_object = self.add_object(grid_shape, level_params)
+            
+    #             objects[f'grid-{n}'] = grid_object
+        
+    #     return ObjectContainer(objects)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    @staticmethod
+    def target(position, size, edge_length, colour):
         """Create a target around a 3D shape.
         
         Args:
@@ -475,376 +935,71 @@ class Shapes:
                 base_idx, base_idx + 3   # Depth edge
             ])
         
-        return Shape(GL_LINES,vertices, indices)
-
-    @staticmethod
-    def create_rectangle_wireframe(position, width, height, colour):
-        """Create a 2D rectangle wireframe in the XY plane.
-        
-        Args:
-            position (tuple): XYZ coordinates of rectangle centre
-            width (float): Total width of rectangle
-            height (float): Total height of rectangle
-            colour (tuple): RGB colour values
-        
-        Returns:
-            Shape: Rectangle wireframe shape
-        """
-        x, y, z = position[0], position[1], position[2]
-        half_w, half_h = width / 2, height / 2
-        normal = [0, 0, 1]  # Normal pointing outwards
-        vertices = [
-            Vertex([x - half_w, y - half_h, z], colour, normal),
-            Vertex([x + half_w, y - half_h, z], colour, normal),
-            Vertex([x + half_w, y + half_h, z], colour, normal),
-            Vertex([x - half_w, y + half_h, z], colour, normal)
-        ]
-        indices = [0, 1, 1, 2, 2, 3, 3, 0]
         return Shape(GL_LINES, vertices, indices)
 
-    @staticmethod
-    def create_circle(position, radius, segments, colour):
-        """Create a filled circle in the XY plane.
-        
-        Args:
-            position (tuple): XYZ coordinates of circle centre
-            radius (float): Circle radius
-            segments (int): Number of segments around circumference
-            colour (tuple): RGB colour values
-        
-        Returns:
-            Shape: Circle shape made of triangular segments
-        """
-        normal = [0, 0, 1]  # Normal pointing outwards
-        vertices = [Vertex(position, colour, normal)]
-        indices = []
-        for i in range(segments):
-            angle = 2 * np.pi * i / segments
-            x = position[0] + radius * np.cos(angle)
-            y = position[1] + radius * np.sin(angle)
-            vertices.append(Vertex([x, y, position[2]], colour, normal))
-            if i > 0:
-                indices.extend([0, i, i + 1])
-        indices.extend([0, segments, 1])
-        return Shape(GL_TRIANGLES, vertices, indices)
-        
-    @staticmethod
-    def create_circle_wireframe(position, radius, segments, colour):
-        """Create a circle wireframe in the XY plane.
-        
-        Args:
-            position (tuple): XYZ coordinates of circle centre
-            radius (float): Circle radius
-            segments (int): Number of segments around circumference
-            colour (tuple): RGB colour values
-        
-        Returns:
-            Shape: Circle wireframe shape
-        """
-        normal = [0, 0, 1]  # Normal pointing outwards
-        vertices = []
-        indices = []
-        for i in range(segments):
-            angle = 2 * np.pi * i / segments
-            x = position[0] + radius * np.cos(angle)
-            y = position[1] + radius * np.sin(angle)
-            vertices.append(Vertex([x, y, position[2]], colour, normal))
-            indices.extend([i, (i + 1) % segments])
-        return Shape(GL_LINES, vertices, indices)
-
-    @staticmethod
-    def create_cube(position=(0,0,0), size=1.0, colour=(1,1,1)):
-        """Create a cube.
-        
-        Args:
-            position (tuple): XYZ coordinates of cube centre. Defaults to origin
-            size (float): Length of cube sides. Defaults to 1.0
-            colour (tuple): RGB colour values. Defaults to white
-        
-        Returns:
-            Shape: Cube shape
-        """
-        s = size / 2
-        x, y, z = position
-        vertices = [
-            # Front face
-            Vertex([x-s, y-s, z+s], colour, [0, 0, 1]),
-            Vertex([x+s, y-s, z+s], colour, [0, 0, 1]),
-            Vertex([x+s, y+s, z+s], colour, [0, 0, 1]),
-            Vertex([x-s, y+s, z+s], colour, [0, 0, 1]),
-            # Back face
-            Vertex([x-s, y-s, z-s], colour, [0, 0, -1]),
-            Vertex([x+s, y-s, z-s], colour, [0, 0, -1]),
-            Vertex([x+s, y+s, z-s], colour, [0, 0, -1]),
-            Vertex([x-s, y+s, z-s], colour, [0, 0, -1]),
-            # Left face
-            Vertex([x-s, y-s, z-s], colour, [-1, 0, 0]),
-            Vertex([x-s, y-s, z+s], colour, [-1, 0, 0]),
-            Vertex([x-s, y+s, z+s], colour, [-1, 0, 0]),
-            Vertex([x-s, y+s, z-s], colour, [-1, 0, 0]),
-            # Right face
-            Vertex([x+s, y-s, z+s], colour, [1, 0, 0]),
-            Vertex([x+s, y-s, z-s], colour, [1, 0, 0]),
-            Vertex([x+s, y+s, z-s], colour, [1, 0, 0]),
-            Vertex([x+s, y+s, z+s], colour, [1, 0, 0]),
-            # Top face
-            Vertex([x-s, y+s, z+s], colour, [0, 1, 0]),
-            Vertex([x+s, y+s, z+s], colour, [0, 1, 0]),
-            Vertex([x+s, y+s, z-s], colour, [0, 1, 0]),
-            Vertex([x-s, y+s, z-s], colour, [0, 1, 0]),
-            # Bottom face
-            Vertex([x-s, y-s, z-s], colour, [0, -1, 0]),
-            Vertex([x+s, y-s, z-s], colour, [0, -1, 0]),
-            Vertex([x+s, y-s, z+s], colour, [0, -1, 0]),
-            Vertex([x-s, y-s, z+s], colour, [0, -1, 0])
-        ]
-
-        indices = [
-            0, 1, 2, 2, 3, 0,    # Front face
-            4, 7, 6, 6, 5, 4,    # Back face
-            8, 9, 10, 10, 11, 8, # Left face
-            12, 13, 14, 14, 15, 12, # Right face 
-            16, 17, 18, 18, 19, 16, # Top face
-            20, 21, 22, 22, 23, 20  # Bottom face
-        ]
-
-        return Shape(GL_TRIANGLES, vertices, indices)
-
-    @staticmethod
-    def create_cube_wireframe(position=(0,0,0), size=1.0, colour=(1,1,1)):
-        """Create a cube wireframe.
-        
-        Args:
-            position (tuple): XYZ coordinates of cube centre. Defaults to origin
-            size (float): Length of cube edges. Defaults to 1.0
-            colour (tuple): RGB colour values. Defaults to white
-        
-        Returns:
-            Shape: Cube wireframe shape with eight vertices and twelve edges
-        """
-        s = size / 2
-        x, y, z = position
-        normal = [0, 0, 1]  # Normal pointing outwards
-        vertices = [
-            Vertex([x-s, y-s, z-s], colour, normal),
-            Vertex([x+s, y-s, z-s], colour, normal),
-            Vertex([x+s, y+s, z-s], colour, normal),
-            Vertex([x-s, y+s, z-s], colour, normal),
-            Vertex([x-s, y-s, z+s], colour, normal),
-            Vertex([x+s, y-s, z+s], colour, normal),
-            Vertex([x+s, y+s, z+s], colour, normal),
-            Vertex([x-s, y+s, z+s], colour, normal)
-        ]
-
-        indices = [
-            0, 1, 1, 2, 2, 3, 3, 0,  # Back face
-            4, 5, 5, 6, 6, 7, 7, 4,  # Front face
-            0, 4, 1, 5, 2, 6, 3, 7   # Connecting edges
-        ]
-
-        return Shape(GL_LINES, vertices, indices)
-
-
-    @staticmethod
-    def create_cylinder(position=(0,0,0), radius=0.5, height=1.0, segments=32, colour=(1,1,1)):
-        """Create a cylinder.
-        
-        Args:
-            position (tuple): XYZ coordinates of base centre. Defaults to origin
-            radius (float): Radius of cylinder. Defaults to 0.5
-            height (float): Height of cylinder. Defaults to 1.0
-            segments (int): Number of segments around circumference. Defaults to 32
-            colour (tuple): RGB colour values. Defaults to white
-        
-        Returns:
-            Shape: Cylinder shape
-        """
-        vertices = []
-        indices = []
-
-        # Create vertices for the cylinder body
-        for i in range(segments + 1):  # +1 to close the cylinder
-            angle = 2 * np.pi * i / segments
-            x = radius * np.cos(angle)
-            y = radius * np.sin(angle)
-            normal = np.array([x, y, 0])
-            normal = normal / np.linalg.norm(normal)  # Normalize the normal
-            
-            # Bottom vertex
-            vertices.append(Vertex([x, y, 0], colour, normal))
-            # Top vertex
-            vertices.append(Vertex([x, y, height], colour, normal))
-
-        # Indices for the side faces
-        for i in range(segments):
-            i1 = i * 2
-            i2 = (i * 2 + 2) % (segments * 2 + 2)
-            i3 = i * 2 + 1
-            i4 = (i * 2 + 3) % (segments * 2 + 2)
-            indices.extend([i1, i2, i3, i2, i4, i3])
-
-        cylinder = Shape(GL_TRIANGLES, vertices, indices)
-        bottom = Shapes.create_circle(position=(0,0,0), radius=radius, segments=segments, colour=colour).transform(rotate=(np.pi,0,0))
-        top = Shapes.create_circle(position=(0,0,1), radius=radius, segments=segments, colour=colour)
-        # Transform to position
-        if position != (0,0,0):
-            cylinder.transform(translate=position)
-            bottom.transform(translate=position)
-            top.transform(translate=position)
-        return cylinder + bottom + top
-    
-
-    @staticmethod
-    def create_cylinder_wireframe(position=(0,0,0), radius=0.5, height=1.0, segments=32, colour=(1,1,1)):
-        """Create a cylinder wireframe.
-        
-        Args:
-            position (tuple): XYZ coordinates of cylinder centre. Defaults to origin
-            radius (float): Radius of cylinder. Defaults to 0.5
-            segments (int): Number of segments around circumference. Defaults to 32
-            colour (tuple): RGB colour values. Defaults to white
-        
-        Returns:
-            Shape: Combined wireframe for cylinder outline
-        """
-        bottom = Shapes.create_circle_wireframe(position=position, radius=radius, segments=segments, colour=colour)
-        top_position = np.array(position) + np.array([0,0,height])
-        top = Shapes.create_circle_wireframe(position=top_position, radius=radius, segments=segments, colour=colour)
-        return bottom + top
     
     @staticmethod
-    def create_cone(position=(0,0,0), radius=0.5, height=1.0, segments=32, colour=(1,1,1)):
-        """Create a cone.
+    def scatter(x, y, colour=DEFAULT_POINT_COLOUR):
+        """Create a scatter plot of x,y points.
         
-        Args:
-            position (tuple): XYZ coordinates of base centre. Defaults to origin
-            radius (float): Radius of cone base. Defaults to 0.5
-            height (float): Height of cone. Defaults to 1.0
-            segments (int): Number of segments around base circumference. Defaults to 32
-            colour (tuple): RGB colour values. Defaults to white
-        
-        Returns:
-            Shape: Cone shape
+        Parameters
+        ----------
+        x : float or array-like
+            X coordinates
+        y : float or array-like
+            Y coordinates
+        colour : Colour, optional
+            Point colour
+
+        Returns
+        -------
+        RenderObject
+            Points render object
         """
-        assert isinstance(segments, int) and segments > 2, "segments must be an integer greater than 2"
-        assert len(colour) == 3, "colour must be a tuple of 3 values"
+        x = np.atleast_1d(x)
+        y = np.atleast_1d(y)
         
-        vertices = []
-        indices = []
-        normal_apex = [0, 0, 1]  # Normal pointing outwards
-        # Apex
-        vertices.append(Vertex([0, 0, height], colour, normal_apex))
-        # Side vertices
-        for i in range(segments):
-            angle = 2 * np.pi * i / segments
-            x = radius * np.cos(angle)
-            y = radius * np.sin(angle)
-            normal = [x, y, 0.5]  # Adjusted normal for smooth shading
-            normal = normal / np.linalg.norm(normal)
-            vertices.append(Vertex([x, y, 0], colour, normal))
-
-        # Base centre vertex
-        vertices.append(Vertex([0, 0, 0], colour, [0, 0, -1]))  # Base centre with normal pointing down
-
-        # Indices for the sides
-        for i in range(segments):
-            i1 = i + 1
-            i2 = (i + 1) % segments + 1
-            indices.extend([0, i1, i2])
-
-        cone = Shape(GL_TRIANGLES, vertices, indices)
-        # Create bottom circle
-        bottom = Shapes.create_circle(position=(0,0,0), radius=0.5, segments=segments, colour=colour).transform(rotate=(np.pi,0,0))
-        # Transform to position
-        if position != (0,0,0):
-            cone.transform(translate=position)
-            bottom.transform(translate=position)
-        return cone + bottom
+        if len(x) != len(y):
+            raise ValueError("x and y must have same length")
+        points = np.column_stack((x, y, np.zeros_like(x)))
+        
+        # Use point shader if not specified
+        return Shapes.points(points, colour)
 
     @staticmethod
-    def create_cone_wireframe(position=(0,0,0), radius=0.5, segments=32, colour=(1,1,1)):
-        """Create a cone wireframe.
+    def plot(x, y, colour=DEFAULT_LINE_COLOUR):
+        """Plot a line through a series of x,y points.
         
-        Args:
-            position (tuple): XYZ coordinates of cone base centre. Defaults to origin
-            radius (float): Radius of cone base. Defaults to 0.5
-            segments (int): Number of segments around base circumference. Defaults to 32
-            colour (tuple): RGB colour values. Defaults to white
-        
-        Returns:
-            Shape: Cone wireframe shape
+        Parameters
+        ----------
+        x : float or array-like
+            X coordinates
+        y : float or array-like
+            Y coordinates
+        colour : Colour, optional
+            Line colour (default: white)
+        params : RenderParams, optional
+            Rendering parameters
+
+        Returns
+        -------
+        RenderObject
+            Line render object
         """
-        return Shapes.create_circle_wireframe(position=position, radius=radius, segments=segments, colour=colour)
-
-    @staticmethod
-    def create_sphere(position=(0,0,0), radius=0.5, subdivisions=3, colour=(1,1,1)):
-        """Create a sphere.
+        x = np.atleast_1d(x)
+        y = np.atleast_1d(y)
         
-        Args:
-            radius (float): Sphere radius
-            subdivisions (int): Number of subdivision iterations
-            colour (tuple): RGB colour values
-            position (tuple): XYZ coordinates of sphere centre. Defaults to origin
+        if len(x) != len(y):
+            raise ValueError("x and y must have same length")
         
-        Returns:
-            Shape: Sphere shape with normalized vertices
-        """
-        vertices = []
-        indices = []
-
-        # Create initial icosahedron
-        t = (1.0 + np.sqrt(5.0)) / 2.0
-        vertices = [
-            [-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0],
-            [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t],
-            [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]
-        ]
-        indices = [
-            0, 11, 5, 0, 5, 1, 0, 1, 7, 0, 7, 10, 0, 10, 11,
-            1, 5, 9, 5, 11, 4, 11, 10, 2, 10, 7, 6, 7, 1, 8,
-            3, 9, 4, 3, 4, 2, 3, 2, 6, 3, 6, 8, 3, 8, 9,
-            4, 9, 5, 2, 4, 11, 6, 2, 10, 8, 6, 7, 9, 8, 1
-        ]
-
-        # Subdivide
-        for _ in range(subdivisions):
-            new_indices = []
-            for i in range(0, len(indices), 3):
-                v1 = vertices[indices[i]]
-                v2 = vertices[indices[i+1]]
-                v3 = vertices[indices[i+2]]
-                
-                v12 = Shapes.normalize([(v1[0] + v2[0])/2, (v1[1] + v2[1])/2, (v1[2] + v2[2])/2])
-                v23 = Shapes.normalize([(v2[0] + v3[0])/2, (v2[1] + v3[1])/2, (v2[2] + v3[2])/2])
-                v31 = Shapes.normalize([(v3[0] + v1[0])/2, (v3[1] + v1[1])/2, (v3[2] + v1[2])/2])
-                
-                vertices.extend([v12, v23, v31])
-                
-                i1, i2, i3 = indices[i], indices[i+1], indices[i+2]
-                i12, i23, i31 = len(vertices) - 3, len(vertices) - 2, len(vertices) - 1
-                
-                new_indices.extend([i1, i12, i31, i2, i23, i12, i3, i31, i23, i12, i23, i31])
-            
-            indices = new_indices
-
-        # Normalize all vertices to the sphere surface and create Vertex objects
-        vertex_objects = []
-        for v in vertices:
-            normalized = Shapes.normalize(v)
-            vertex_position = [x * radius for x in normalized]
-            vertex_objects.append(Vertex(vertex_position, colour, normalized))
-
-        sphere = Shape(GL_TRIANGLES, vertex_objects, indices)
-        if position != (0,0,0):
-            sphere.transform(translate=position)
-        return sphere
+        points = np.column_stack((x, y, np.zeros_like(x)))
+        return Shapes.linestring(points, colour)
     
     ###########################################################################
-    ###########  MULTIPLE GEOMETRIES  ##########################################
-    ###########################################################################
+    ###########  MULTIPLE GEOMETRIES  #########################################
     
     @staticmethod
-    def create_beam(p0, p1, width, height, colour, wireframe_colour=(1,1,1)):
+    def beam(p0, p1, width, height, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR):
         """Create a rectangular beam between two points.
         
         Args:
@@ -867,19 +1022,19 @@ class Shapes:
             
         # Calculate transforms - note we use midpoint since cube is centreed at origin
         dimensions = (width, height) if direction[0] == 0 and direction[1] == 0 else (height, width) # width & height get swapped if beam is vertical
-        translation, rotation, scale = Shapes.calculate_transform(p0, p1, dimensions)
+        translation, rotation, scale = Shapes._calculate_transform(p0, p1, dimensions)
         # Create body and wireframe using cube, offset by 0.5 in z-direction, and transform to between p0 and p1
-        body = Shapes.create_cube(colour=colour) \
+        body = Shapes.cube(colour=colour) \
             .transform(translate=(0, 0, 0.5)) \
             .transform(translation, rotation, scale)
-        wireframe = Shapes.create_cube_wireframe(colour=wireframe_colour) \
+        wireframe = Shapes.cube_wireframe(colour=wireframe_colour) \
             .transform(translate=(0, 0, 0.5)) \
             .transform(translation, rotation, scale)
         
         return [body, wireframe]
             
     @staticmethod
-    def create_arrow(p0, p1, dimensions: ArrowDimensions, colour, wireframe_colour=(1,1,1), segments=16):
+    def arrow(p0, p1, dimensions=DEFAULT_ARROW_DIMENSIONS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, segments=DEFAULT_SEGMENTS):
         """Create a 3D arrow from p0 to p1.
         
         Args:
@@ -904,29 +1059,104 @@ class Shapes:
         pHead = p1 - unit_direction * dimensions.head_length
 
         # Calculate transforms
-        translation_shaft, rotation_shaft, scale_shaft = Shapes.calculate_transform(
+        translation_shaft, rotation_shaft, scale_shaft = Shapes._calculate_transform(
             p0, pHead, (dimensions.shaft_radius, dimensions.shaft_radius))
-        translation_head, rotation_head, scale_head = Shapes.calculate_transform(
+        translation_head, rotation_head, scale_head = Shapes._calculate_transform(
             pHead, p1, (dimensions.head_radius, dimensions.head_radius))
 
         # Create shaft (cylinder)
-        shaft = Shapes.create_cylinder(segments=segments, colour=colour) \
+        shaft = Shapes.cylinder(segments=segments, colour=colour) \
             .transform(translation_shaft, rotation_shaft, scale_shaft)
         # Create arrowhead (cone)
-        head = Shapes.create_cone(segments=segments, colour=colour) \
+        head = Shapes.cone(segments=segments, colour=colour) \
             .transform(translation_head, rotation_head, scale_head)
         body = shaft + head
         # Create shaft (cylinder)
-        shaft_wireframe = Shapes.create_cylinder_wireframe(segments=segments, colour=wireframe_colour) \
+        shaft_wireframe = Shapes.cylinder_wireframe(segments=segments, colour=wireframe_colour) \
             .transform(translation_shaft, rotation_shaft, scale_shaft)
         # Create arrowhead (cone)
-        head_wireframe = Shapes.create_cone_wireframe(segments=segments, colour=wireframe_colour) \
+        head_wireframe = Shapes.cone_wireframe(segments=segments, colour=wireframe_colour) \
             .transform(translation_head, rotation_head, scale_head)
         wireframe = shaft_wireframe + head_wireframe
         return [body, wireframe]
     
+    
+    def axis(self, size=1.0, origin_radius=0.035, arrow_dimensions=DEFAULT_ARROW_DIMENSIONS,
+                 origin_colour=Colour.BLACK, wireframe_colour=DEFAULT_WIREFRAME_COLOUR,
+                 segments=DEFAULT_SEGMENTS, subdivisions=DEFAULT_SUBDIVISIONS):
+        """Add coordinate axis arrows.
+        
+        Parameters
+        ----------
+        size : float, optional
+            Length of axis arrows (default: 1.0)
+        arrow_dimensions : ArrowDimensions, optional
+            Arrow dimensions
+        origin_radius : float, optional
+            Radius of origin sphere (default: 0.035)
+        origin_colour : Colour, optional
+            Colour of origin sphere (default: BLACK)
+        params : RenderParams, optional
+            Rendering parameters
+        
+        Returns
+        -------
+        ObjectContainer
+            Collection containing 'body' and 'wireframe' objects
+        """
+                
+        x_body, x_wireframe = Shapes.arrow((0,0,0), (size,0,0), arrow_dimensions, (1,0,0), wireframe_colour, segments)
+        y_body, y_wireframe = Shapes.arrow((0,0,0), (0,size,0), arrow_dimensions, (0,1,0), wireframe_colour, segments)
+        z_body, z_wireframe = Shapes.arrow((0,0,0), (0,0,size), arrow_dimensions, (0,0,1), wireframe_colour, segments)  
+        origin_shape = Shapes.sphere(position=(0,0,0), radius=origin_radius, subdivisions=subdivisions, colour=origin_colour)
+        body = x_body + y_body + z_body + origin_shape
+        wireframe = x_wireframe + y_wireframe + z_wireframe
+        return [body, wireframe]
+
+    def add_axis_ticks(self, size=5.0, tick_params=DEFAULT_AXIS_TICKS):
+        """Add axis ticks in the XY plane.
+         
+        Parameters
+        ----------
+        size : float, optional
+            Axis size (default: 5.0)
+        tick_params : list, optional
+            List of tick parameters for different detail levels
+            Each dict contains: increment, tick_size, line_width (overrides RenderParams.line_width), tick_colour
+
+        Returns
+        -------
+        ObjectContainer
+            Collection containing tick objects at different detail levels
+        """
+        shapes = []
+        
+        for n, tick_level in enumerate(tick_params):
+            increment = tick_level['increment']
+            tick_size = tick_level['tick_size']
+            # line_width = tick_level['line_width'] # TODO: add line width
+            tick_colour = tick_level['tick_colour']
+            tick_shape = None
+            
+            for i in np.arange(-size + increment, size + increment/2, increment):
+                if abs(i) < 1e-10:  # Skip centre
+                    continue
+                    
+                x_tick = Shapes.line((i, 0, 0), (i, tick_size, 0), tick_colour)
+                y_tick = Shapes.line((0, i, 0), (tick_size, i, 0), tick_colour)
+                
+                if tick_shape is None:
+                    tick_shape = x_tick + y_tick
+                else:
+                    tick_shape = tick_shape + x_tick + y_tick
+
+            if tick_shape is not None:
+                shapes.append(tick_shape)
+                
+        return shapes
+    
     @staticmethod
-    def calculate_transform(p0, p1, cross_section=(1, 1)):
+    def _calculate_transform(p0, p1, cross_section=(1, 1)):
         """Calculate transformation between (0, 1) and (p0, p1).
         
         Args:
@@ -964,19 +1194,3 @@ class Shapes:
         scale = np.array([cross_section[0], cross_section[1], length])
 
         return translation, rotation, scale
-    
-    @staticmethod
-    def normalize(v):
-        """Normalize a vector to unit length.
-        
-        Args:
-            v (list/tuple): Vector to normalize
-        
-        Returns:
-            list: Normalized vector, or original if zero length
-        """
-        length = np.linalg.norm(v)
-        return [x / length for x in v] if length != 0 else v
-
-
-

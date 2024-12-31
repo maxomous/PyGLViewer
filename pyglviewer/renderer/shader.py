@@ -9,6 +9,7 @@ class PointShape(Enum):
     SQUARE = 1
     TRIANGLE = 2
     
+    
 # Vertex shader for basic lighting and transformations
 vertex_shader_lighting = """
 #version 330 core
@@ -384,3 +385,13 @@ class Shader:
         """Ensure shader resources are cleaned up."""
         self.shutdown()
 
+class DefaultShaders:
+    """Manage default shaders."""
+    default_shader = None
+    default_point_shader = None
+
+    @staticmethod
+    def initialise():
+        """Initialise default shaders, should be called once at start of program after OpenGL initialisation."""
+        DefaultShaders.default_shader = Shader(vertex_shader_lighting, fragment_shader_lighting)
+        DefaultShaders.default_point_shader = Shader(vertex_shader_points, fragment_shader_points)
