@@ -108,7 +108,7 @@ class Shape:
         # Combine indices
         combined_indices = np.concatenate((self.indices, adjusted_other_indices))
 
-        result = Shape(self.draw_type, self.shader, combined_vertices, combined_indices)
+        result = Shape(self.draw_type, combined_vertices, combined_indices, self.shader)
         return result
 
     def get_vertices(self):
@@ -345,7 +345,27 @@ class Shapes:
         return Shape(GL_LINES, vertices, indices)
 
     @staticmethod
-    def triangle(p1, p2, p3, colour=DEFAULT_FACE_COLOUR):
+    def triangle(p1, p2, p3, colour=DEFAULT_FACE_COLOUR, show_body=True, show_wireframe=True):
+        """Create a filled triangle from three points.
+        
+        Args:
+            p1 (tuple): First vertex XYZ coordinates
+            p2 (tuple): Second vertex XYZ coordinates
+            p3 (tuple): Third vertex XYZ coordinates
+            colour (tuple): RGB colour values
+        
+        Returns:
+            Shape: Triangle shape with computed normal
+        """ 
+        shapes = []
+        if show_body:
+            shapes.append(Shapes.triangle_body(p1, p2, p3, colour))
+        if show_wireframe:
+            shapes.append(Shapes.triangle_wireframe(p1, p2, p3, colour))
+        return shapes
+    
+    @staticmethod
+    def triangle_body(p1, p2, p3, colour=DEFAULT_FACE_COLOUR):
         """Create a filled triangle from three points.
         
         Args:
@@ -1080,8 +1100,8 @@ class Shapes:
         wireframe = shaft_wireframe + head_wireframe
         return [body, wireframe]
     
-    
-    def axis(self, size=1.0, origin_radius=0.035, arrow_dimensions=DEFAULT_ARROW_DIMENSIONS,
+    @staticmethod
+    def axis(size=1.0, origin_radius=0.035, arrow_dimensions=DEFAULT_ARROW_DIMENSIONS,
                  origin_colour=Colour.BLACK, wireframe_colour=DEFAULT_WIREFRAME_COLOUR,
                  segments=DEFAULT_SEGMENTS, subdivisions=DEFAULT_SUBDIVISIONS):
         """Add coordinate axis arrows.
@@ -1113,7 +1133,8 @@ class Shapes:
         wireframe = x_wireframe + y_wireframe + z_wireframe
         return [body, wireframe]
 
-    def add_axis_ticks(self, size=5.0, tick_params=DEFAULT_AXIS_TICKS):
+    @staticmethod
+    def axis_ticks(size=5.0, tick_params=DEFAULT_AXIS_TICKS):
         """Add axis ticks in the XY plane.
          
         Parameters

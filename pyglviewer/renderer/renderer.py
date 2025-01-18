@@ -131,7 +131,7 @@ class Renderer:
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         glLineWidth(1.0)
         glPointSize(1.0)
-
+ 
     def clear(self):
         """Clear the framebuffer with a dark teal background."""
         r, g, b = self.config["background_colour"]
