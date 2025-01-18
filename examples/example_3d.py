@@ -67,7 +67,7 @@ class ExampleApplication(Application):
         Shapes.DEFAULT_SEGMENTS = 32     # n segments in circle
         Shapes.DEFAULT_SUBDIVISIONS = 4  # n subdivisions in sphere
     
-        self.GRID_SIZE = 50
+        GRID_SIZE = 50
         GRID_TRANSLATE = (0, 0, -0.005) # Move grid slightly below z=0 to avoid z-fighting
         # Text Rendering
         self.text_renderer.add_axis_labels(xlim=[-10, 10], ylim=[-10, 10], increment=2, colour=Colour.WHITE, static=True)
@@ -82,47 +82,38 @@ class ExampleApplication(Application):
         
         
         # Static object
-        static_object = self.renderer.add_object(static=True).set_shape(Shapes.grid(size=self.GRID_SIZE, increment=1, colour=Colour.WHITE))
+        static_object = self.renderer.add_object(static=True).set_shape(Shapes.grid(size=GRID_SIZE, increment=1, colour=Colour.WHITE))
         # Dynamic object
         self.dynamic_object = self.renderer.add_object()
         
     
         
-        # # Grid and axis
-        # self.grid = self.renderer.add_grid(GRID_SIZE*2, params=RenderParams(translate=GRID_TRANSLATE, selectable=False))
-        # self.renderer.add_axis_ticks(size=GRID_SIZE, params=RenderParams(translate=GRID_TRANSLATE, selectable=False))
-        # self.axis = self.renderer.add_axis(params=RenderParams(selectable=False))
+        # Grid and axis
+        self.grid = self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.grid(size=GRID_SIZE*2, increment=1, colour=Colour.WHITE)).set_transform_matrix(Transform(translate=GRID_TRANSLATE))
+        self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.axis_ticks(size=GRID_SIZE)).set_transform_matrix(Transform(translate=GRID_TRANSLATE))
+        self.axis = self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.axis(size=10))
         
-        # # Points with different shapes
-        # self.renderer.add_point(position=(-4, 4, 0), colour=Colour.RED, 
-        #                       params=RenderParams(point_size=15))
-        # self.renderer.add_point(position=(-4, 2.5, 0), colour=Colour.GREEN, 
-        #                       params=RenderParams(point_size=15, point_shape=PointShape.TRIANGLE))
-        # self.renderer.add_point(position=(-4, 1, 0), colour=Colour.BLUE, 
-        #                       params=RenderParams(point_size=15, point_shape=PointShape.SQUARE))
+        # Points with different shapes
+        self.renderer.add_object(point_size=15, point_shape=PointShape.CIRCLE, static=True).set_shape(Shapes.point(position=(-4, 4, 0), colour=Colour.RED))
+        self.renderer.add_object(point_size=15, point_shape=PointShape.TRIANGLE, static=True).set_shape(Shapes.point(position=(-4, 2.5, 0), colour=Colour.GREEN))
+        self.renderer.add_object(point_size=15, point_shape=PointShape.SQUARE, static=True).set_shape(Shapes.point(position=(-4, 1, 0), colour=Colour.BLUE))
         
-        # # Lines and beams
-        # self.renderer.add_line(p0=(-2.5, 3.5, 0), p1=(-1.5, 4.5, 0), colour=Colour.ORANGE, 
-        #                      params=RenderParams(line_width=5))
-        # self.renderer.add_beam(p0=(-2.5, 2.0, 0.25), p1=(-1.5, 3.0, 0.75), 
-        #                      width=0.2, height=0.2, colour=Colour.YELLOW)
+        # Lines and beams
+        self.renderer.add_object(line_width=5, static=True).set_shape(Shapes.line(p0=(-2.5, 3.5, 0), p1=(-1.5, 4.5, 0), colour=Colour.ORANGE))
+        self.renderer.add_object(static=True).set_shape(Shapes.beam(p0=(-2.5, 2.0, 0.25), p1=(-1.5, 3.0, 0.75), width=0.2, height=0.2, colour=Colour.YELLOW))
         
-        # # Arrow with dimensions
-        # arrow_dims = ArrowDimensions(
-        #     shaft_radius=0.2,
-        #     head_radius=0.35,
-        #     head_length=0.3
-        # )
-        # self.renderer.add_arrow(p0=(-2.4, 0.6, 0.25), p1=(-1.6, 1.4, 0.75), 
-        #                       dimensions=arrow_dims, colour=Colour.PURPLE)
+        # Arrow with dimensions
+        arrow_dims = ArrowDimensions(
+            shaft_radius=0.2,
+            head_radius=0.35,
+            head_length=0.3
+        )
+        self.renderer.add_object(static=True).set_shape(Shapes.arrow(p0=(-2.4, 0.6, 0.25), p1=(-1.6, 1.4, 0.75), dimensions=arrow_dims, colour=Colour.PURPLE))
         
-        # # Basic shapes - wireframe only
-        # self.renderer.add_triangle(p1=(0, 4.433, 0), p2=(-0.5, 3.567, 0), p3=(0.5, 3.567, 0), 
-        #                          params=RenderParams(wireframe_colour=Colour.YELLOW, show_body=False))
-        # self.renderer.add_rectangle(position=(2, 4, 0), width=1, height=1, 
-        #                           params=RenderParams(wireframe_colour=Colour.GREEN, show_body=False))
-        # self.renderer.add_circle(position=(4, 4, 0), radius=0.5, 
-        #                        params=RenderParams(wireframe_colour=Colour.BLUE, show_body=False))
+        # Basic shapes - wireframe only
+        self.renderer.add_object(static=True).set_shape(Shapes.triangle(p1=(0, 4.433, 0), p2=(-0.5, 3.567, 0), p3=(0.5, 3.567, 0), wireframe_colour=Colour.YELLOW, show_body=False))
+        self.renderer.add_object(static=True).set_shape(Shapes.rectangle(position=(2, 4, 0), width=1, height=1, wireframe_colour=Colour.GREEN, show_body=False))
+        self.renderer.add_object(static=True).set_shape(Shapes.circle(position=(4, 4, 0), radius=0.5, wireframe_colour=Colour.BLUE, show_body=False))
         
         # # Basic shapes - filled
         # self.renderer.add_triangle(p1=(0, 2.933, 0), p2=(-0.5, 2.067, 0), p3=(0.5, 2.067, 0), 
