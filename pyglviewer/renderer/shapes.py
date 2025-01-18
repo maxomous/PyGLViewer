@@ -356,7 +356,7 @@ class Shapes:
         
         Returns:
             Shape: Triangle shape with computed normal
-        """
+        """ 
         shapes = []
         if show_body:
             shapes.append(Shapes.triangle_body(p1, p2, p3, colour))

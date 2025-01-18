@@ -85,9 +85,9 @@ class ExampleApplication(Application):
         static_object = self.renderer.add_object(static=True).set_shape(Shapes.grid(size=GRID_SIZE, increment=1, colour=Colour.WHITE))
         # Dynamic object
         self.dynamic_object = self.renderer.add_object()
-        
+         
     
-        
+         
         # Grid and axis
         self.grid = self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.grid(size=GRID_SIZE*2, increment=1, colour=Colour.WHITE)).set_transform_matrix(Transform(translate=GRID_TRANSLATE))
         self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.axis_ticks(size=GRID_SIZE)).set_transform_matrix(Transform(translate=GRID_TRANSLATE))
