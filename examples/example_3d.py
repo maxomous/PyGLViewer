@@ -32,7 +32,7 @@ class ExampleApplication(Application):
         self.init_geometry()
     
     def init_ui(self):
-        """
+        """ 
         Initialise ImGui (UI) elements.
         """
         #
