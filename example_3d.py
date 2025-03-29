@@ -82,10 +82,10 @@ class ExampleApplication(Application):
         
         
         # Static object
-        static_object = self.renderer.add_object(static=True).set_shape(Shapes.grid(size=GRID_SIZE, increment=1, colour=Colour.WHITE))
+        # static_object = self.renderer.add_object(static=True).set_shape(Shapes.grid(size=GRID_SIZE, increment=1, colour=Colour.WHITE))
         # Dynamic object
         self.dynamic_object = self.renderer.add_object()
-         
+        self.rotating_cubes = self.renderer.add_object()
     
          
         # Grid and axis
@@ -103,51 +103,33 @@ class ExampleApplication(Application):
         self.renderer.add_object(static=True).set_shape(Shapes.beam(p0=(-2.5, 2.0, 0.25), p1=(-1.5, 3.0, 0.75), width=0.2, height=0.2, colour=Colour.YELLOW))
         
         # Arrow with dimensions
-        arrow_dims = ArrowDimensions(
-            shaft_radius=0.2,
-            head_radius=0.35,
-            head_length=0.3
-        )
-        self.renderer.add_object(static=True).set_shape(Shapes.arrow(p0=(-2.4, 0.6, 0.25), p1=(-1.6, 1.4, 0.75), dimensions=arrow_dims, colour=Colour.PURPLE))
+        arrow_dimensions = ArrowDimensions(shaft_radius=0.2, head_radius=0.35, head_length=0.3)
+        self.renderer.add_object(static=True).set_shape(Shapes.arrow(p0=(-2.4, 0.6, 0.25), p1=(-1.6, 1.4, 0.75), dimensions=arrow_dimensions, colour=Colour.PURPLE))
         
-        # Basic shapes - wireframe only
+        # Basic shapes - wireframe
         self.renderer.add_object(static=True).set_shape(Shapes.triangle(p1=(0, 4.433, 0), p2=(-0.5, 3.567, 0), p3=(0.5, 3.567, 0), wireframe_colour=Colour.YELLOW, show_body=False))
         self.renderer.add_object(static=True).set_shape(Shapes.rectangle(position=(2, 4, 0), width=1, height=1, wireframe_colour=Colour.GREEN, show_body=False))
         self.renderer.add_object(static=True).set_shape(Shapes.circle(position=(4, 4, 0), radius=0.5, wireframe_colour=Colour.BLUE, show_body=False))
         
-        # # Basic shapes - filled
-        # self.renderer.add_triangle(p1=(0, 2.933, 0), p2=(-0.5, 2.067, 0), p3=(0.5, 2.067, 0), 
-        #                          colour=Colour.YELLOW)
-        # self.renderer.add_rectangle(position=(2, 2.5, 0), width=1, height=1, colour=Colour.GREEN)
-        # self.renderer.add_circle(position=(4, 2.5, 0), radius=0.5, colour=Colour.BLUE)
+        # Basic shapes - wireframe
+        self.renderer.add_object(static=True).set_shape(Shapes.triangle(p1=(0, 2.433, 0), p2=(-0.5, 1.567, 0), p3=(0.5, 1.567, 0), colour=Colour.YELLOW))
+        self.renderer.add_object(static=True).set_shape(Shapes.rectangle(position=(2, 2, 0), width=1, height=1, colour=Colour.GREEN))
+        self.renderer.add_object(static=True).set_shape(Shapes.circle(position=(4, 2, 0), radius=0.5, colour=Colour.BLUE))
+        
+        # 3D shapes with transforms
+        self.renderer.add_object(static=True).set_shape(Shapes.cone(colour=Colour.rgb(255, 165, 0)).transform(translate=(0, 0.75, 0.5), scale=(0.5, 0.5, 0.5), rotate=(-np.pi/2, 0, 0)))
+        self.renderer.add_object(static=True).set_shape(Shapes.cylinder(colour=Colour.MAGENTA).transform(translate=(2, 1, 0.25), scale=(0.5, 0.5, 0.5)))
+        self.renderer.add_object(static=True).set_shape(Shapes.sphere(radius=0.25, colour=Colour.RED).transform(translate=(4, 1, 0.5)))
+             
+        # Plots
+        x = np.linspace(-1.5, 1.5, 100)
+        y = x**2
+        self.renderer.add_object(static=True, line_width=2.0).set_shape(Shapes.plot(x, y, colour=Colour.GREEN).transform(translate=(-3, -2, 0)))
 
-        # # 3D shapes with transforms
-        # self.renderer.add_cone(colour=Colour.rgb(255, 165, 0), 
-        #                      params=RenderParams(translate=(0, 0.75, 0.5), 
-        #                                        scale=(0.5, 0.5, 0.5), 
-        #                                        rotate=(-np.pi/2, 0, 0)))
-        # self.renderer.add_cylinder(colour=Colour.MAGENTA, 
-        #                          params=RenderParams(translate=(2, 1, 0.25), 
-        #                                            scale=(0.5, 0.5, 0.5)))
-        # self.renderer.add_sphere(position=(4, 1, 0.5), radius=0.25, colour=Colour.RED, 
-        #                        params=RenderParams())
-                
-        # # Dynamic objects
-        # self.rotating_cubes = self.renderer.add_blank_objects({
-        #     'body': GL_TRIANGLES, 
-        #     'wireframe': GL_LINES
-        # })
+        x = np.linspace(0, 3, 50)
+        y = np.sin(x * np.pi / 1.5)
+        self.renderer.add_object(static=True, point_size=5.0).set_shape(Shapes.scatter(x, y, colour=Colour.CYAN).transform(translate=(1, -1, 0)))
 
-        # # Plots
-        # x = np.linspace(-1.5, 1.5, 100)
-        # y = x**2
-        # self.renderer.plot(x, y, colour=Colour.GREEN, 
-        #                  params=RenderParams(line_width=2.0, translate=(-3, -2, 0)))
-
-        # x = np.linspace(0, 3, 50)
-        # y = np.sin(x * np.pi / 1.5)
-        # self.renderer.scatter(x, y, colour=Colour.CYAN, 
-        #                     params=RenderParams(point_size=5.0, translate=(1, -1, 0)))
 
     def update_scene(self):
         """
@@ -156,16 +138,13 @@ class ExampleApplication(Application):
             - Multiple geometries can be summed ('+') together.
             - Geometries can be transformed individually and/or together 
                 using the 'transform()' method as many times as required.
-        - Transform an object with object.set_transform_matrix() once per frame.
 
         Note: Only update geometry if it actually changes, 
             update the Object transform if only translating, rotating or scaling.
             
         Dynamic Text can be rendered here every frame (make sure to set static=False).
         """
-        self.dynamic_object.set_shape(Shapes.cube(size=0.5, colour=Colour.WHITE))
-
-        return
+        
         # Update axis size
         if self.camera.distance > 5:
             self.grid.set_transform_matrix(Transform(scale=(10, 10, 1)))
@@ -175,25 +154,25 @@ class ExampleApplication(Application):
         scale_axis = self.mouse.screen_to_world(100, dimension=3)
         self.axis.set_transform_matrix(Transform(scale=scale_axis))
         
+        
+
+        self.dynamic_object.set_shape(Shapes.triangle(p1=(0, -2.433, 0), p2=(-0.5, -3.567, 0), p3=(0.5, -3.567, 0), colour=Colour.GREEN))
+
         # Rotating cube
         rotate_geometry = (0, 0, self.timer.oscillate_angle(speed=0.6))
         rotate_object = (0, 0, self.timer.oscillate_angle(speed=0.5))
+        
         # Rotating cubes
-        self.rotating_cubes['body'].set_geometry_data(
+        self.rotating_cubes.set_shape(
             Shapes.cube(size=0.5, colour=Colour.YELLOW)
                 .transform(translate=(-1, 0, 0.5), rotate=rotate_geometry) +
             Shapes.cube(size=0.5, colour=Colour.GREEN)
                 .transform(translate=(1, 0, 0.5), rotate=rotate_geometry)
         )
-        self.rotating_cubes['wireframe'].set_geometry_data(
-            Shapes.cube_wireframe(size=0.5, colour=Colour.BLACK)
-                .transform(translate=(-1, 0, 0.5), rotate=rotate_geometry, scale=(1.0001, 1.0001, 1.0001)) +
-            Shapes.cube_wireframe(size=0.5, colour=Colour.BLACK)
-                .transform(translate=(1, 0, 0.5), rotate=rotate_geometry, scale=(1.0001, 1.0001, 1.0001))
-        )
+        
         # Translate & rotate cube objects
         self.rotating_cubes.set_transform_matrix(Transform(translate=(self.timer.oscillate_translation(limits=[-2, 2], speed=0.25), -3, 0), rotate=rotate_object))
-
+  
         # Text Rendering
         self.text_renderer.add_text('3D LABEL', (self.timer.oscillate_translation(limits=[-1.5, 1.5], speed=0.25), -0.5, 1), Colour.ORANGE, font='arial_rounded_mt_bold-medium')
 

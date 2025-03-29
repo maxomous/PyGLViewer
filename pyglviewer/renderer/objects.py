@@ -4,7 +4,7 @@ import numpy as np
 from OpenGL.GL import *
 from pyglviewer.utils.transform import Transform
 from pyglviewer.renderer.shader import Shader, PointShape
-from pyglviewer.renderer.shapes import Shape
+from pyglviewer.renderer.shapes import Shape, ShapeGroup
 from dataclasses import dataclass
 
 # Used to give each object a unique ID
@@ -293,11 +293,18 @@ class ObjectContainer:
         self._selectable = selectable
         self._objects = []
 
-    def set_shape(self, shapes):
-
-        # Convert single shape to list if needed
-        if not isinstance(shapes, list):
-            shapes = [shapes]
+    def set_shape(self, shapes: Shape | list[Shape] | ShapeGroup):
+        """Set the shape of the object.
+        Returns self to allow chaining.
+        
+        Parameters
+        ----------
+        shapes : Shape | list[Shape] | ShapeGroup
+            Shape object or list of shape objects or shape group
+        """
+        # Convert single shape to shape group if needed
+        if not isinstance(shapes, ShapeGroup):
+            shapes = ShapeGroup(shapes)
 
         # Initialise objects if they don't exist
         if len(self._objects) == 0:
@@ -323,9 +330,18 @@ class ObjectContainer:
         
         return self
     
-    def set_transform_matrix(self, transform):
+    def set_transform_matrix(self, transform: Transform):
+        """Set the transform matrix of the object.
+        Returns self to allow chaining.
+        
+        Parameters
+        ----------
+        transform : Transform
+            Transform object
+        """
         for obj in self._objects:
             obj.set_transform_matrix(transform)
+        return self
 
 
 # class ObjectContainer:
