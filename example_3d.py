@@ -39,7 +39,6 @@ class ExampleApplication(Application):
         """ 
         Initialise ImGui (UI) elements.
         """
-        #
         imgui.get_style().colors[imgui.COLOR_HEADER] = (0, 0, 0, 0) # / COLOR_HEADER_HOVERED / COLOR_HEADER_ACTIVE
         
     def init_variables(self):
@@ -53,15 +52,17 @@ class ExampleApplication(Application):
     
     def init_geometry(self):
         """
-        Create objects using either:
-        1. Built-in shapes: renderer.add_cube(), renderer.add_sphere(), etc.
-        2. Custom shapes: combine / transform Geometry classes and pass to renderer.add_object()
+        Create an object with obj = self.renderer.add_object()
+        
+        Add geometry to an object using either:
+        1. Built-in shapes: obj.set_shape(Shapes.add_sphere()) etc.
+        2. Or create custom shapes using the Shape class
 
         Buffer Types:
         - Static: Fixed geometry (rarely changes)
-        - Dynamic: Frequent updates (use add_blank_object() and update in update_scene())
+        - Dynamic: Frequent updates (use add_object() and update in update_scene())
 
-        Both types support transform operations (translate, rotate, scale) in update_scene()
+        Buffers support transform operations using set_transform_matrix(translate, rotate, scale) in update_scene()
         
         Create Text using text_renderer.add_text(), text_renderer.add_axis_labels() etc. 
         To ensure text persists between frames, set static=True.
@@ -74,18 +75,9 @@ class ExampleApplication(Application):
         # Text Rendering
         self.text_renderer.add_axis_labels(xlim=[-10, 10], ylim=[-10, 10], increment=2, colour=Colour.WHITE, static=True)
         
-        
-        
-        
-        
-        
-        # object starts with no size
-        # when set_shape is called, number of objects is set
-        
-        
+               
         # Static objects
-  
-         
+           
         # Grid and axis
         self.grid = self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.grid(size=self.GRID_SIZE*2, increment=1, colour=Colour.WHITE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
         self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.axis_ticks(size=self.GRID_SIZE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
@@ -144,16 +136,16 @@ class ExampleApplication(Application):
 
     def update_scene(self):
         """
-        ***TODO: REWRITE THIS***
-        Update dynamic objects each frame:
-        - Set the geometry of the object using object.set_geometry_data(). 
+        Update objects each frame:
+        - Objects should be created first using self.renderer.add_object()
+        - If an object only needs to move, scale or rotate, the transform matrix 
+            can be set for both static or dynamic objects with obj.set_transform_matrix(). 
+            Tranforming a static object is much quicker than transforming the geometry each frame.
+        - Dynamic objects are used when geometry wants to change often, using .set_shape() 
             - Multiple geometries can be summed ('+') together.
             - Geometries can be transformed individually and/or together 
                 using the 'transform()' method as many times as required.
 
-        Note: Only update geometry if it actually changes, 
-            update the Object transform if only translating, rotating or scaling.
-            
         Dynamic Text can be rendered here every frame (make sure to set static=False).
         """
         # Rotating cube
