@@ -312,9 +312,9 @@ class ObjectContainer:
                     selectable=self._selectable,
                 )
                 self._objects.append(obj)
-                # Add to scene
-                self._renderer.objects.append(obj)
-            
+            # Add to scene
+            self._renderer.object_containers.append(self)
+        
         if len(shapes) != len(self._objects):
             raise ValueError("Number of shapes does not match number of objects")
         
@@ -326,7 +326,22 @@ class ObjectContainer:
     def set_transform_matrix(self, transform):
         for obj in self._objects:
             obj.set_transform_matrix(transform)
+        return self
 
+    def get_bounds(self):
+        bounds = []
+        for obj in self._objects:
+            bounds.append(obj.get_bounds())
+        min = [b['min'] for b in bounds]
+        max = [b['max'] for b in bounds]
+        # get min and max bounds
+        min_bounds = np.min(min, axis=0)
+        max_bounds = np.max(max, axis=0)
+        return {'min': min_bounds, 'max': max_bounds}
+
+    def get_mid_point(self):
+        bounds = self.get_bounds()
+        return (bounds['min'] + bounds['max']) / 2
 
 # class ObjectContainer:
     

@@ -230,6 +230,34 @@ class Shapes:
     ]
     
     @staticmethod
+    def combine(shapes: list[Shape | list[Shape]]) -> list[Shape]:
+        """Combine a list of shapes into a single shape.
+        
+        Args:
+            shapes (list): List of shapes to combine. Can be either:
+                - List of Shape objects
+                - List of lists of Shape objects
+        
+        Returns:
+            list[Shape]: List of combined shapes grouped by draw_type
+        """
+        # Flatten the list if it contains nested lists
+        flat_shapes = []
+        for shape in shapes:
+            if isinstance(shape, list):
+                flat_shapes.extend(shape)
+            else:
+                flat_shapes.append(shape)
+            
+        # Group shapes by draw_type
+        shape_list = {}
+        for shape in flat_shapes:
+            if shape.draw_type not in shape_list:
+                shape_list[shape.draw_type] = Shapes.blank(shape.draw_type)
+            shape_list[shape.draw_type] += shape
+        return list(shape_list.values())    
+    
+    @staticmethod
     def blank(draw_type):
         """Create a blank shape with default shader."""
         return Shape(draw_type)
@@ -345,7 +373,7 @@ class Shapes:
         return Shape(GL_LINES, vertices, indices)
 
     @staticmethod
-    def triangle(p1, p2, p3, colour=DEFAULT_FACE_COLOUR, show_body=True, show_wireframe=True):
+    def triangle(p1, p2, p3, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
         """Create a filled triangle from three points.
         
         Args:
@@ -361,7 +389,7 @@ class Shapes:
         if show_body:
             shapes.append(Shapes.triangle_body(p1, p2, p3, colour))
         if show_wireframe:
-            shapes.append(Shapes.triangle_wireframe(p1, p2, p3, colour))
+            shapes.append(Shapes.triangle_wireframe(p1, p2, p3, wireframe_colour))
         return shapes
     
     @staticmethod
@@ -404,7 +432,30 @@ class Shapes:
         return Shapes.line(p1, p2, colour) + Shapes.line(p2, p3, colour) + Shapes.line(p3, p1, colour)
 
     @staticmethod
-    def rectangle(position, width, height, colour=DEFAULT_FACE_COLOUR):
+    def rectangle(position, width, height, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
+        """Create a 2D rectangle.
+        
+        Args:
+            position (tuple): XYZ coordinates of rectangle centre
+            width (float): Total width of rectangle
+            height (float): Total height of rectangle
+            colour (tuple): RGB colour values
+            wireframe_colour (tuple): RGB colour values
+            show_body (bool): Whether to show the body of the rectangle
+            show_wireframe (bool): Whether to show the wireframe of the rectangle
+
+        Returns:
+            Shape: Rectangle shape
+        """
+        shapes = []
+        if show_body:
+            shapes.append(Shapes.rectangle_body(position, width, height, colour))   
+        if show_wireframe:
+            shapes.append(Shapes.rectangle_wireframe(position, width, height, wireframe_colour))
+        return shapes
+
+    @staticmethod
+    def rectangle_body(position, width, height, colour=DEFAULT_FACE_COLOUR):
         """Create a 2D rectangle in the XY plane.
         
         Args:
@@ -454,7 +505,30 @@ class Shapes:
         return Shape(GL_LINES, vertices, indices)
 
     @staticmethod
-    def circle(position, radius, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR):
+    def circle(position, radius, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
+        """Create a circle.
+        
+        Args:
+            position (tuple): XYZ coordinates of circle centre
+            radius (float): Circle radius
+            segments (int): Number of segments around circumference
+            colour (tuple): RGB colour values
+            wireframe_colour (tuple): RGB colour values
+            show_body (bool): Whether to show the body of the circle
+            show_wireframe (bool): Whether to show the wireframe of the circle
+
+        Returns:
+            Shape: Circle shape
+        """
+        shapes = []
+        if show_body:
+            shapes.append(Shapes.circle_body(position, radius, segments, colour))
+        if show_wireframe:
+            shapes.append(Shapes.circle_wireframe(position, radius, segments, wireframe_colour))
+        return shapes
+
+    @staticmethod
+    def circle_body(position, radius, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR):
         """Create a filled circle in the XY plane.
         
         Args:
@@ -504,7 +578,29 @@ class Shapes:
         return Shape(GL_LINES, vertices, indices)
 
     @staticmethod
-    def cube(position=(0,0,0), size=1.0, colour=DEFAULT_FACE_COLOUR):
+    def cube(position=(0,0,0), size=1.0, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
+        """Create a cube.
+        
+        Args:
+            position (tuple): XYZ coordinates of cube centre. Defaults to origin
+            size (float): Length of cube sides. Defaults to 1.0 
+            colour (tuple): RGB colour values. Defaults to white
+            wireframe_colour (tuple): RGB colour values. Defaults to white
+            show_body (bool): Whether to show the body of the cube
+            show_wireframe (bool): Whether to show the wireframe of the cube
+        
+        Returns:
+            Shape: Cube shape
+        """
+        shapes = []
+        if show_body:
+            shapes.append(Shapes.cube_body(position, size, colour))
+        if show_wireframe:
+            shapes.append(Shapes.cube_wireframe(position, size, wireframe_colour))
+        return shapes
+    
+    @staticmethod
+    def cube_body(position=(0,0,0), size=1.0, colour=DEFAULT_FACE_COLOUR):
         """Create a cube.
         
         Args:
@@ -595,9 +691,29 @@ class Shapes:
 
         return Shape(GL_LINES, vertices, indices)
 
+    @staticmethod
+    def cylinder(position=(0,0,0), radius=0.5, height=1.0, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
+        """Create a cylinder.
+        
+        Args:
+            position (tuple): XYZ coordinates of base centre. Defaults to origin
+            radius (float): Radius of cylinder. Defaults to 0.5
+            height (float): Height of cylinder. Defaults to 1.0
+            segments (int): Number of segments around circumference. Defaults to 32
+            colour (tuple): RGB colour values. Defaults to white
+            wireframe_colour (tuple): RGB colour values. Defaults to white
+            show_body (bool): Whether to show the body of the cylinder
+            show_wireframe (bool): Whether to show the wireframe of the cylinder
+        """
+        shapes = []
+        if show_body:
+            shapes.append(Shapes.cylinder_body(position, radius, height, segments, colour))
+        if show_wireframe:
+            shapes.append(Shapes.cylinder_wireframe(position, radius, height, segments, wireframe_colour))
+        return shapes
 
     @staticmethod
-    def cylinder(position=(0,0,0), radius=0.5, height=1.0, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR):
+    def cylinder_body(position=(0,0,0), radius=0.5, height=1.0, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR):
         """Create a cylinder.
         
         Args:
@@ -634,17 +750,17 @@ class Shapes:
             i4 = (i * 2 + 3) % (segments * 2 + 2)
             indices.extend([i1, i2, i3, i2, i4, i3])
 
+        # Cylinder body
         cylinder = Shape(GL_TRIANGLES, vertices, indices)
-        bottom = Shapes.circle(position=(0,0,0), radius=radius, segments=segments, colour=colour).transform(rotate=(np.pi,0,0))
-        top = Shapes.circle(position=(0,0,1), radius=radius, segments=segments, colour=colour)
+        # Bottom and top circle bodies + wireframes
+        bottom = Shapes.circle_body(position=(0,0,0), radius=radius, segments=segments, colour=colour).transform(rotate=(np.pi,0,0))
+        top = Shapes.circle_body(position=(0,0,1), radius=radius, segments=segments, colour=colour)
+        body = cylinder + bottom + top
         # Transform to position
         if position != (0,0,0):
-            cylinder.transform(translate=position)
-            bottom.transform(translate=position)
-            top.transform(translate=position)
-        return cylinder + bottom + top
+            body.transform(translate=position)
+        return body
     
-
     @staticmethod
     def cylinder_wireframe(position=(0,0,0), radius=0.5, height=1.0, segments=DEFAULT_SEGMENTS, colour=DEFAULT_WIREFRAME_COLOUR):
         """Create a cylinder wireframe.
@@ -664,7 +780,31 @@ class Shapes:
         return bottom + top
     
     @staticmethod
-    def cone(position=(0,0,0), radius=0.5, height=1.0, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR):
+    def cone(position=(0,0,0), radius=0.5, height=1.0, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
+        """Create a cone.
+        
+        Args:
+            position (tuple): XYZ coordinates of base centre. Defaults to origin
+            radius (float): Radius of cone base. Defaults to 0.5
+            height (float): Height of cone. Defaults to 1.0
+            segments (int): Number of segments around base circumference. Defaults to 32
+            colour (tuple): RGB colour values. Defaults to white
+            wireframe_colour (tuple): RGB colour values. Defaults to white
+            show_body (bool): Whether to show the body of the cone
+            show_wireframe (bool): Whether to show the wireframe of the cone
+
+        Returns:
+            Shape: Cone shape
+        """
+        shapes = []
+        if show_body:
+            shapes.append(Shapes.cone_body(position, radius, height, segments, colour))
+        if show_wireframe:
+            shapes.append(Shapes.cone_wireframe(position, radius, segments, wireframe_colour))
+        return shapes
+            
+    @staticmethod
+    def cone_body(position=(0,0,0), radius=0.5, height=1.0, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR):
         """Create a cone.
         
         Args:
@@ -705,12 +845,12 @@ class Shapes:
 
         cone = Shape(GL_TRIANGLES, vertices, indices)
         # Create bottom circle
-        base_circle = Shapes.circle(position=(0,0,0), radius=0.5, segments=segments, colour=colour).transform(rotate=(np.pi,0,0))
+        base_circle = Shapes.circle_body(position=(0,0,0), radius=0.5, segments=segments, colour=colour).transform(rotate=(np.pi,0,0))
+        body = cone + base_circle
         # Transform to position
         if position != (0,0,0):
-            cone.transform(translate=position)
-            base_circle.transform(translate=position)
-        return cone + base_circle
+            body.transform(translate=position)
+        return body
 
     @staticmethod
     def cone_wireframe(position=(0,0,0), radius=0.5, segments=DEFAULT_SEGMENTS, colour=DEFAULT_WIREFRAME_COLOUR):
@@ -1019,7 +1159,7 @@ class Shapes:
     ###########  MULTIPLE GEOMETRIES  #########################################
     
     @staticmethod
-    def beam(p0, p1, width, height, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR):
+    def beam(p0, p1, width, height, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
         """Create a rectangular beam between two points.
         
         Args:
@@ -1029,7 +1169,9 @@ class Shapes:
             height (float): Height of beam cross-section
             colour (tuple): RGB colour values for filled shape
             wireframe_colour (tuple): RGB colour values for wireframe. Defaults to white
-        
+            show_body (bool): Whether to show the body of the beam
+            show_wireframe (bool): Whether to show the wireframe of the beam
+
         Returns:
             list[Shape]: [Filled beam shape, Wireframe shape]
         """
@@ -1044,17 +1186,19 @@ class Shapes:
         dimensions = (width, height) if direction[0] == 0 and direction[1] == 0 else (height, width) # width & height get swapped if beam is vertical
         translation, rotation, scale = Shapes._calculate_transform(p0, p1, dimensions)
         # Create body and wireframe using cube, offset by 0.5 in z-direction, and transform to between p0 and p1
-        body = Shapes.cube(colour=colour) \
-            .transform(translate=(0, 0, 0.5)) \
-            .transform(translation, rotation, scale)
-        wireframe = Shapes.cube_wireframe(colour=wireframe_colour) \
-            .transform(translate=(0, 0, 0.5)) \
-            .transform(translation, rotation, scale)
+        if show_body:
+            body = Shapes.cube_body(colour=colour) \
+                .transform(translate=(0, 0, 0.5)) \
+                .transform(translation, rotation, scale)
+        if show_wireframe:
+            wireframe = Shapes.cube_wireframe(colour=wireframe_colour) \
+                .transform(translate=(0, 0, 0.5)) \
+                .transform(translation, rotation, scale)
         
         return [body, wireframe]
             
     @staticmethod
-    def arrow(p0, p1, dimensions=DEFAULT_ARROW_DIMENSIONS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, segments=DEFAULT_SEGMENTS):
+    def arrow(p0, p1, dimensions=DEFAULT_ARROW_DIMENSIONS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, segments=DEFAULT_SEGMENTS, show_body=True, show_wireframe=True):
         """Create a 3D arrow from p0 to p1.
         
         Args:
@@ -1064,7 +1208,9 @@ class Shapes:
             colour (tuple): RGB colour values for filled shape
             wireframe_colour (tuple): RGB colour values for wireframe. Defaults to white
             segments (int): Number of segments for circular parts. Defaults to 16
-        
+            show_body (bool): Whether to show the body of the arrow
+            show_wireframe (bool): Whether to show the wireframe of the arrow
+
         Returns:
             list[Shape]: [Filled arrow shape, Wireframe shape]
         """
@@ -1084,20 +1230,23 @@ class Shapes:
         translation_head, rotation_head, scale_head = Shapes._calculate_transform(
             pHead, p1, (dimensions.head_radius, dimensions.head_radius))
 
-        # Create shaft (cylinder)
-        shaft = Shapes.cylinder(segments=segments, colour=colour) \
-            .transform(translation_shaft, rotation_shaft, scale_shaft)
-        # Create arrowhead (cone)
-        head = Shapes.cone(segments=segments, colour=colour) \
-            .transform(translation_head, rotation_head, scale_head)
-        body = shaft + head
-        # Create shaft (cylinder)
-        shaft_wireframe = Shapes.cylinder_wireframe(segments=segments, colour=wireframe_colour) \
-            .transform(translation_shaft, rotation_shaft, scale_shaft)
-        # Create arrowhead (cone)
-        head_wireframe = Shapes.cone_wireframe(segments=segments, colour=wireframe_colour) \
-            .transform(translation_head, rotation_head, scale_head)
-        wireframe = shaft_wireframe + head_wireframe
+        if show_body:
+            # Create shaft (cylinder)
+            shaft = Shapes.cylinder_body(segments=segments, colour=colour) \
+                .transform(translation_shaft, rotation_shaft, scale_shaft)
+            # Create arrowhead (cone)
+            head = Shapes.cone_body(segments=segments, colour=colour) \
+                .transform(translation_head, rotation_head, scale_head)
+            body = shaft + head
+            
+        if show_wireframe:
+            # Create shaft (cylinder)
+            shaft_wireframe = Shapes.cylinder_wireframe(segments=segments, colour=wireframe_colour) \
+                .transform(translation_shaft, rotation_shaft, scale_shaft)
+            # Create arrowhead (cone)
+            head_wireframe = Shapes.cone_wireframe(segments=segments, colour=wireframe_colour) \
+                .transform(translation_head, rotation_head, scale_head)
+            wireframe = shaft_wireframe + head_wireframe
         return [body, wireframe]
     
     @staticmethod
@@ -1124,14 +1273,12 @@ class Shapes:
         ObjectContainer
             Collection containing 'body' and 'wireframe' objects
         """
-                
-        x_body, x_wireframe = Shapes.arrow((0,0,0), (size,0,0), arrow_dimensions, (1,0,0), wireframe_colour, segments)
-        y_body, y_wireframe = Shapes.arrow((0,0,0), (0,size,0), arrow_dimensions, (0,1,0), wireframe_colour, segments)
-        z_body, z_wireframe = Shapes.arrow((0,0,0), (0,0,size), arrow_dimensions, (0,0,1), wireframe_colour, segments)  
-        origin_shape = Shapes.sphere(position=(0,0,0), radius=origin_radius, subdivisions=subdivisions, colour=origin_colour)
-        body = x_body + y_body + z_body + origin_shape
-        wireframe = x_wireframe + y_wireframe + z_wireframe
-        return [body, wireframe]
+        return Shapes.combine([
+            Shapes.arrow((0,0,0), (size,0,0), arrow_dimensions, (1,0,0), wireframe_colour, segments),
+            Shapes.arrow((0,0,0), (0,size,0), arrow_dimensions, (0,1,0), wireframe_colour, segments),
+            Shapes.arrow((0,0,0), (0,0,size), arrow_dimensions, (0,0,1), wireframe_colour, segments),
+            Shapes.sphere(position=(0,0,0), radius=origin_radius, subdivisions=subdivisions, colour=origin_colour)
+        ])
 
     @staticmethod
     def axis_ticks(size=5.0, tick_params=DEFAULT_AXIS_TICKS):

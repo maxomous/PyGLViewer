@@ -23,7 +23,7 @@ class ObjectSelection:
         
         self.cursor_point = self.renderer.add_object(selectable=False)
         self.selection_target = self.renderer.add_object(selectable=False)
-        self.selected_objects = []
+        self.selected_objects_containers = []
         
     def process_input(self):
         # Always update selection targets
@@ -43,23 +43,27 @@ class ObjectSelection:
         
         # Handle object selection on left click
         if self.mouse.left_click:  # Left mouse click
-            picked_object = self.get_object_under_cursor(self.mouse.position)
+            picked_object_container = self.get_object_container_under_cursor(self.mouse.position)
             
             # Clear previous selection if not holding shift
             if not self.mouse.shift_down:
-                for obj in self.renderer.objects:
-                    obj.selected = False
+                for container in self.renderer.object_containers:
+                    for obj in container._objects:
+                        obj.selected = False
             
             # Select the picked object
-            if picked_object:
-                picked_object.toggle_selection()
+            if picked_object_container:
+                for obj in picked_object_container._objects:
+                    obj.toggle_selection()
         
             # Get selected objects to set the start positions
-            self.selected_objects = self.renderer.get_selected_objects() 
+            self.selected_objects_containers = self.renderer.get_selected_object_containers() 
             # Set initial object positions
             if not hasattr(self, 'object_start_pos') or self.object_start_pos is None:
-                self.object_start_pos = [obj.get_translate().copy() for i, obj in enumerate(self.selected_objects)] if len(self.selected_objects) > 0 else None
-
+                self.object_start_pos = []
+                for container in self.selected_objects_containers:
+                    self.object_start_pos.append([obj.get_translate().copy() for obj in container._objects])
+                    
     def process_drag(self):
         '''Drag selected objects with left mouse button pressed.'''
         if not self.settings.drag_objects:
@@ -74,13 +78,14 @@ class ObjectSelection:
             mouse_delta_y = self.mouse.screen_to_world(-self.mouse.click_position_delta[1])
             mouse_delta = np.array([mouse_delta_x, mouse_delta_y, 0.0])
             
-            if not hasattr(self, 'object_start_pos') or self.object_start_pos is None:
+            if not hasattr(self, 'object_start_pos') or self.object_start_pos is None or self.object_start_pos == []:
                 return
             
-            for i, obj in enumerate(self.selected_objects):
-                # Set new object transform
-                translate = self.object_start_pos[i] + mouse_delta
-                obj.set_translate(translate)
+            for i, container in enumerate(self.selected_objects_containers):
+                for j, obj in enumerate(container._objects):
+                    # Set new object transform
+                    translate = self.object_start_pos[i][j] + mouse_delta
+                    obj.set_translate(translate)
                 
     def process_release(self):
         '''Release left mouse button.'''
@@ -96,24 +101,22 @@ class ObjectSelection:
         # Draw target on selected objects
         selected_geometry = Shapes.blank(GL_LINES)
         # Get object under cursor
-        if selected_objects := self.renderer.get_selected_objects():
-            # Create a single geometry with multiple rectangles to indicate each selected object
-            for i, obj in enumerate(selected_objects):
-                if bounds := obj.get_bounds():
-                    mid_point = obj.get_mid_point()
-                    # Get offset for target size
-                    offset = self.mouse.screen_to_world(10)
-                    if obj.draw_type == GL_POINTS:
-                        offset += self.mouse.screen_to_world(obj.point_size)
-                        
-                    # Get size of target
-                    size = (bounds['max'] - bounds['min']) + np.array([offset, offset, offset])
-                    edge_length = self.camera.distance * self.target_edge_length
-                    selected_geometry += Shapes.target(mid_point, size, edge_length, Colour.WHITE) 
+        for container in self.renderer.get_selected_object_containers():
+            bounds = container.get_bounds()
+            mid_point = container.get_mid_point()
+            size = (bounds['max'] - bounds['min'])
+
+            # Get offset for target size
+            offset = self.mouse.screen_to_world(10)
+            if container._objects[0].draw_type == GL_POINTS:
+                offset += self.mouse.screen_to_world(container._objects[0].point_size)
+                
+            edge_length = self.camera.distance * self.target_edge_length
+            selected_geometry += Shapes.target(mid_point, size + np.array([offset, offset, offset]), edge_length, Colour.WHITE) 
 
         self.selection_target.set_shape(selected_geometry)
         
-    def get_object_under_cursor(self, cursor_pos):
+    def get_object_container_under_cursor(self, cursor_pos):
         """Determine which object is under the cursor"""
         cursor_world_pos = self.mouse.project_screen_to_world(cursor_pos)
         self.renderer.cursor_pos = cursor_world_pos
@@ -122,10 +125,11 @@ class ObjectSelection:
         
         # Test intersection with objects
         valid_hits = []
-        for obj in self.renderer.objects:
-            hit, distance = self.intersect_cursor(obj, cursor_world_pos, scale_factor, min_distance=self.min_selection_distance)
-            if hit and distance > 0 and distance < float('inf'):
-                valid_hits.append((distance, obj))
+        for container in self.renderer.object_containers:
+            for obj in container._objects:
+                hit, distance = self.intersect_cursor(obj, cursor_world_pos, scale_factor, min_distance=self.min_selection_distance)
+                if hit and distance > 0 and distance < float('inf'):
+                    valid_hits.append((distance, container))
         
         if not valid_hits:
             return None

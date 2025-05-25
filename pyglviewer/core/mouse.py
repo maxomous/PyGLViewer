@@ -232,6 +232,8 @@ class Mouse:
         Returns:
             float: Value in world space
         """
+        if self.app.window_height == 0:
+            return 0
         world_scale = value * self.app.camera.distance / self.app.window_height
         
         if dimension > 1:

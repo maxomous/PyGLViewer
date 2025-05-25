@@ -66,7 +66,7 @@ class Renderer:
     def __init__(self, config, max_static_vertices, max_static_indices, max_dynamic_vertices, max_dynamic_indices):
         """Initialize renderer with default settings and OpenGL state."""
         self.lights = []
-        self.objects = []
+        self.object_containers = []
         # Config file
         config.add("background_colour", [0.21987, 0.34362, 0.40084], "Background colour")
         self.config = config
@@ -89,9 +89,15 @@ class Renderer:
         self.batch_renderer = BatchRenderer(max_static_vertices, max_static_indices,
                                             max_dynamic_vertices, max_dynamic_indices)
         
-    def get_selected_objects(self):
+    def get_selected_object_containers(self):
         """Get all selected objects."""
-        return [obj for obj in self.objects if getattr(obj, 'selected', False)]
+        selected_containers = []
+        for container in self.object_containers:
+            for obj in container._objects:
+                if getattr(obj, 'selected', False):
+                    selected_containers.append(container)
+        # Remove duplicates
+        return list(set(selected_containers))
     
     def add_lights(self, lights):
         """Add multiple light sources to the scene.
@@ -115,9 +121,10 @@ class Renderer:
         # Clear batch renderer buffers (if update is required)
         self.batch_renderer.clear()
         # Submit all objects to the batch renderer 
-        for obj in self.objects:
-            # Add objects to appropriate buffer based on their type (if update is required)
-            self.batch_renderer.add_object_to_batch(obj)
+        for container in self.object_containers:
+            for obj in container._objects:
+                # Add objects to appropriate buffer based on their type (if update is required)
+                self.batch_renderer.add_object_to_batch(obj)
         
     def draw(self, view_matrix, projection_matrix, camera_position, lights):
         """Render all objects in the scene, using batching"""

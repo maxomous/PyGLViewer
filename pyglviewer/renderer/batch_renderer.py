@@ -158,7 +158,7 @@ class BatchBuffer:
         # Add new batch if it doesn't exist
         if batch_key not in self.batches:
             self.batches[batch_key] = []
-        print(f'Batch key: {batch_key}')
+        # print(f'Batch key: {batch_key}')
         # Add object to batch
         self.batches[batch_key].append(render_object)
         # self.needs_update = True
@@ -173,7 +173,7 @@ class BatchBuffer:
         
         # First pass: collect all vertex and index data
         for batch_data in self.batches.values():
-            print(f'n objects: {len(batch_data)}')
+            # print(f'n objects: {len(batch_data)}')
             for obj in batch_data:
                 if obj.vertex_data is None or obj.index_data is None:
                     continue
@@ -196,7 +196,7 @@ class BatchBuffer:
         vertex_count = len(vertex_data)
         index_count = len(index_data)
         
-        print(f"Vertex count: {vertex_count}, Index count: {index_count}")
+        # print(f"Vertex count: {vertex_count}, Index count: {index_count}")
         if vertex_count > self.max_vertices or index_count > self.max_indices:
             # Calculate new sizes with growth factor
             new_vertex_count = max(self.max_vertices, int(vertex_count * self.growth_factor))
