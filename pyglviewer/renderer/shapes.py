@@ -61,6 +61,7 @@ class Shape:
     Vertices are stored in their transformed state.
 
     Attributes:
+        draw_type (int): OpenGL draw type (GL_TRIANGLES, GL_LINES, etc.)
         vertices (list[Vertex]): List of vertices defining the shape
         indices (np.array): Indices of the vertices to render
     """
@@ -202,6 +203,73 @@ class Shape:
             self.indices.copy(),
             self.shader
         )
+
+class ShapeGroup:
+    """
+    Container for a group of shapes.
+    """
+    def __init__(self, shapes: list[Shape] | Shape):
+        if isinstance(shapes, Shape):
+            self.shapes = [shapes]
+        else:
+            self.shapes = shapes
+
+    def transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
+        for shape in self.shapes:
+            shape.transform(translate, rotate, scale)
+        return self
+        
+    def __add__(self, other):
+        """Combine ShapeGroups, adding corresponding shapes with matching draw types.
+        
+        Args:
+            other: ShapeGroup or Shape to add to this group
+            
+        Returns:
+            ShapeGroup: New group with combined shapes
+            
+        Raises:
+            TypeError: If other is not a Shape or ShapeGroup
+        """
+        if isinstance(other, ShapeGroup):
+            # Create new list to store combined shapes
+            combined_shapes = self.shapes.copy()
+            
+            # For each shape in other, try to find and combine with matching shape
+            for other_shape in other.shapes:
+                matched = False
+                for i, self_shape in enumerate(combined_shapes):
+                    if (self_shape.draw_type == other_shape.draw_type and self_shape.shader == other_shape.shader):
+                        # Combine matching shapes
+                        combined_shapes[i] = self_shape + other_shape
+                        matched = True
+                        break
+                if not matched:
+                    # If no match found, append the shape
+                    combined_shapes.append(other_shape)
+                    
+            return ShapeGroup(combined_shapes)
+            
+        elif isinstance(other, Shape):
+            # Convert Shape to ShapeGroup and use the same logic
+            return self + ShapeGroup([other])
+        else:
+            raise TypeError("Can only add Shape or ShapeGroup to ShapeGroup")
+        
+    # Add iteration support
+    def __iter__(self):
+        return iter(self.shapes)
+    
+    def __len__(self):
+        return len(self.shapes)
+    
+    def __getitem__(self, index):
+        return self.shapes[index]
+    
+    def __setitem__(self, index, value):
+        self.shapes[index] = value
+    
+
 
 class Shapes:
     
@@ -373,6 +441,7 @@ class Shapes:
         return Shape(GL_LINES, vertices, indices)
 
     @staticmethod
+    def triangle(p1, p2, p3, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
     def triangle(p1, p2, p3, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
         """Create a filled triangle from three points.
         
@@ -577,7 +646,9 @@ class Shapes:
             indices.extend([i, (i + 1) % segments])
         return Shape(GL_LINES, vertices, indices)
 
+
     @staticmethod
+    def cube(position=(0,0,0), size=1.0, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
     def cube(position=(0,0,0), size=1.0, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
         """Create a cube.
         
@@ -722,6 +793,30 @@ class Shapes:
             height (float): Height of cylinder. Defaults to 1.0
             segments (int): Number of segments around circumference. Defaults to 32
             colour (tuple): RGB colour values. Defaults to white
+            wireframe_colour (tuple): RGB colour values for wireframe. Defaults to white
+            show_body (bool): Whether to show filled shape. Defaults to True
+            show_wireframe (bool): Whether to show wireframe. Defaults to True
+        
+        Returns:
+            Shape: Cylinder shape
+        """
+        shapes = []
+        if show_body:
+            shapes.append(Shapes.cylinder_body(position, radius, height, segments, colour))
+        if show_wireframe:
+            shapes.append(Shapes.cylinder_wireframe(position, radius, height, segments, wireframe_colour))  
+        return ShapeGroup(shapes)   
+
+    @staticmethod
+    def cylinder_body(position=(0,0,0), radius=0.5, height=1.0, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR):
+        """Create a filled cylinder.
+        
+        Args:
+            position (tuple): XYZ coordinates of base centre. Defaults to origin
+            radius (float): Radius of cylinder. Defaults to 0.5
+            height (float): Height of cylinder. Defaults to 1.0
+            segments (int): Number of segments around circumference. Defaults to 32
+            colour (tuple): RGB colour values. Defaults to white
         
         Returns:
             Shape: Cylinder shape
@@ -778,6 +873,7 @@ class Shapes:
         top_position = np.array(position) + np.array([0,0,height])
         top = Shapes.circle_wireframe(position=top_position, radius=radius, segments=segments, colour=colour)
         return bottom + top
+    
     
     @staticmethod
     def cone(position=(0,0,0), radius=0.5, height=1.0, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
@@ -1160,6 +1256,7 @@ class Shapes:
     
     @staticmethod
     def beam(p0, p1, width, height, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
+    def beam(p0, p1, width, height, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
         """Create a rectangular beam between two points.
         
         Args:
@@ -1198,6 +1295,7 @@ class Shapes:
         return [body, wireframe]
             
     @staticmethod
+    def arrow(p0, p1, dimensions=DEFAULT_ARROW_DIMENSIONS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, segments=DEFAULT_SEGMENTS, show_body=True, show_wireframe=True):
     def arrow(p0, p1, dimensions=DEFAULT_ARROW_DIMENSIONS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, segments=DEFAULT_SEGMENTS, show_body=True, show_wireframe=True):
         """Create a 3D arrow from p0 to p1.
         
@@ -1252,22 +1350,31 @@ class Shapes:
     @staticmethod
     def axis(size=1.0, origin_radius=0.035, arrow_dimensions=DEFAULT_ARROW_DIMENSIONS,
                  origin_colour=Colour.BLACK, wireframe_colour=DEFAULT_WIREFRAME_COLOUR,
-                 segments=DEFAULT_SEGMENTS, subdivisions=DEFAULT_SUBDIVISIONS):
+                 segments=DEFAULT_SEGMENTS, subdivisions=DEFAULT_SUBDIVISIONS, show_body=True, show_wireframe=True):
         """Add coordinate axis arrows.
         
         Parameters
         ----------
         size : float, optional
             Length of axis arrows (default: 1.0)
-        arrow_dimensions : ArrowDimensions, optional
-            Arrow dimensions
         origin_radius : float, optional
             Radius of origin sphere (default: 0.035)
+        arrow_dimensions : ArrowDimensions, optional
+            Arrow dimensions
         origin_colour : Colour, optional
             Colour of origin sphere (default: BLACK)
-        params : RenderParams, optional
-            Rendering parameters
+        wireframe_colour : Colour, optional
+            Colour of wireframe (default: BLACK)
+        segments : int, optional
+            Number of segments for circular parts. Defaults to 16
+        subdivisions : int, optional
+            Number of subdivisions for sphere. Defaults to 4
+        show_body : bool, optional
+            Whether to show body of axis arrows. Defaults to True
+        show_wireframe : bool, optional
+            Whether to show wireframe of axis arrows. Defaults to True
         
+
         Returns
         -------
         ObjectContainer
@@ -1290,7 +1397,7 @@ class Shapes:
             Axis size (default: 5.0)
         tick_params : list, optional
             List of tick parameters for different detail levels
-            Each dict contains: increment, tick_size, line_width (overrides RenderParams.line_width), tick_colour
+            Each dict contains: increment, tick_size, line_width (overrides RenderParams.line_width), tick_colour TODO: add line width
 
         Returns
         -------
@@ -1321,7 +1428,7 @@ class Shapes:
             if tick_shape is not None:
                 shapes.append(tick_shape)
                 
-        return shapes
+        return ShapeGroup(shapes)
     
     @staticmethod
     def _calculate_transform(p0, p1, cross_section=(1, 1)):

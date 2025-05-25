@@ -102,7 +102,7 @@ class ExampleApplication(Application):
         arrow_dimensions = ArrowDimensions(shaft_radius=0.2, head_radius=0.35, head_length=0.3)
         self.renderer.add_object(static=True).set_shape(Shapes.arrow(p0=(-2.4, 0.6, 0.25), p1=(-1.6, 1.4, 0.75), dimensions=arrow_dimensions, colour=Colour.PURPLE))
         
-        # Basic shapes - wireframe only
+        # Basic shapes - wireframe
         self.renderer.add_object(static=True).set_shape(Shapes.triangle(p1=(0, 4.433, 0), p2=(-0.5, 3.567, 0), p3=(0.5, 3.567, 0), wireframe_colour=Colour.YELLOW, show_body=False))
         self.renderer.add_object(static=True).set_shape(Shapes.rectangle(position=(2, 4, 0), width=1, height=1, wireframe_colour=Colour.GREEN, show_body=False))
         self.renderer.add_object(static=True).set_shape(Shapes.circle(position=(4, 4, 0), radius=0.5, wireframe_colour=Colour.BLUE, show_body=False))
@@ -148,7 +148,6 @@ class ExampleApplication(Application):
             - Multiple geometries can be summed ('+') together.
             - Geometries can be transformed individually and/or together 
                 using the 'transform()' method as many times as required.
-        - Transform an object with object.set_transform_matrix() once per frame.
 
         Note: Only update geometry if it actually changes, 
             update the Object transform if only translating, rotating or scaling.
