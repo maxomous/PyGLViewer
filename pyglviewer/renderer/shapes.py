@@ -1190,16 +1190,19 @@ class Shapes:
         dimensions = (width, height) if direction[0] == 0 and direction[1] == 0 else (height, width) # width & height get swapped if beam is vertical
         translation, rotation, scale = Shapes._calculate_transform(p0, p1, dimensions)
         # Create body and wireframe using cube, offset by 0.5 in z-direction, and transform to between p0 and p1
+        shapes = []
         if show_body:
             body = Shapes.cube_body(colour=colour) \
                 .transform(translate=(0, 0, 0.5)) \
                 .transform(translation, rotation, scale)
+            shapes.append(body)
         if show_wireframe:
             wireframe = Shapes.cube_wireframe(colour=wireframe_colour) \
                 .transform(translate=(0, 0, 0.5)) \
                 .transform(translation, rotation, scale)
+            shapes.append(wireframe)
         
-        return [body, wireframe]
+        return shapes
             
     @staticmethod
     def arrow(p0, p1, dimensions=DEFAULT_ARROW_DIMENSIONS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, segments=DEFAULT_SEGMENTS, show_body=True, show_wireframe=True):
@@ -1234,6 +1237,7 @@ class Shapes:
         translation_head, rotation_head, scale_head = Shapes._calculate_transform(
             pHead, p1, (dimensions.head_radius, dimensions.head_radius))
 
+        shapes = []
         if show_body:
             # Create shaft (cylinder)
             shaft = Shapes.cylinder_body(segments=segments, colour=colour) \
@@ -1242,7 +1246,7 @@ class Shapes:
             head = Shapes.cone_body(segments=segments, colour=colour) \
                 .transform(translation_head, rotation_head, scale_head)
             body = shaft + head
-            
+            shapes.append(body)
         if show_wireframe:
             # Create shaft (cylinder)
             shaft_wireframe = Shapes.cylinder_wireframe(segments=segments, colour=wireframe_colour) \
@@ -1251,7 +1255,8 @@ class Shapes:
             head_wireframe = Shapes.cone_wireframe(segments=segments, colour=wireframe_colour) \
                 .transform(translation_head, rotation_head, scale_head)
             wireframe = shaft_wireframe + head_wireframe
-        return [body, wireframe]
+            shapes.append(wireframe)
+        return shapes
     
     @staticmethod
     def axis(size=1.0, origin_radius=0.035, arrow_dimensions=DEFAULT_ARROW_DIMENSIONS,
