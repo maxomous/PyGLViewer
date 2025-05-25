@@ -4,17 +4,17 @@ from pyglviewer.core.application import Application
 from pyglviewer.core.object_selection import SelectionSettings
 from pyglviewer.renderer.objects import ObjectContainer
 from pyglviewer.renderer.shader import PointShape
+from pyglviewer.renderer.shapes import Shapes
 from pyglviewer.utils.colour import Colour
 from pyglviewer.utils.config import Config
 from pyglviewer.utils.timer import Timer
 from pyglviewer.utils.transform import Transform
-from pyglviewer.renderer.renderer import RenderParams
-
 
 class Example2DApplication(Application):
     
-    GRID_SIZE = 25
+    GRID_SIZE = 25 # units
     GRID_TRANSLATE = (0, 0, -0.002)  # Move grid slightly below z=0 to avoid z-fighting
+    AXIS_SIZE = 100 # px
     
     def init(self):
         """ Initialise the application. Create the UI, variables, lighting and geometry. """
@@ -30,17 +30,18 @@ class Example2DApplication(Application):
             colour=Colour.WHITE, 
             static=True
         )
-        
         # Create grid params with translation
-        grid_params = RenderParams(
-            translate=self.GRID_TRANSLATE,
-            scale=(1, 1, 1),
-            selectable=False
-        )
+        self.grid = self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.grid(size=self.GRID_SIZE*2, increment=1, colour=Colour.WHITE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))  
+        self.axis_ticks = self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.axis_ticks(size=self.GRID_SIZE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.axis = self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.axis(size=1))
         
-        self.renderer.add_axis_ticks(size=self.GRID_SIZE, params=grid_params)
-        self.grid = self.renderer.add_grid(self.GRID_SIZE, params=grid_params)
-                
+        # Transparent circle
+        self.renderer.add_object(static=True, alpha=0.5).set_shape(Shapes.circle(position=(4, 1.5, 0), radius=0.1, colour=Colour.YELLOW)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        # Rectangle
+        self.renderer.add_object(static=True, alpha=0.5).set_shape(Shapes.rectangle(position=(4, 1.5, 0), width=0.1, height=0.1, colour=Colour.YELLOW)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        # Triangle
+        self.renderer.add_object(static=True, alpha=0.5).set_shape(Shapes.triangle(p1=(4, 1.5, 0), p2=(4, 1.5, 0), p3=(4, 1.5, 0), colour=Colour.YELLOW)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        
         # Example sine wave scatter plot
         x1 = np.linspace(-self.GRID_SIZE, self.GRID_SIZE, 500)
         y1 = np.sin(x1)
@@ -48,61 +49,23 @@ class Example2DApplication(Application):
         y2 = np.sin(x2)
         
         # Plot lines with custom widths
-        self.renderer.plot(
-            x=x1, y=2*y1, 
-            colour=Colour.CYAN, 
-            params=RenderParams(line_width=3.0)
-        )
-        self.renderer.plot(
-            x=x1, y=-0.5*y1, 
-            colour=Colour.RED, 
-            params=RenderParams(line_width=3.0)
-        )
+        self.renderer.add_object(static=True, selectable=False, line_width=1.0).set_shape(Shapes.plot(x=x1, y=2*y1, colour=Colour.CYAN)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.renderer.add_object(static=True, selectable=False, line_width=3.0).set_shape(Shapes.plot(x=x1, y=-0.5*y1, colour=Colour.RED)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
         
         # Scatter plots with custom point sizes and shapes
-        self.renderer.scatter(
-            x=x2, y=-1.5*y2, 
-            colour=Colour.GREEN, 
-            params=RenderParams(point_size=12.0, point_shape=PointShape.CIRCLE)
-        )
-        self.renderer.scatter(
-            x=x2, y=1*y2, 
-            colour=Colour.ORANGE, 
-            params=RenderParams(point_size=12.0, point_shape=PointShape.TRIANGLE)
-        )
+        self.renderer.add_object(static=True, selectable=False, point_size=12.0, point_shape=PointShape.CIRCLE).set_shape(Shapes.scatter(x=x2, y=-1.5*y2, colour=Colour.GREEN)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.renderer.add_object(static=True, selectable=False, point_size=12.0, point_shape=PointShape.TRIANGLE).set_shape(Shapes.scatter(x=x2, y=1*y2, colour=Colour.ORANGE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
         
         # Add circles with custom rendering parameters
-        circle_params = RenderParams(show_wireframe=False)
-        self.renderer.add_circle(
-            position=(3, 2, 0),
-            radius=0.2, 
-            colour=Colour.RED, 
-            params=circle_params
-        )
-        self.renderer.add_circle(
-            position=(4, 2, 0),
-            radius=0.2, 
-            colour=Colour.GREEN, 
-            params=circle_params
-        )
-        self.renderer.add_circle(
-            position=(5, 2, 0),
-            radius=0.2, 
-            colour=Colour.BLUE, 
-            params=circle_params
-        )
-        
-        # Transparent circle
-        transparent_circle_params = RenderParams(show_wireframe=False, alpha=0.5)
-        self.renderer.add_circle(
-            position=(4, 1.5, 0),
-            radius=3, 
-            colour=Colour.YELLOW, 
-            params=transparent_circle_params
-        )
+        self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.circle(position=(3, 2, 0), radius=0.2, colour=Colour.RED)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.circle(position=(4, 2, 0), radius=0.2, colour=Colour.GREEN)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.circle(position=(5, 2, 0), radius=0.2, colour=Colour.BLUE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
         
     def update_scene(self):
         """ update the scene """
+        # Update axis size
+        self.axis.set_transform_matrix(Transform(scale=self.mouse.screen_to_world(self.AXIS_SIZE, dimension=3)))
+
         # Update axis size
         if self.camera.distance > 2.5:
             self.grid.set_transform_matrix(Transform(scale=(10, 10, 1))) # TODO: Only update on change

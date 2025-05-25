@@ -20,6 +20,10 @@ from pyglviewer.utils.transform import Transform
 
 class ExampleApplication(Application):
     
+    GRID_SIZE = 50
+    GRID_TRANSLATE = (0, 0, -0.005) # Move grid slightly below z=0 to avoid z-fighting
+    AXIS_SIZE = 100 # px
+    
     def init(self):
         """
         Initialise the application.
@@ -67,8 +71,6 @@ class ExampleApplication(Application):
         Shapes.DEFAULT_SEGMENTS = 32     # n segments in circle
         Shapes.DEFAULT_SUBDIVISIONS = 4  # n subdivisions in sphere
     
-        GRID_SIZE = 50
-        GRID_TRANSLATE = (0, 0, -0.005) # Move grid slightly below z=0 to avoid z-fighting
         # Text Rendering
         self.text_renderer.add_axis_labels(xlim=[-10, 10], ylim=[-10, 10], increment=2, colour=Colour.WHITE, static=True)
         
@@ -85,9 +87,9 @@ class ExampleApplication(Application):
   
          
         # Grid and axis
-        self.grid = self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.grid(size=GRID_SIZE*2, increment=1, colour=Colour.WHITE)).set_transform_matrix(Transform(translate=GRID_TRANSLATE))
-        self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.axis_ticks(size=GRID_SIZE)).set_transform_matrix(Transform(translate=GRID_TRANSLATE))
-        self.axis = self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.axis(size=10))
+        self.grid = self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.grid(size=self.GRID_SIZE*2, increment=1, colour=Colour.WHITE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.axis_ticks(size=self.GRID_SIZE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.axis = self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.axis(size=1))
         
         # Points with different shapes
         self.renderer.add_object(point_size=15, point_shape=PointShape.CIRCLE, static=True).set_shape(Shapes.point(position=(-4, 4, 0), colour=Colour.RED))
@@ -172,7 +174,7 @@ class ExampleApplication(Application):
         else:
             self.grid.set_transform_matrix(Transform(scale=(1, 1, 1)))
             
-        self.axis.set_transform_matrix(Transform(scale=self.mouse.screen_to_world(100, dimension=3)))
+        self.axis.set_transform_matrix(Transform(scale=self.mouse.screen_to_world(self.AXIS_SIZE, dimension=3)))
         
         # Text Rendering
         self.text_renderer.add_text('3D LABEL', (self.timer.oscillate_translation(limits=[-1.5, 1.5], speed=0.25), -0.5, 1), Colour.ORANGE, font='arial_rounded_mt_bold-medium')
