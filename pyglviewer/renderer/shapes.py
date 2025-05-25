@@ -204,72 +204,6 @@ class Shape:
             self.shader
         )
 
-class ShapeGroup:
-    """
-    Container for a group of shapes.
-    """
-    def __init__(self, shapes: list[Shape] | Shape):
-        if isinstance(shapes, Shape):
-            self.shapes = [shapes]
-        else:
-            self.shapes = shapes
-
-    def transform(self, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
-        for shape in self.shapes:
-            shape.transform(translate, rotate, scale)
-        return self
-        
-    def __add__(self, other):
-        """Combine ShapeGroups, adding corresponding shapes with matching draw types.
-        
-        Args:
-            other: ShapeGroup or Shape to add to this group
-            
-        Returns:
-            ShapeGroup: New group with combined shapes
-            
-        Raises:
-            TypeError: If other is not a Shape or ShapeGroup
-        """
-        if isinstance(other, ShapeGroup):
-            # Create new list to store combined shapes
-            combined_shapes = self.shapes.copy()
-            
-            # For each shape in other, try to find and combine with matching shape
-            for other_shape in other.shapes:
-                matched = False
-                for i, self_shape in enumerate(combined_shapes):
-                    if (self_shape.draw_type == other_shape.draw_type and self_shape.shader == other_shape.shader):
-                        # Combine matching shapes
-                        combined_shapes[i] = self_shape + other_shape
-                        matched = True
-                        break
-                if not matched:
-                    # If no match found, append the shape
-                    combined_shapes.append(other_shape)
-                    
-            return ShapeGroup(combined_shapes)
-            
-        elif isinstance(other, Shape):
-            # Convert Shape to ShapeGroup and use the same logic
-            return self + ShapeGroup([other])
-        else:
-            raise TypeError("Can only add Shape or ShapeGroup to ShapeGroup")
-        
-    # Add iteration support
-    def __iter__(self):
-        return iter(self.shapes)
-    
-    def __len__(self):
-        return len(self.shapes)
-    
-    def __getitem__(self, index):
-        return self.shapes[index]
-    
-    def __setitem__(self, index, value):
-        self.shapes[index] = value
-    
-
 
 class Shapes:
     
@@ -441,7 +375,6 @@ class Shapes:
         return Shape(GL_LINES, vertices, indices)
 
     @staticmethod
-    def triangle(p1, p2, p3, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
     def triangle(p1, p2, p3, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
         """Create a filled triangle from three points.
         
@@ -649,7 +582,6 @@ class Shapes:
 
     @staticmethod
     def cube(position=(0,0,0), size=1.0, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
-    def cube(position=(0,0,0), size=1.0, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
         """Create a cube.
         
         Args:
@@ -782,30 +714,6 @@ class Shapes:
         if show_wireframe:
             shapes.append(Shapes.cylinder_wireframe(position, radius, height, segments, wireframe_colour))
         return shapes
-
-    @staticmethod
-    def cylinder_body(position=(0,0,0), radius=0.5, height=1.0, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR):
-        """Create a cylinder.
-        
-        Args:
-            position (tuple): XYZ coordinates of base centre. Defaults to origin
-            radius (float): Radius of cylinder. Defaults to 0.5
-            height (float): Height of cylinder. Defaults to 1.0
-            segments (int): Number of segments around circumference. Defaults to 32
-            colour (tuple): RGB colour values. Defaults to white
-            wireframe_colour (tuple): RGB colour values for wireframe. Defaults to white
-            show_body (bool): Whether to show filled shape. Defaults to True
-            show_wireframe (bool): Whether to show wireframe. Defaults to True
-        
-        Returns:
-            Shape: Cylinder shape
-        """
-        shapes = []
-        if show_body:
-            shapes.append(Shapes.cylinder_body(position, radius, height, segments, colour))
-        if show_wireframe:
-            shapes.append(Shapes.cylinder_wireframe(position, radius, height, segments, wireframe_colour))  
-        return ShapeGroup(shapes)   
 
     @staticmethod
     def cylinder_body(position=(0,0,0), radius=0.5, height=1.0, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR):
@@ -1256,7 +1164,6 @@ class Shapes:
     
     @staticmethod
     def beam(p0, p1, width, height, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
-    def beam(p0, p1, width, height, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
         """Create a rectangular beam between two points.
         
         Args:
@@ -1295,7 +1202,6 @@ class Shapes:
         return [body, wireframe]
             
     @staticmethod
-    def arrow(p0, p1, dimensions=DEFAULT_ARROW_DIMENSIONS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, segments=DEFAULT_SEGMENTS, show_body=True, show_wireframe=True):
     def arrow(p0, p1, dimensions=DEFAULT_ARROW_DIMENSIONS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, segments=DEFAULT_SEGMENTS, show_body=True, show_wireframe=True):
         """Create a 3D arrow from p0 to p1.
         
@@ -1428,7 +1334,7 @@ class Shapes:
             if tick_shape is not None:
                 shapes.append(tick_shape)
                 
-        return ShapeGroup(shapes)
+        return shapes
     
     @staticmethod
     def _calculate_transform(p0, p1, cross_section=(1, 1)):
