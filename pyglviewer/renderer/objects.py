@@ -297,17 +297,17 @@ class ObjectContainer:
 
     # These functions are used to set the properties of each of the objects inside the container
     def set_point_size(self, point_size):
-        for obj in [self] + self.objects: obj._point_size = point_size
+        for obj in [self] + self._objects: obj._point_size = point_size
     def set_line_width(self, line_width):
-        for obj in [self] + self.objects: obj._line_width = line_width
+        for obj in [self] + self._objects: obj._line_width = line_width
     def set_point_shape(self, point_shape):
-        for obj in [self] + self.objects: obj._point_shape = point_shape
+        for obj in [self] + self._objects: obj._point_shape = point_shape
     def set_alpha(self, alpha):
-        for obj in [self] + self.objects: obj._alpha = alpha
+        for obj in [self] + self._objects: obj._alpha = alpha
     def set_static(self, static):
-        for obj in [self] + self.objects: obj._static = static
+        for obj in [self] + self._objects: obj._static = static
     def set_selectable(self, selectable):
-        for obj in [self] + self.objects: obj._selectable = selectable
+        for obj in [self] + self._objects: obj._selectable = selectable
         
     def set_shapes(self, shapes):
         # Convert single shape to list if needed
@@ -370,18 +370,18 @@ class ObjectContainer:
 #         objects : dict[str, Object]
 #             A dictionary of objects to manage.
 #         """
-#         self.objects = objects
+#         self._objects = objects
         
 #     def __getitem__(self, key: str) -> Object:
 #         """Retrieve an object by its key."""
-#         return self.objects[key]
+#         return self._objects[key]
         
 #     def __setitem__(self, key: str, value: Object):
 #         """Set an object in the collection by its key."""
-#         self.objects[key] = value
+#         self._objects[key] = value
         
 #     def set_transform_matrix(self, transform: Transform):
 #         """Apply a transformation to all objects in the collection."""
-#         for object in self.objects.values():
+#         for object in self._objects.values():
 #             object.set_transform_matrix(transform)
             
