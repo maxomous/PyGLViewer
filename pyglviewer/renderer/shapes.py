@@ -434,6 +434,62 @@ class Shapes:
         return Shapes.line(p1, p2, colour) + Shapes.line(p2, p3, colour) + Shapes.line(p3, p1, colour)
 
     @staticmethod
+    def quad(p1, p2, p3, p4, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
+        """Create a quadrilateral.
+        
+        Args:
+            p1 (tuple): First vertex XYZ coordinates
+            p2 (tuple): Second vertex XYZ coordinates
+            p3 (tuple): Third vertex XYZ coordinates
+            p4 (tuple): Fourth vertex XYZ coordinates
+            colour (tuple): RGB colour values
+            wireframe_colour (tuple): RGB colour values
+            show_body (bool): Whether to show the body of the quadrilateral
+            show_wireframe (bool): Whether to show the wireframe of the quadrilateral
+            
+        Returns:
+            Shape: Quadrilateral shape
+        """
+        shapes = []
+        if show_body:
+            shapes.append(Shapes.quad_body(p1, p2, p3, p4, colour))
+        if show_wireframe:
+            shapes.append(Shapes.quad_wireframe(p1, p2, p3, p4, wireframe_colour))
+        return shapes
+    
+    @staticmethod
+    def quad_body(p1, p2, p3, p4, colour=DEFAULT_FACE_COLOUR):
+        """Create a filled quadrilateral from four points.
+        
+        Args:
+            p1 (tuple): First vertex XYZ coordinates
+            p2 (tuple): Second vertex XYZ coordinates
+            p3 (tuple): Third vertex XYZ coordinates
+            p4 (tuple): Fourth vertex XYZ coordinates
+            colour (tuple): RGB colour values
+        
+        Returns:
+            Shape: Quadrilateral shape
+        """
+        return Shapes.triangle_body(p1, p2, p3, colour) + Shapes.triangle_body(p1, p3, p4, colour)
+    
+    @staticmethod
+    def quad_wireframe(p1, p2, p3, p4, colour=DEFAULT_WIREFRAME_COLOUR):
+        """Create a quadrilateral wireframe from four points.
+        
+        Args:
+            p1 (tuple): First vertex XYZ coordinates
+            p2 (tuple): Second vertex XYZ coordinates
+            p3 (tuple): Third vertex XYZ coordinates
+            p4 (tuple): Fourth vertex XYZ coordinates
+            colour (tuple): RGB colour values
+        
+        Returns:
+            Shape: Quadrilateral wireframe shape
+        """
+        return Shapes.line(p1, p2, colour) + Shapes.line(p2, p3, colour) + Shapes.line(p3, p4, colour) + Shapes.line(p4, p1, colour)
+
+    @staticmethod
     def rectangle(position, width, height, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
         """Create a 2D rectangle.
         
@@ -781,7 +837,78 @@ class Shapes:
         top_position = np.array(position) + np.array([0,0,height])
         top = Shapes.circle_wireframe(position=top_position, radius=radius, segments=segments, colour=colour)
         return bottom + top
+
+
+    @staticmethod
+    def prism(position=(0,0,0), radius=1, depth=1, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
+        """Create a prism.
+        
+        Args:
+            position (tuple): XYZ coordinates of base centre. Defaults to origin
+            height (float): Height of prism. Defaults to 1.0
+            colour (tuple): RGB colour values. Defaults to white
+            wireframe_colour (tuple): RGB colour values. Defaults to white
+            show_body (bool): Whether to show the body of the prism
+            show_wireframe (bool): Whether to show the wireframe of the prism
+
+        Returns:
+            Shape: Prism shape
+        """
+        shapes = []
+        if show_body:
+            shapes.append(Shapes.prism_body(position, radius, depth, colour))
+        if show_wireframe:
+            shapes.append(Shapes.prism_wireframe(position, radius, depth, wireframe_colour))
+        return shapes
+            
+    @staticmethod
+    def prism_body(position=(0,0,0), radius=1, depth=1, colour=DEFAULT_FACE_COLOUR):
+        """Create a prism body.
+        
+        Args:
+            position (tuple): XYZ coordinates of base centre. Defaults to origin
+            height (float): Height of prism. Defaults to 1.0
+            depth (float): Depth of prism. Defaults to 1.0
+            colour (tuple): RGB colour values. Defaults to white
+            
+        Returns:
+            Shape: Prism body shape
+        """
+        p1 = np.array([0, radius/2, 0])
+        p2 = np.array([-0.866 * radius/2, -0.5 * radius/2, 0])
+        p3 = np.array([0.866 * radius/2, -0.5 * radius/2, 0])
+        z = np.array([0, 0, depth/2])
+        # Top and bottom triangles
+        top = Shapes.triangle_body(p1+z, p2+z, p3+z, colour)
+        bottom = Shapes.triangle_body(p1-z, p3-z, p2-z, colour)
+        # Side quads
+        side_1 = Shapes.quad_body(p1+z, p1-z, p2-z, p2+z, colour)
+        side_2 = Shapes.quad_body(p2+z, p2-z, p3-z, p3+z, colour)
+        side_3 = Shapes.quad_body(p3+z, p3-z, p1-z, p1+z, colour)
+        return (top + bottom + side_1 + side_2 + side_3).transform(translate=position)
     
+    @staticmethod
+    def prism_wireframe(position=(0,0,0), radius=1, depth=1, colour=DEFAULT_WIREFRAME_COLOUR):
+        """Create a prism wireframe.
+        
+        Args:
+            position (tuple): XYZ coordinates of base centre. Defaults to origin
+            height (float): Height of prism. Defaults to 1.0
+            colour (tuple): RGB colour values. Defaults to white
+            
+        Returns:
+            Shape: Prism wireframe shape
+        """
+        p1 = np.array([0, radius/2, 0])
+        p2 = np.array([-0.866 * radius/2, -0.5 * radius/2, 0])
+        p3 = np.array([0.866 * radius/2, -0.5 * radius/2, 0])
+        z = np.array([0, 0, depth/2])
+        top = Shapes.triangle_wireframe(p1+z, p2+z, p3+z, colour)
+        bottom = Shapes.triangle_wireframe(p1-z, p3-z, p2-z, colour)
+        line_1 = Shapes.line(p1+z, p1-z, colour) 
+        line_2 = Shapes.line(p2+z, p2-z, colour)
+        line_3 = Shapes.line(p3+z, p3-z, colour)
+        return (top + bottom + line_1 + line_2 + line_3).transform(translate=position)
     
     @staticmethod
     def cone(position=(0,0,0), radius=0.5, height=1.0, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):

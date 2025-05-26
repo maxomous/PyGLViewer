@@ -103,10 +103,10 @@ class ExampleApplication(Application):
         
         # Basic shapes - filled
         self.renderer.add_object(static=True).set_shapes(Shapes.triangle(p1=(0, 2.933, 0), p2=(-0.5, 2.067, 0), p3=(0.5, 2.067, 0), colour=Colour.YELLOW))
-        self.renderer.add_object(static=True).set_shapes(Shapes.rectangle(position=(2, 2.5, 0), width=1, height=1, colour=Colour.GREEN))
-        self.renderer.add_object(static=True).set_shapes(Shapes.circle(position=(4, 2.5, 0), radius=0.5, colour=Colour.BLUE))
+        self.renderer.add_object(static=True).set_shapes(Shapes.quad(p1=(1.5, 3, 0.5), p2=(1.5, 2, 0), p3=(2.5, 2, 0.5), p4=(2.5, 3, 1), colour=Colour.RED))
+        self.renderer.add_object(static=True).set_shapes(Shapes.rectangle(position=(4, 2.5, 0), width=1, height=1, colour=Colour.GREEN))
+        self.renderer.add_object(static=True).set_shapes(Shapes.circle(position=(6, 2.5, 0), radius=0.5, colour=Colour.BLUE))
 
-        
         # 3D shapes with transforms
         self.renderer.add_object(static=True)\
             .set_shapes(Shapes.cone(colour=Colour.rgb(255, 165, 0)))\
@@ -116,9 +116,9 @@ class ExampleApplication(Application):
             .set_shapes(Shapes.cylinder(colour=Colour.MAGENTA))\
                 .set_transform_matrix(Transform(translate=(2, 1, 0.25), scale=(0.5, 0.5, 0.5)))
             
-        self.renderer.add_object(static=True)\
-            .set_shapes(Shapes.sphere(position=(4, 1, 0.5), radius=0.25, colour=Colour.RED))\
-            .set_transform_matrix(Transform(translate=(4, 1, 0.5), scale=(0.25, 0.25, 0.25)))
+        self.renderer.add_object(static=True).set_shapes(Shapes.prism(position=(4, 1, 0), radius=1, depth=1, colour=Colour.ORANGE))
+
+        self.renderer.add_object(static=True).set_shapes(Shapes.sphere(position=(6, 1, 0.5), radius=0.5, colour=Colour.RED))
                 
         # Dynamic objects
         self.dynamic_object = self.renderer.add_object()
