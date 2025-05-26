@@ -146,21 +146,23 @@ class Object:
         global _global_object_counter
         self.id = _global_object_counter
         _global_object_counter += 1 
-        self.line_width = line_width
-        self.point_size = point_size
-        self.point_shape = point_shape
-        self.alpha = alpha  # Add alpha value (1.0 = fully opaque, 0.0 = fully transparent)
-        self.static = static
+        
+        # These should be controlled by the object container
+        self._point_size = point_size
+        self._line_width = line_width
+        self._point_shape = point_shape
+        self._alpha = alpha  # Add alpha value (1.0 = fully opaque, 0.0 = fully transparent)
+        self._static = static
         # Add selection-related properties
+        self._selectable = selectable  # Flag to control if object can be selected
         self.selected = False
-        self.selectable = selectable  # Flag to control if object can be selected
         # Set with set_transform_matrix
         self.model_matrix = np.identity(4, dtype=np.float32)
         # These are set with set_shapes
         self.draw_type = None
         self.shader = None
-        self.vertex_data = None
-        self.index_data = None
+        self._vertex_data = None
+        self._index_data = None
         # Cached boundary region
         self._world_bounds = None
         self._bounds_needs_update = True
@@ -183,14 +185,14 @@ class Object:
         dict or None
             Dictionary containing 'min' and 'max' bounds as np.ndarray, or None if no vertex data
         """
-        if self.vertex_data is None or len(self.vertex_data) == 0:
+        if self._vertex_data is None or len(self._vertex_data) == 0:
             return None
         # Return cached bounds if available and doesnt need update
         if not self._bounds_needs_update:
             return self._world_bounds
         
         # Get local bounds from actual vertex data
-        vertices = self.vertex_data.reshape(-1, 3, 3)[:,0,:]  # Reshape to Nx3 array of positions and remove colours / normals
+        vertices = self._vertex_data.reshape(-1, 3, 3)[:,0,:]  # Reshape to Nx3 array of positions and remove colours / normals
         local_min = np.min(vertices, axis=0)
         local_max = np.max(vertices, axis=0)
         
@@ -219,8 +221,8 @@ class Object:
         """
         self.draw_type = shape.draw_type
         self.shader = shape.shader
-        self.vertex_data = np.array(shape.get_vertices(), dtype=np.float32)
-        self.index_data = np.array(shape.get_indices(), dtype=np.uint32)
+        self._vertex_data = np.array(shape.get_vertices(), dtype=np.float32)
+        self._index_data = np.array(shape.get_indices(), dtype=np.uint32)
         self._bounds_needs_update = True  # Mark bounds for recalculation
         return self
     
@@ -265,7 +267,7 @@ class Object:
         
         Only selects if object's selectable flag is True.
         """
-        if self.selectable:
+        if self._selectable:
             self.selected = True
 
     def deselect(self):
@@ -277,7 +279,7 @@ class Object:
         
         Only toggles if object's selectable flag is True.
         """
-        if self.selectable:
+        if self._selectable:
             self.selected = not self.selected
 
 
@@ -293,8 +295,21 @@ class ObjectContainer:
         self._selectable = selectable
         self._objects = []
 
-    def set_shape(self, shapes):
-
+    # These functions are used to set the properties of each of the objects inside the container
+    def set_point_size(self, point_size):
+        for obj in [self] + self.objects: obj._point_size = point_size
+    def set_line_width(self, line_width):
+        for obj in [self] + self.objects: obj._line_width = line_width
+    def set_point_shape(self, point_shape):
+        for obj in [self] + self.objects: obj._point_shape = point_shape
+    def set_alpha(self, alpha):
+        for obj in [self] + self.objects: obj._alpha = alpha
+    def set_static(self, static):
+        for obj in [self] + self.objects: obj._static = static
+    def set_selectable(self, selectable):
+        for obj in [self] + self.objects: obj._selectable = selectable
+        
+    def set_shapes(self, shapes):
         # Convert single shape to list if needed
         if not isinstance(shapes, list):
             shapes = [shapes]

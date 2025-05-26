@@ -95,7 +95,7 @@ class ObjectSelection:
     def process_cursor_point(self):
         # Draw cursor point
         if hasattr(self.renderer, 'cursor_pos'):
-            self.cursor_point.set_shape(Shapes.point(self.renderer.cursor_pos, colour=Colour.WHITE))
+            self.cursor_point.set_shapes(Shapes.point(self.renderer.cursor_pos, colour=Colour.WHITE))
         
     def process_selection_targets(self):
         # Draw target on selected objects
@@ -109,12 +109,12 @@ class ObjectSelection:
             # Get offset for target size
             offset = self.mouse.screen_to_world(10)
             if container._objects[0].draw_type == GL_POINTS:
-                offset += self.mouse.screen_to_world(container._objects[0].point_size)
+                offset += self.mouse.screen_to_world(container._objects[0]._point_size)
                 
             edge_length = self.camera.distance * self.target_edge_length
             selected_geometry += Shapes.target(mid_point, size + np.array([offset, offset, offset]), edge_length, Colour.WHITE) 
 
-        self.selection_target.set_shape(selected_geometry)
+        self.selection_target.set_shapes(selected_geometry)
         
     def get_object_container_under_cursor(self, cursor_pos):
         """Determine which object is under the cursor"""
@@ -158,7 +158,7 @@ class ObjectSelection:
         tuple
             (bool, float) - (intersection found, distance to intersection)
         """
-        if not obj.selectable:
+        if not obj._selectable:
             return False, float('inf')
         bounds = obj.get_bounds()
         if bounds is None:
@@ -168,7 +168,7 @@ class ObjectSelection:
         scale = scale_factor * min_distance
         # Expand bounds by point_size if this is a point object
         if obj.draw_type == GL_POINTS:
-            scale += scale_factor * obj.point_size / 2
+            scale += scale_factor * obj._point_size / 2
         
         bounds['min'] = bounds['min'] - np.array([scale, scale, scale])
         bounds['max'] = bounds['max'] + np.array([scale, scale, scale])

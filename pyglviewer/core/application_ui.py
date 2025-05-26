@@ -51,8 +51,8 @@ def render_ui_selection_widget(renderer):
                             obj.set_translate(translate=new_pos)
                             
                         # Display vertex count
-                        if obj.vertex_data is not None:
-                            vertex_count = len(obj.vertex_data) // 3  # Assuming 3 components per vertex
+                        if obj._vertex_data is not None:
+                            vertex_count = len(obj._vertex_data) // 3  # Assuming 3 components per vertex
                             imgui.text(f"Vertex Count: {vertex_count}")
                         
                         

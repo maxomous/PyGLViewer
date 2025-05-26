@@ -1301,7 +1301,9 @@ class Shapes:
     @staticmethod
     def axis_ticks(size=5.0, tick_params=DEFAULT_AXIS_TICKS):
         """Add axis ticks in the XY plane.
-         
+
+        TODO: Update this function to use the new tick_params structure
+        
         Parameters
         ----------
         size : float, optional

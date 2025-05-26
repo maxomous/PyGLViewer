@@ -150,11 +150,11 @@ class BatchBuffer:
         batch_key += f"_shader_{render_object.shader.program}"
         # Add line width to key if it's a line type
         if render_object.draw_type in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP):
-            batch_key += f"_line_width_{render_object.line_width}"
+            batch_key += f"_line_width_{render_object._line_width}"
         # Add point size to key if it's a point type
         elif render_object.draw_type == GL_POINTS:
-            batch_key += f"_point_size_{render_object.point_size}"
-            batch_key += f"_point_shape_{render_object.point_shape}"
+            batch_key += f"_point_size_{render_object._point_size}"
+            batch_key += f"_point_shape_{render_object._point_shape}"
         # Add new batch if it doesn't exist
         if batch_key not in self.batches:
             self.batches[batch_key] = []
@@ -175,14 +175,14 @@ class BatchBuffer:
         for batch_data in self.batches.values():
             # print(f'n objects: {len(batch_data)}')
             for obj in batch_data:
-                if obj.vertex_data is None or obj.index_data is None:
+                if obj._vertex_data is None or obj._index_data is None:
                     continue
                     
-                vertex_data = obj.vertex_data.reshape(-1, 9)
+                vertex_data = obj._vertex_data.reshape(-1, 9)
                 num_vertices = len(vertex_data)
                 
                 combined_vertices.append(vertex_data)
-                combined_indices.append(obj.index_data + vertex_offset)
+                combined_indices.append(obj._index_data + vertex_offset)
                 vertex_offset += num_vertices
         
         if not combined_vertices or not combined_indices:
@@ -244,7 +244,7 @@ class BatchRenderer:
     
     def add_object_to_batch(self, render_object: Object):
         """Add object to appropriate buffer based on type."""
-        buffer = self.static_buffer if render_object.static else self.dynamic_buffer
+        buffer = self.static_buffer if render_object._static else self.dynamic_buffer
         buffer.add_object_to_buffer(render_object)
         
     def clear(self):
@@ -308,21 +308,21 @@ class BatchRenderer:
                 
                 # Set line width or point properties if needed
                 if draw_type in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP):
-                    glLineWidth(first_obj.line_width)
+                    glLineWidth(first_obj._line_width)
                 elif draw_type == GL_POINTS:
-                    glPointSize(first_obj.point_size)
-                    current_shader.set_point_shape(first_obj.point_shape)
+                    glPointSize(first_obj._point_size)
+                    current_shader.set_point_shape(first_obj._point_shape)
                     
                 # Draw each object in the batch
                 for obj in objects:
-                    if obj.vertex_data is None or obj.index_data is None:
+                    if obj._vertex_data is None or obj._index_data is None:
                         continue
                     # Set model matrix for this object
                     current_shader.set_model_matrix(obj.model_matrix)
                     # Set alpha for transparency
-                    current_shader.set_alpha(obj.alpha)
+                    current_shader.set_alpha(obj._alpha)
                     # Calculate number of indices for this object
-                    num_indices = len(obj.index_data)
+                    num_indices = len(obj._index_data)
                     # Draw the object
                     glDrawElements(
                         draw_type,

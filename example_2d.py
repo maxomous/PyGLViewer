@@ -31,16 +31,16 @@ class Example2DApplication(Application):
             static=True
         )
         # Create grid params with translation
-        self.grid = self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.grid(size=self.GRID_SIZE*2, increment=1, colour=Colour.WHITE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))  
-        self.axis_ticks = self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.axis_ticks(size=self.GRID_SIZE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
-        self.axis = self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.axis(size=1))
+        self.grid = self.renderer.add_object(static=True, selectable=False).set_shapes(Shapes.grid(size=self.GRID_SIZE*2, increment=1, colour=Colour.WHITE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))  
+        self.axis_ticks = self.renderer.add_object(static=True, selectable=False).set_shapes(Shapes.axis_ticks(size=self.GRID_SIZE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.axis = self.renderer.add_object(static=True, selectable=False).set_shapes(Shapes.axis(size=1))
         
         # Transparent circle
-        self.renderer.add_object(static=True, alpha=0.2).set_shape(Shapes.circle(position=(3, 1, 0), radius=0.1, colour=Colour.YELLOW)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.renderer.add_object(static=True, alpha=0.2).set_shapes(Shapes.circle(position=(3, 1, 0), radius=0.1, colour=Colour.YELLOW)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
         # Rectangle
-        self.renderer.add_object(static=True, alpha=0.5).set_shape(Shapes.rectangle(position=(4, 1, 0), width=0.1, height=0.1, colour=Colour.RED)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.renderer.add_object(static=True, alpha=0.5).set_shapes(Shapes.rectangle(position=(4, 1, 0), width=0.1, height=0.1, colour=Colour.RED)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
         # Triangle
-        self.renderer.add_object(static=True, alpha=0.8).set_shape(Shapes.triangle(p1=(5, 1.1, 0), p2=(4.9, 0.9, 0), p3=(5.1, 0.9, 0), colour=Colour.GREEN)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.renderer.add_object(static=True, alpha=0.8).set_shapes(Shapes.triangle(p1=(5, 1.1, 0), p2=(4.9, 0.9, 0), p3=(5.1, 0.9, 0), colour=Colour.GREEN)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
         
         # Example sine wave scatter plot
         x1 = np.linspace(-self.GRID_SIZE, self.GRID_SIZE, 500)
@@ -49,17 +49,17 @@ class Example2DApplication(Application):
         y2 = np.sin(x2)
         
         # Plot lines with custom widths
-        self.renderer.add_object(static=True, selectable=False, line_width=1.0).set_shape(Shapes.plot(x=x1, y=2*y1, colour=Colour.CYAN)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
-        self.renderer.add_object(static=True, selectable=False, line_width=3.0).set_shape(Shapes.plot(x=x1, y=-0.5*y1, colour=Colour.RED)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.renderer.add_object(static=True, selectable=False, line_width=1.0).set_shapes(Shapes.plot(x=x1, y=2*y1, colour=Colour.CYAN)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.renderer.add_object(static=True, selectable=False, line_width=3.0).set_shapes(Shapes.plot(x=x1, y=-0.5*y1, colour=Colour.RED)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
         
         # Scatter plots with custom point sizes and shapes
-        self.renderer.add_object(static=True, selectable=False, point_size=12.0, point_shape=PointShape.CIRCLE).set_shape(Shapes.scatter(x=x2, y=-1.5*y2, colour=Colour.GREEN)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
-        self.renderer.add_object(static=True, selectable=False, point_size=12.0, point_shape=PointShape.TRIANGLE).set_shape(Shapes.scatter(x=x2, y=1*y2, colour=Colour.ORANGE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.renderer.add_object(static=True, selectable=False, point_size=12.0, point_shape=PointShape.CIRCLE).set_shapes(Shapes.scatter(x=x2, y=-1.5*y2, colour=Colour.GREEN)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.renderer.add_object(static=True, selectable=False, point_size=12.0, point_shape=PointShape.TRIANGLE).set_shapes(Shapes.scatter(x=x2, y=1*y2, colour=Colour.ORANGE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
         
         # Add circles with custom rendering parameters
-        self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.circle(position=(3, 2, 0), radius=0.2, colour=Colour.RED)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
-        self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.circle(position=(4, 2, 0), radius=0.2, colour=Colour.GREEN)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
-        self.renderer.add_object(static=True, selectable=False).set_shape(Shapes.circle(position=(5, 2, 0), radius=0.2, colour=Colour.BLUE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.renderer.add_object(static=True, selectable=False).set_shapes(Shapes.circle(position=(3, 2, 0), radius=0.2, colour=Colour.RED)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.renderer.add_object(static=True, selectable=False).set_shapes(Shapes.circle(position=(4, 2, 0), radius=0.2, colour=Colour.GREEN)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
+        self.renderer.add_object(static=True, selectable=False).set_shapes(Shapes.circle(position=(5, 2, 0), radius=0.2, colour=Colour.BLUE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
         
     def update_scene(self):
         """ update the scene """

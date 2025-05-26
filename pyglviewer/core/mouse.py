@@ -233,7 +233,7 @@ class Mouse:
             float: Value in world space
         """
         if self.app.window_height == 0:
-            return 0
+            return 0 if dimension == 1 else np.repeat(0, dimension)
         world_scale = value * self.app.camera.distance / self.app.window_height
         
         if dimension > 1:
