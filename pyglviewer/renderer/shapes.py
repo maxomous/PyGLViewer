@@ -757,7 +757,7 @@ class Shapes:
         cylinder = Shape(GL_TRIANGLES, vertices, indices)
         # Bottom and top circle bodies + wireframes
         bottom = Shapes.circle_body(position=(0,0,0), radius=radius, segments=segments, colour=colour).transform(rotate=(np.pi,0,0))
-        top = Shapes.circle_body(position=(0,0,1), radius=radius, segments=segments, colour=colour)
+        top = Shapes.circle_body(position=(0,0,height), radius=radius, segments=segments, colour=colour)
         body = cylinder + bottom + top
         # Transform to position
         if position != (0,0,0):
