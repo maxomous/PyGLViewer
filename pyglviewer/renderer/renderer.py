@@ -89,6 +89,11 @@ class Renderer:
         self.batch_renderer = BatchRenderer(max_static_vertices, max_static_indices,
                                             max_dynamic_vertices, max_dynamic_indices)
         
+    def clear(self):
+        """Clear the renderer."""   
+        self.object_containers = []
+        Object.reset_global_object_counter()
+        
     def get_selected_object_containers(self):
         """Get all selected objects."""
         selected_containers = []
