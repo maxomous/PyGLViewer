@@ -167,6 +167,21 @@ class Object:
         self._world_bounds = None
         self._bounds_needs_update = True
 
+    def set_shape(self, shape: Shape):
+        """Update the vertex and index data from a Shape object.
+        Returns self to allow chaining.
+        Parameters
+        ----------
+        shape : Shape
+            Shape object containing vertex and index data
+        """
+        self.draw_type = shape.draw_type
+        self.shader = shape.shader
+        self._vertex_data = np.array(shape.get_vertices(), dtype=np.float32)
+        self._index_data = np.array(shape.get_indices(), dtype=np.uint32)
+        self._bounds_needs_update = True  # Mark bounds for recalculation
+        return self
+    
     def get_mid_point(self):
         """Get the mid point of the object.
         
@@ -211,21 +226,6 @@ class Object:
         self._bounds_needs_update = False
         return self._world_bounds
 
-    def set_shape(self, shape: Shape):
-        """Update the vertex and index data from a Shape object.
-        Returns self to allow chaining.
-        Parameters
-        ----------
-        shape : Shape
-            Shape object containing vertex and index data
-        """
-        self.draw_type = shape.draw_type
-        self.shader = shape.shader
-        self._vertex_data = np.array(shape.get_vertices(), dtype=np.float32)
-        self._index_data = np.array(shape.get_indices(), dtype=np.uint32)
-        self._bounds_needs_update = True  # Mark bounds for recalculation
-        return self
-    
     def set_transform_matrix(self, transform: Transform):
         """Set the transform matrix.
         Returns self to allow chaining.
@@ -338,10 +338,9 @@ class ObjectContainer:
         
         return self
     
-    def set_transform_matrix(self, transform):
-        for obj in self._objects:
-            obj.set_transform_matrix(transform)
-        return self
+    def get_mid_point(self):
+        bounds = self.get_bounds()
+        return (bounds['min'] + bounds['max']) / 2
 
     def get_bounds(self):
         bounds = []
@@ -354,34 +353,28 @@ class ObjectContainer:
         max_bounds = np.max(max, axis=0)
         return {'min': min_bounds, 'max': max_bounds}
 
-    def get_mid_point(self):
-        bounds = self.get_bounds()
-        return (bounds['min'] + bounds['max']) / 2
-
-# class ObjectContainer:
+    def set_transform_matrix(self, transform):
+        for obj in self._objects:
+            obj.set_transform_matrix(transform)
+        return self
+        
+    def set_translate(self, translate):
+        for obj in self._objects:
+            obj.set_translate(translate)
+        return self
     
-#     def __init__(self, objects: dict[str, Object]):
-#         """
-#         A collection of renderable objects, allowing batch operations on multiple objects.
-#         Usage: ObjectContainer({ 'object_name': Object(), ... })
-
-#         Parameters
-#         ----------
-#         objects : dict[str, Object]
-#             A dictionary of objects to manage.
-#         """
-#         self._objects = objects
-        
-#     def __getitem__(self, key: str) -> Object:
-#         """Retrieve an object by its key."""
-#         return self._objects[key]
-        
-#     def __setitem__(self, key: str, value: Object):
-#         """Set an object in the collection by its key."""
-#         self._objects[key] = value
-        
-#     def set_transform_matrix(self, transform: Transform):
-#         """Apply a transformation to all objects in the collection."""
-#         for object in self._objects.values():
-#             object.set_transform_matrix(transform)
-            
+    def select(self):
+        for obj in self._objects:
+            obj.select()
+        return self
+    
+    def deselect(self):
+        for obj in self._objects:
+            obj.deselect()
+        return self
+    
+    def toggle_selection(self):
+        for obj in self._objects:
+            obj.toggle_selection()
+        return self
+    
