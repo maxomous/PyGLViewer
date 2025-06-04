@@ -10,6 +10,10 @@ from dataclasses import dataclass
 # Used to give each object a unique ID
 _global_object_counter = 0
 
+def reset_global_object_counter():
+    global _global_object_counter
+    _global_object_counter = 0
+
 class Buffer:
     """Base class for OpenGL buffer objects. Set size when using a dynamic / stream buffer."""
     def __init__(self, data, buffer_type, target, size):
