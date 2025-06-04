@@ -1,15 +1,20 @@
 import numpy as np
 import imgui
+from typing import Callable
 from OpenGL.GL import GL_POINTS, GL_LINES
 from pyglviewer.renderer.renderer import Renderer
 from pyglviewer.renderer.shapes import Shapes
 from pyglviewer.utils.colour import Colour
 
+
 class SelectionSettings:
-    def __init__(self, show_cursor_point=True, select_objects=True, drag_objects=True):
+    def __init__(self, show_cursor_point=True, select_objects=True, drag_objects=True, select_callback: Callable = None, drag_callback: Callable = None):
         self.show_cursor_point = show_cursor_point
         self.select_objects = select_objects
         self.drag_objects = drag_objects
+        # Callbacks
+        self.select_callback = select_callback
+        self.drag_callback = drag_callback
 
 class ObjectSelection:
     """Handles object selection based on mouse input."""
@@ -55,6 +60,9 @@ class ObjectSelection:
             if picked_object_container:
                 for obj in picked_object_container._objects:
                     obj.toggle_selection()
+                    # Call callback with object
+                    if self.settings.select_callback:
+                        self.settings.select_callback(obj)
         
             # Get selected objects to set the start positions
             self.selected_objects_containers = self.renderer.get_selected_object_containers() 
@@ -86,6 +94,9 @@ class ObjectSelection:
                     # Set new object transform
                     translate = self.object_start_pos[i][j] + mouse_delta
                     obj.set_translate(translate)
+                    # Call callback with object
+                    if self.settings.drag_callback:
+                        self.settings.drag_callback(obj)
                 
     def process_release(self):
         '''Release left mouse button.'''

@@ -253,6 +253,8 @@ if __name__ == '__main__':
             show_cursor_point=True,
             select_objects=True,
             drag_objects=True
+            # select_callback=lambda obj: print(f"Selected object: {obj}"),
+            # drag_callback=lambda obj: print(f"Dragged object: {obj}")
         )
     )
     

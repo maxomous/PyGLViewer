@@ -10,7 +10,12 @@ from pyglviewer.utils.config import Config
 from pyglviewer.gui.imgui_manager import ImGuiManager
 from pyglviewer.gui.imgui_text_renderer import ImguiTextRenderer
 import time
-            
+
+
+
+
+
+        
 class Application:
     """Base class for OpenGL applications with ImGui integration.
     
