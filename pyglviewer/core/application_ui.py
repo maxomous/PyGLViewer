@@ -27,32 +27,32 @@ def render_core_ui(camera, renderer, text_renderer, config, timer, imgui_manager
 
 def render_ui_selection_widget(renderer):
     """Render widget showing information about selected object."""
-    selected_object_containers = renderer.get_selected_object_containers()
-    
-    if not selected_object_containers:
+    selected_object = renderer.get_selected_object()
+
+    if not selected_object:
         imgui.text("No object selected")
     else:
-        for i, container in enumerate(selected_object_containers):
-            for obj in container._objects:
-                if imgui.tree_node(f"Object {obj.id}"):
+        for i, obj in enumerate(selected_object):
+            for render_obj in obj._render_objects:
+                if imgui.tree_node(f"Object {render_obj.id}"):
                     # Display object properties
-                    imgui.text(f"Draw Type: {obj.draw_type}")
+                    imgui.text(f"Draw Type: {render_obj.draw_type}")
                         
                     # Display transform info
                     if imgui.tree_node("Transform"):
                         # Extract position from model matrix (last column)
-                        position = obj.model_matrix[3, :3]
+                        position = render_obj.model_matrix[3, :3]
                         # imgui.text(f"Position: {position[0]:.2f}, {position[1]:.2f}, {position[2]:.2f}")
                         
                         # Add transform controls
                         changed, new_pos = imgui.drag_float3("Position", *position, 0.1)
                         if changed:
                             # Update object position
-                            obj.set_translate(translate=new_pos)
+                            render_obj.set_translate(translate=new_pos)
                             
                         # Display vertex count
-                        if obj._vertex_data is not None:
-                            vertex_count = len(obj._vertex_data) // 3  # Assuming 3 components per vertex
+                        if render_obj._vertex_data is not None:
+                            vertex_count = len(render_obj._vertex_data) // 3  # Assuming 3 components per vertex
                             imgui.text(f"Vertex Count: {vertex_count}")
                         
                         
@@ -60,7 +60,7 @@ def render_ui_selection_widget(renderer):
                     
                     # Display bounds info
                     if imgui.tree_node("Bounds"):
-                        bounds = obj.get_bounds()
+                        bounds = render_obj.get_bounds()
                         if bounds:
                             imgui.text(f"Min: {bounds['min'][0]:.2f}, {bounds['min'][1]:.2f}, {bounds['min'][2]:.2f}")
                             imgui.text(f"Max: {bounds['max'][0]:.2f}, {bounds['max'][1]:.2f}, {bounds['max'][2]:.2f}")

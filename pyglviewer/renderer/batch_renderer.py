@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional
 import numpy as np
 from OpenGL.GL import *
-from pyglviewer.renderer.objects import VertexBuffer, IndexBuffer, VertexArray, Object
+from pyglviewer.renderer.objects import VertexBuffer, IndexBuffer, VertexArray, RenderObject
 from pyglviewer.renderer.shapes import Vertex
 
 class BatchBuffer:
@@ -14,7 +14,7 @@ class BatchBuffer:
         self.growth_factor = 1.5  # Increase buffer by 50% when needed
         
         # Batch storage - simple list of objects per batch key
-        self.batches: Dict[str, List[Object]] = {}
+        self.batches: Dict[str, List[RenderObject]] = {}
         
         # Create initial buffers
         self.vertex_buffer, self.index_buffer, self.vao = self._create_buffers()
@@ -134,6 +134,7 @@ class BatchBuffer:
     
     def clear(self):
         """Clear the buffer data."""
+        # print(f"Clearing buffer: {self.buffer_type}")
         # if not self.needs_update:
         #     return
         self.batches.clear()
@@ -141,7 +142,7 @@ class BatchBuffer:
         self.vertex_count = 0
         self.index_count = 0
     
-    def add_object_to_buffer(self, render_object: Object):
+    def add_object_to_buffer(self, render_object: RenderObject):
         """Add object to appropriate batch."""
         
         # Create batch key based on draw type
@@ -242,7 +243,7 @@ class BatchRenderer:
         self.static_buffer = BatchBuffer(max_static_vertices, max_static_indices, GL_STATIC_DRAW)
         self.dynamic_buffer = BatchBuffer(max_dynamic_vertices, max_dynamic_indices, GL_DYNAMIC_DRAW)
     
-    def add_object_to_batch(self, render_object: Object):
+    def add_object_to_batch(self, render_object: RenderObject):
         """Add object to appropriate buffer based on type."""
         buffer = self.static_buffer if render_object._static else self.dynamic_buffer
         buffer.add_object_to_buffer(render_object)

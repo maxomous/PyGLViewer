@@ -1,6 +1,6 @@
 """
 Core Shapes module providing classes for creating and manipulating 3D primitives.
-Includes vertex data structures, shape containers, and shape factory methods.
+Includes vertex data structures, shapes, and shape factory methods.
 """
 
 import numpy as np
@@ -1415,8 +1415,8 @@ class Shapes:
 
         Returns
         -------
-        ObjectContainer
-            Collection containing 'body' and 'wireframe' objects
+        list[Shape]
+            Collection containing 'body' and 'wireframe' shapes
         """
         return Shapes.combine([
             Shapes.arrow((0,0,0), (size,0,0), arrow_dimensions, (1,0,0), wireframe_colour, segments),
@@ -1441,8 +1441,8 @@ class Shapes:
 
         Returns
         -------
-        ObjectContainer
-            Collection containing tick objects at different detail levels
+        list[Shape]
+            Collection containing tick shapes at different detail levels
         """
         shapes = []
         

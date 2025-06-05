@@ -8,7 +8,7 @@ from pyglviewer.core.object_selection import ObjectSelection, SelectionSettings
 from pyglviewer.renderer.light import Light, LightType, default_lighting
 from pyglviewer.renderer.renderer import Renderer
 from pyglviewer.renderer.shapes import Shapes, ArrowDimensions
-from pyglviewer.renderer.objects import ObjectContainer
+from pyglviewer.renderer.objects import Object
 from pyglviewer.renderer.shader import PointShape
 from pyglviewer.utils.colour import Colour
 from pyglviewer.utils.config import Config   
@@ -77,62 +77,82 @@ class ExampleApplication(Application):
         
                
         # Static objects
-           
+        
         # Grid and axis
-        self.grid = self.renderer.add_object(static=True, selectable=False).set_shapes(Shapes.grid(size=self.GRID_SIZE*2, increment=1, colour=Colour.WHITE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
-        self.renderer.add_object(static=True, selectable=False).set_shapes(Shapes.axis_ticks(size=self.GRID_SIZE)).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE))
-        self.axis = self.renderer.add_object(static=True, selectable=False).set_shapes(Shapes.axis(size=1))
+        self.grid = self.renderer.add_object(Object(static=True, selectable=False)\
+            .set_shapes(Shapes.grid(size=self.GRID_SIZE*2, increment=1, colour=Colour.WHITE))\
+            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
+        self.axis = self.renderer.add_object(Object(static=True, selectable=False)\
+            .set_shapes(Shapes.axis(size=1)))
+        self.axis_ticks = self.renderer.add_object(Object(static=True, selectable=False)\
+            .set_shapes(Shapes.axis_ticks(size=self.GRID_SIZE))\
+            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
         
         # Points with different shapes
-        self.renderer.add_object(point_size=15, point_shape=PointShape.CIRCLE, static=True).set_shapes(Shapes.point(position=(-4, 4, 0), colour=Colour.RED))
-        self.renderer.add_object(point_size=15, point_shape=PointShape.TRIANGLE, static=True).set_shapes(Shapes.point(position=(-4, 2.5, 0), colour=Colour.GREEN))
-        self.renderer.add_object(point_size=15, point_shape=PointShape.SQUARE, static=True).set_shapes(Shapes.point(position=(-4, 1, 0), colour=Colour.BLUE))
+        self.renderer.add_object(Object(point_size=15, point_shape=PointShape.CIRCLE, static=True)\
+            .set_shapes(Shapes.point(position=(-4, 4, 0), colour=Colour.RED)))
+        self.renderer.add_object(Object(point_size=15, point_shape=PointShape.TRIANGLE, static=True)\
+            .set_shapes(Shapes.point(position=(-4, 2.5, 0), colour=Colour.GREEN)))
+        self.renderer.add_object(Object(point_size=15, point_shape=PointShape.SQUARE, static=True)\
+            .set_shapes(Shapes.point(position=(-4, 1, 0), colour=Colour.BLUE)))
         
         # Lines and beams
-        self.renderer.add_object(line_width=5, static=True).set_shapes(Shapes.line(p0=(-2.5, 3.5, 0), p1=(-1.5, 4.5, 0), colour=Colour.ORANGE))
-        self.renderer.add_object(static=True).set_shapes(Shapes.beam(p0=(-2.5, 2.0, 0.25), p1=(-1.5, 3.0, 0.75), width=0.2, height=0.2, colour=Colour.YELLOW))
+        self.renderer.add_object(Object(line_width=5, static=True)\
+            .set_shapes(Shapes.line(p0=(-2.5, 3.5, 0), p1=(-1.5, 4.5, 0), colour=Colour.ORANGE)))
+        self.renderer.add_object(Object(static=True)\
+            .set_shapes(Shapes.beam(p0=(-2.5, 2.0, 0.25), p1=(-1.5, 3.0, 0.75), width=0.2, height=0.2, colour=Colour.YELLOW)))
         
         # Arrow with dimensions
         arrow_dimensions = ArrowDimensions(shaft_radius=0.2, head_radius=0.35, head_length=0.3)
-        self.renderer.add_object(static=True).set_shapes(Shapes.arrow(p0=(-2.4, 0.6, 0.25), p1=(-1.6, 1.4, 0.75), dimensions=arrow_dimensions, colour=Colour.PURPLE))
+        self.renderer.add_object(Object(static=True)\
+            .set_shapes(Shapes.arrow(p0=(-2.4, 0.6, 0.25), p1=(-1.6, 1.4, 0.75), dimensions=arrow_dimensions, colour=Colour.PURPLE)))
         
         # Basic shapes - wireframe
-        self.renderer.add_object(static=True).set_shapes(Shapes.triangle(p1=(0, 4.433, 0), p2=(-0.5, 3.567, 0), p3=(0.5, 3.567, 0), wireframe_colour=Colour.YELLOW, show_body=False))
-        self.renderer.add_object(static=True).set_shapes(Shapes.rectangle(position=(2, 4, 0), width=1, height=1, wireframe_colour=Colour.GREEN, show_body=False))
-        self.renderer.add_object(static=True).set_shapes(Shapes.circle(position=(4, 4, 0), radius=0.5, wireframe_colour=Colour.BLUE, show_body=False))
+        self.renderer.add_object(Object(static=True)\
+            .set_shapes(Shapes.triangle(p1=(0, 4.433, 0), p2=(-0.5, 3.567, 0), p3=(0.5, 3.567, 0), wireframe_colour=Colour.YELLOW, show_body=False)))
+        self.renderer.add_object(Object(static=True)\
+            .set_shapes(Shapes.rectangle(position=(2, 4, 0), width=1, height=1, wireframe_colour=Colour.GREEN, show_body=False)))
+        self.renderer.add_object(Object(static=True)\
+            .set_shapes(Shapes.circle(position=(4, 4, 0), radius=0.5, wireframe_colour=Colour.BLUE, show_body=False)))
         
         # Basic shapes - filled
-        self.renderer.add_object(static=True).set_shapes(Shapes.triangle(p1=(0, 2.933, 0), p2=(-0.5, 2.067, 0), p3=(0.5, 2.067, 0), colour=Colour.YELLOW))
-        self.renderer.add_object(static=True).set_shapes(Shapes.quad(p1=(1.5, 3, 0.5), p2=(1.5, 2, 0), p3=(2.5, 2, 0.5), p4=(2.5, 3, 1), colour=Colour.RED))
-        self.renderer.add_object(static=True).set_shapes(Shapes.rectangle(position=(4, 2.5, 0), width=1, height=1, colour=Colour.GREEN))
-        self.renderer.add_object(static=True).set_shapes(Shapes.circle(position=(6, 2.5, 0), radius=0.5, colour=Colour.BLUE))
+        self.renderer.add_object(Object(static=True)\
+            .set_shapes(Shapes.triangle(p1=(0, 2.933, 0), p2=(-0.5, 2.067, 0), p3=(0.5, 2.067, 0), colour=Colour.YELLOW)))
+        self.renderer.add_object(Object(static=True)\
+            .set_shapes(Shapes.quad(p1=(1.5, 3, 0.5), p2=(1.5, 2, 0), p3=(2.5, 2, 0.5), p4=(2.5, 3, 1), colour=Colour.RED)))
+        self.renderer.add_object(Object(static=True)\
+            .set_shapes(Shapes.rectangle(position=(4, 2.5, 0), width=1, height=1, colour=Colour.GREEN)))
+        self.renderer.add_object(Object(static=True)\
+            .set_shapes(Shapes.circle(position=(6, 2.5, 0), radius=0.5, colour=Colour.BLUE)))
 
         # 3D shapes with transforms
-        self.renderer.add_object(static=True)\
+        self.renderer.add_object(Object(static=True)\
             .set_shapes(Shapes.cone(colour=Colour.rgb(255, 165, 0)))\
-            .set_transform_matrix(Transform(translate=(0, 0.75, 0.5), scale=(0.5, 0.5, 0.5), rotate=(-np.pi/2, 0, 0)))
+            .set_transform_matrix(Transform(translate=(0, 0.75, 0.5), scale=(0.5, 0.5, 0.5), rotate=(-np.pi/2, 0, 0))))
             
-        self.renderer.add_object(static=True)\
+        self.renderer.add_object(Object(static=True)\
             .set_shapes(Shapes.cylinder(colour=Colour.MAGENTA))\
-                .set_transform_matrix(Transform(translate=(2, 1, 0.25), scale=(0.5, 0.5, 0.5)))
+            .set_transform_matrix(Transform(translate=(2, 1, 0.25), scale=(0.5, 0.5, 0.5))))
             
-        self.renderer.add_object(static=True).set_shapes(Shapes.prism(position=(4, 1, 0), radius=1, depth=1, colour=Colour.ORANGE))
+        self.renderer.add_object(Object(static=True)\
+            .set_shapes(Shapes.prism(position=(4, 1, 0), radius=1, depth=1, colour=Colour.ORANGE)))
 
-        self.renderer.add_object(static=True).set_shapes(Shapes.sphere(position=(6, 1, 0.5), radius=0.5, colour=Colour.RED))
+        self.renderer.add_object(Object(static=True)\
+            .set_shapes(Shapes.sphere(position=(6, 1, 0.5), radius=0.5, colour=Colour.RED)))
                 
         # Dynamic objects
-        self.dynamic_object = self.renderer.add_object()
+        self.dynamic_object = self.renderer.add_object(Object())
          
         # Plots
         x = np.linspace(-1.5, 1.5, 100)
         y = x**2
-        self.renderer.add_object(static=True, line_width=2.0)\
-            .set_shapes(Shapes.plot(x, y, colour=Colour.GREEN).transform(translate=(-3, -2, 0)))
+        self.renderer.add_object(Object(static=True, line_width=2.0)\
+            .set_shapes(Shapes.plot(x, y, colour=Colour.GREEN).transform(translate=(-3, -2, 0))))
 
         x = np.linspace(0, 3, 50)
         y = np.sin(x * np.pi / 1.5)
-        self.renderer.add_object(static=True, point_size=5.0)\
-            .set_shapes(Shapes.scatter(x, y, colour=Colour.CYAN).transform(translate=(1, -1, 0)))
+        self.renderer.add_object(Object(static=True, point_size=5.0)\
+            .set_shapes(Shapes.scatter(x, y, colour=Colour.CYAN).transform(translate=(1, -1, 0))))
 
     def update_scene(self):
         """

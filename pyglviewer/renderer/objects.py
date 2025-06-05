@@ -123,7 +123,7 @@ class VertexArray:
         if hasattr(self, 'deleted') and not self.deleted:
             self.shutdown()
 
-class Object:
+class RenderObject:
     """Represents a renderable object with vertex, index buffers, and shader."""
     def __init__(self, point_size=1.0, line_width=1.0, point_shape=PointShape.CIRCLE, alpha=1.0, static=False, selectable=True):
         """Initialize object with given data and parameters.
@@ -147,7 +147,7 @@ class Object:
         self.id = _global_object_counter
         _global_object_counter += 1 
         
-        # These should be controlled by the object container
+        # These should be controlled by the Object class
         self._point_size = point_size
         self._line_width = line_width
         self._point_shape = point_shape
@@ -288,31 +288,30 @@ class Object:
         global _global_object_counter
         _global_object_counter = 0
 
-class ObjectContainer:
-    """A container for multiple similar objects (for example a body and its wireframe)."""
-    def __init__(self, renderer, point_size=1.0, line_width=1.0, point_shape=PointShape.CIRCLE, alpha=1.0, static=False, selectable=True):
-        self._renderer = renderer
+class Object:
+    """An object is a container for multiple similar render objects (for example a body and its wireframe)."""
+    def __init__(self, point_size=1.0, line_width=1.0, point_shape=PointShape.CIRCLE, alpha=1.0, static=False, selectable=True):
         self._point_size = point_size
         self._line_width = line_width
         self._point_shape = point_shape
         self._alpha = alpha
         self._static = static
         self._selectable = selectable
-        self._objects = []
+        self._render_objects = []
 
-    # These functions are used to set the properties of each of the objects inside the container
+    # These functions are used to set the properties of each of the render objects inside the object
     def set_point_size(self, point_size):
-        for obj in [self] + self._objects: obj._point_size = point_size
+        for obj in [self] + self._render_objects: obj._point_size = point_size
     def set_line_width(self, line_width):
-        for obj in [self] + self._objects: obj._line_width = line_width
+        for obj in [self] + self._render_objects: obj._line_width = line_width
     def set_point_shape(self, point_shape):
-        for obj in [self] + self._objects: obj._point_shape = point_shape
+        for obj in [self] + self._render_objects: obj._point_shape = point_shape
     def set_alpha(self, alpha):
-        for obj in [self] + self._objects: obj._alpha = alpha
+        for obj in [self] + self._render_objects: obj._alpha = alpha
     def set_static(self, static):
-        for obj in [self] + self._objects: obj._static = static
+        for obj in [self] + self._render_objects: obj._static = static
     def set_selectable(self, selectable):
-        for obj in [self] + self._objects: obj._selectable = selectable
+        for obj in [self] + self._render_objects: obj._selectable = selectable
         
     def set_shapes(self, shapes):
         # Convert single shape to list if needed
@@ -320,28 +319,27 @@ class ObjectContainer:
             shapes = [shapes]
 
         # Initialise objects if they don't exist
-        if len(self._objects) == 0:
+        if len(self._render_objects) == 0:
+            # Create objects
             for shape in shapes:   
                 # Create object for each shape
-                obj = Object(
+                self._render_objects.append(RenderObject(
                     point_size=self._point_size,
                     line_width=self._line_width,
                     point_shape=self._point_shape,
                     alpha=self._alpha,
                     static=self._static,
                     selectable=self._selectable,
-                )
-                self._objects.append(obj)
-            # Add to scene
-            self._renderer.object_containers.append(self)
-        
-        if len(shapes) != len(self._objects):
+                ))
+                
+        if len(shapes) != len(self._render_objects):
             raise ValueError("Number of shapes does not match number of objects")
         
         for i, shape in enumerate(shapes):
-            self._objects[i].set_shape(shape)
+            self._render_objects[i].set_shape(shape)
         
         return self
+    
     
     def get_mid_point(self):
         bounds = self.get_bounds()
@@ -349,7 +347,7 @@ class ObjectContainer:
 
     def get_bounds(self):
         bounds = []
-        for obj in self._objects:
+        for obj in self._render_objects:
             bounds.append(obj.get_bounds())
         min = [b['min'] for b in bounds]
         max = [b['max'] for b in bounds]
@@ -359,27 +357,27 @@ class ObjectContainer:
         return {'min': min_bounds, 'max': max_bounds}
 
     def set_transform_matrix(self, transform):
-        for obj in self._objects:
+        for obj in self._render_objects:
             obj.set_transform_matrix(transform)
         return self
         
     def set_translate(self, translate):
-        for obj in self._objects:
+        for obj in self._render_objects:
             obj.set_translate(translate)
         return self
     
     def select(self):
-        for obj in self._objects:
+        for obj in self._render_objects:
             obj.select()
         return self
     
     def deselect(self):
-        for obj in self._objects:
+        for obj in self._render_objects:
             obj.deselect()
         return self
     
     def toggle_selection(self):
-        for obj in self._objects:
+        for obj in self._render_objects:
             obj.toggle_selection()
         return self
     

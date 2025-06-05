@@ -9,7 +9,7 @@ from .gui.imgui_text_renderer import ImguiTextRenderer
 from .gui.imgui_widgets import ImGuiWidgets
 from .renderer.shapes import Shapes
 from .renderer.light import Light, LightType, default_lighting
-from .renderer.objects import ObjectContainer
+from .renderer.objects import Object
 from .renderer.renderer import Renderer
 from .renderer.shader import PointShape
 from .utils.config import Config
@@ -33,7 +33,7 @@ __all__ = [
     "Shapes",
     "Light",
     "LightType",
-    "ObjectContainer",
+    "Object",
     "Renderer",
     "PointShape",
     "Config",
