@@ -363,7 +363,12 @@ class Object:
         for obj in self._render_objects:
             obj.set_transform_matrix(transform)
         return self
-        
+    
+    def get_translate(self):
+        if len(self._render_objects) == 0:
+            return None
+        return self._render_objects[0].get_translate()
+    
     def set_translate(self, translate):
         for obj in self._render_objects:
             obj.set_translate(translate)
