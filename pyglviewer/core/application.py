@@ -171,7 +171,7 @@ class Application:
         self.update_scene()
         
         # Clear object renderer
-        self.renderer.clear()
+        self.renderer.clear_framebuffer()
         # Render
         self.render_core()
         

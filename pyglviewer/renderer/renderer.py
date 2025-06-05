@@ -92,7 +92,7 @@ class Renderer:
     def clear(self):
         """Clear the renderer."""   
         self.objects = []
-        RenderObject.reset_global_object_counter()
+        Object.reset_global_id_counter()
         
     def get_selected_object(self):
         """Get all selected objects."""
@@ -144,7 +144,7 @@ class Renderer:
         glLineWidth(1.0)
         glPointSize(1.0)
  
-    def clear(self):
+    def clear_framebuffer(self):
         """Clear the framebuffer with a dark teal background."""
         r, g, b = self.config["background_colour"]
         glClearColor(r, g, b, 1.0)

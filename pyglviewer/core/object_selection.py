@@ -120,9 +120,12 @@ class ObjectSelection:
 
             # Get offset for target size
             offset = self.mouse.screen_to_world(10)
+            if len(obj._render_objects) == 0:
+                continue
+            
             if obj._render_objects[0].draw_type == GL_POINTS:
                 offset += self.mouse.screen_to_world(obj._render_objects[0]._point_size)
-                
+            
             edge_length = self.camera.distance * self.target_edge_length
             selected_geometry += Shapes.target(mid_point, size + np.array([offset, offset, offset]), edge_length, Colour.WHITE) 
 

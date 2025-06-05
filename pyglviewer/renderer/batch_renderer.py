@@ -289,7 +289,7 @@ class BatchRenderer:
         
         try:
             for batch_key, objects in buffer.batches.items():
-                if not objects:
+                if not objects or len(objects) == 0:
                     continue
                 
                 # Get properties from first object in batch

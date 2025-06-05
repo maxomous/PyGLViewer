@@ -33,7 +33,7 @@ class ExampleApplication(Application):
         self.init_variables()
         # Add lighting to the scene (Custom lighting can be used instead)
         self.renderer.add_lights(default_lighting)
-        self.init_geometry()
+        self.init_geometry(initialise=True)
     
     def init_ui(self):
         """ 
@@ -50,7 +50,7 @@ class ExampleApplication(Application):
         self.config.add("variable 3", 2, "Value of dropdown")
         self.config.add("variable 4", True, "Value of checkbox")
     
-    def init_geometry(self):
+    def init_geometry(self, initialise=False):
         """
         Create an object with obj = self.renderer.add_object()
         
@@ -68,12 +68,15 @@ class ExampleApplication(Application):
         To ensure text persists between frames, set static=True.
         Dynamic text can be updated in update_scene() & set to static=False.
         """
+        
         # Set default shape settings
         Shapes.DEFAULT_SEGMENTS = 32     # n segments in circle
         Shapes.DEFAULT_SUBDIVISIONS = 4  # n subdivisions in sphere
     
-        # Text Rendering
-        self.text_renderer.add_axis_labels(xlim=[-10, 10], ylim=[-10, 10], increment=2, colour=Colour.WHITE, static=True)
+        # Run this only once on initialisation (else we will add it each time init_geometry is called)
+        if initialise:
+            # Text Rendering
+            self.text_renderer.add_axis_labels(xlim=[-10, 10], ylim=[-10, 10], increment=2, colour=Colour.WHITE, static=True)
         
                
         # Static objects
@@ -137,9 +140,10 @@ class ExampleApplication(Application):
         self.renderer.add_object(Object(static=True)\
             .set_shapes(Shapes.prism(position=(4, 1, 0), radius=1, depth=1, colour=Colour.ORANGE)))
 
-        self.renderer.add_object(Object(static=True)\
+        self.sphere_object = self.renderer.add_object(Object(static=True)\
             .set_shapes(Shapes.sphere(position=(6, 1, 0.5), radius=0.5, colour=Colour.RED)))
-                
+        
+        
         # Dynamic objects
         self.dynamic_object = self.renderer.add_object(Object())
          
@@ -207,6 +211,7 @@ class ExampleApplication(Application):
         if imgui.is_mouse_down(glfw.MOUSE_BUTTON_LEFT):
             pass 
         
+        
             
     def render_core_ui_window(self):
         """
@@ -224,8 +229,11 @@ class ExampleApplication(Application):
         # Text
         imgui.text("Basic widgets")
         # Buttons
-        if imgui.button("Click Me!", width=100, height=30):
-            print("Button clicked!")
+        if imgui.button("Clear Renderer!", width=100, height=30):
+            print("Clearing renderer!")
+            self.renderer.clear()
+            self.init_geometry()
+            
         # Sliders - this variable is stored in the config file
         changed, self.config["variable 1"] = imgui.slider_float("Float Slider", self.config["variable 1"], 0.0, 1.0)
         # Sliders - this variable is stored in the config file

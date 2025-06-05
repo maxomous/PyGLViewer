@@ -143,9 +143,6 @@ class RenderObject:
         selectable : bool
             Allow object to be selected
         """
-        global _global_object_counter
-        self.id = _global_object_counter
-        _global_object_counter += 1 
         
         # These should be controlled by the Object class
         self._point_size = point_size
@@ -282,15 +279,15 @@ class RenderObject:
         if self._selectable:
             self.selected = not self.selected
 
-    @staticmethod
-    def reset_global_object_counter():
-        """Reset the global object counter."""
-        global _global_object_counter
-        _global_object_counter = 0
 
 class Object:
     """An object is a container for multiple similar render objects (for example a body and its wireframe)."""
     def __init__(self, point_size=1.0, line_width=1.0, point_shape=PointShape.CIRCLE, alpha=1.0, static=False, selectable=True):
+        # Give each object a unique ID and increment the counter
+        global _global_object_counter
+        self.id = _global_object_counter
+        _global_object_counter += 1
+        # Set properties
         self._point_size = point_size
         self._line_width = line_width
         self._point_shape = point_shape
@@ -299,6 +296,12 @@ class Object:
         self._selectable = selectable
         self._render_objects = []
 
+    @staticmethod
+    def reset_global_id_counter():
+        """Reset the global object counter. Warning: only call this if all objects have been deleted from renderer."""
+        global _global_object_counter
+        _global_object_counter = 0
+        
     # These functions are used to set the properties of each of the render objects inside the object
     def set_point_size(self, point_size):
         for obj in [self] + self._render_objects: obj._point_size = point_size
