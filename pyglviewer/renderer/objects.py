@@ -282,7 +282,7 @@ class RenderObject:
 
 class Object:
     """An object is a container for multiple similar render objects (for example a body and its wireframe)."""
-    def __init__(self, point_size=1.0, line_width=1.0, point_shape=PointShape.CIRCLE, alpha=1.0, static=False, selectable=True):
+    def __init__(self, point_size=1.0, line_width=1.0, point_shape=PointShape.CIRCLE, alpha=1.0, static=False, selectable=True, meta_data=None):
         # Give each object a unique ID and increment the counter
         global _global_object_counter
         self.id = _global_object_counter
@@ -294,6 +294,7 @@ class Object:
         self._alpha = alpha
         self._static = static
         self._selectable = selectable
+        self.meta_data = meta_data
         self._render_objects = []
 
     @staticmethod
