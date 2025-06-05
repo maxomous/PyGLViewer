@@ -294,7 +294,7 @@ class Object:
         self._alpha = alpha
         self._static = static
         self._selectable = selectable
-        self.meta_data = metadata
+        self.metadata = metadata
         self._render_objects = []
 
     @staticmethod
