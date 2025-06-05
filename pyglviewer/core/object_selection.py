@@ -61,9 +61,9 @@ class ObjectSelection:
             if picked_object:
                 for obj in picked_object._render_objects:
                     obj.toggle_selection()
-                    # Call callback with object
-                    if self.settings.select_callback:
-                        self.settings.select_callback(obj)
+                # Call callback with object
+                if self.settings.select_callback:
+                    self.settings.select_callback(picked_object)
         
             # Get selected objects to set the start positions
             self.selected_objects = self.renderer.get_selected_object() 
@@ -95,9 +95,9 @@ class ObjectSelection:
                     # Set new object transform
                     translate = self.object_start_pos[i][j] + mouse_delta
                     render_obj.set_translate(translate)
-                    # Call callback with object
-                    if self.settings.drag_callback:
-                        self.settings.drag_callback(render_obj)
+                # Call callback with object
+                if self.settings.drag_callback:
+                    self.settings.drag_callback(obj)
                 
     def process_release(self):
         '''Release left mouse button.'''
