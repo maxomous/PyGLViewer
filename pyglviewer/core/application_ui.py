@@ -1,5 +1,5 @@
 import imgui
-from pyglviewer.gui.imgui_widgets import ImGuiWidgets
+from pyglviewer.gui.imgui_widgets import imgui
 
 def render_core_ui(camera, renderer, text_renderer, config, timer, imgui_manager):
     """Render UI panels."""
@@ -136,7 +136,7 @@ def render_ui_camera(camera):
     imgui.pop_style_color()
     
     if imgui.tree_node('Information'):
-        ImGuiWidgets.create_table(
+        imgui.create_table(
             'camera_info',
             ['', ''],
             [

@@ -10,6 +10,7 @@ from pyglviewer.renderer.renderer import Renderer
 from pyglviewer.renderer.shapes import Shapes, ArrowDimensions
 from pyglviewer.renderer.objects import Object
 from pyglviewer.renderer.shader import PointShape
+from pyglviewer.gui.imgui_widgets import imgui
 from pyglviewer.utils.colour import Colour
 from pyglviewer.utils.config import Config   
 from pyglviewer.utils.timer import Timer
@@ -246,6 +247,9 @@ class ExampleApplication(Application):
         changed, self.config["variable 4"] = imgui.checkbox("Checkbox", self.config["variable 4"])
         
         if imgui.image_button(self.images['image_node'], 32, 32):
+            print("Image button clicked!")
+        
+        if imgui.image_button_with_text('Button', self.images['image_node'], (65, 80), (32, 32), text_offset=(0.5, 0.8), image_offset=(0, -15), is_active=False, image_when_hovered=self.images['image_node']):
             print("Image button clicked!")
         
         # End UI window

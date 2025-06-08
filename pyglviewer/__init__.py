@@ -6,7 +6,7 @@ from .core.mouse import Mouse
 from .core.object_selection import ObjectSelection, SelectionSettings
 from .gui.imgui_manager import ImGuiManager
 from .gui.imgui_text_renderer import ImguiTextRenderer
-from .gui.imgui_widgets import ImGuiWidgets
+from .gui.imgui_widgets import imgui
 from .renderer.shapes import Shapes
 from .renderer.light import Light, LightType, default_lighting
 from .renderer.objects import Object
@@ -29,7 +29,7 @@ __all__ = [
     "SelectionSettings",
     "ImGuiManager",
     "ImguiTextRenderer",
-    "ImGuiWidgets",
+    "imgui",
     "Shapes",
     "Light",
     "LightType",
