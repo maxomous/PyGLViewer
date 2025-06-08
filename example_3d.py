@@ -249,7 +249,7 @@ class ExampleApplication(Application):
         if imgui.image_button(self.images['image_node'], 32, 32):
             print("Image button clicked!")
         
-        if imgui.image_button_with_text('Button', self.images['image_node'], (65, 80), (32, 32), text_offset=(0.5, 0.8), image_offset=(0, -15), is_active=False, image_when_hovered=self.images['image_node']):
+        if imgui.image_button_with_text('Button', self.images['image_node'], (65, 80), (32, 32), text_offset=(0.5, 0.8), image_offset=(0, -15), is_active=True, image_when_hovered=self.images['image_node']):
             print("Image button clicked!")
         
         # End UI window

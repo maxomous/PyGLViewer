@@ -11,30 +11,6 @@ def imgui_method(func):
     setattr(imgui, func.__name__, func)  # Set our new function
     return func
 
-
-@imgui_method
-def get_color_rgb(col_imU32):
-    """Extract RGBA components from an ImGui color value.
-    
-    Args:
-        col_imU32 (int): ImGui color value in U32 format
-        
-    Returns:
-        tuple: (r, g, b, a) values in range 0-255
-        
-    Example:
-        ```python
-        color = imgui.get_color_rgb(imgui.COLOR_BUTTON)
-        r, g, b, a = color
-        print(f"Color components: R={r}, G={g}, B={b}, A={a}")
-        ```
-    """
-    r = col_imU32 & 0xFF
-    g = (col_imU32 >> 8) & 0xFF
-    b = (col_imU32 >> 16) & 0xFF
-    a = (col_imU32 >> 24) & 0xFF
-    return r, g, b, a
-
 @imgui_method
 def create_table(table_id: str, headers: list, rows: list, flags: int = 0) -> bool:
     """Creates and renders an ImGui table with the specified headers and rows.
@@ -88,7 +64,7 @@ def image_button_with_text(text, image, button_size, image_size, text_offset=(0,
             x: 0 = left, 0.5 = center, 1 = right
             y: 0 = top, 0.5 = center, 1 = bottom
         image_offset (tuple): Offset for image position (x, y)
-        is_active (bool): Whether the button is in active state
+        is_active (bool): Whether the button is in active state (set with imgui.COLOR_BUTTON_ACTIVE)
         image_when_hovered (int, optional): OpenGL texture ID for hover state
         
     Returns:
@@ -116,14 +92,9 @@ def image_button_with_text(text, image, button_size, image_size, text_offset=(0,
         
     # Set active color if needed
     if is_active:
-        r, g, b, a = imgui.get_color_rgb(imgui.COLOR_BUTTON_ACTIVE)
+        r, g, b, a = imgui.get_style().colors[imgui.COLOR_BUTTON_ACTIVE]
         imgui.push_style_color(imgui.COLOR_BUTTON, r, g, b)
         
-    # Calculate text positioning
-    style = imgui.get_style()
-    inner_frame = (button_size[0] - style.frame_padding.x * 2,
-                    button_size[1] - style.frame_padding.y * 2)
-   
     # Set text alignment and draw button
     imgui.push_style_var(imgui.STYLE_BUTTON_TEXT_ALIGN, text_offset)
     is_clicked = imgui.button(text, button_size[0], button_size[1])

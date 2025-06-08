@@ -50,7 +50,7 @@ pip install .[glfw]
 ### 4. ImGui Intellisense (Optional)
 ImGui documentation: https://pyimgui.readthedocs.io/en/latest/reference/imgui.core.html
 Intellisense is not included in the current version of the 'imgui' due to it being a port from C++, you can manually add it by:
-- Copy file: imgui_descriptions\__init__.pyi (Or download from: https://github.com/masc-it/pyimgui-interface-generator/blob/master/imgui.pyi)
+- Copy file: imgui_descriptions\__init__.pyi (This is a modified version of https://github.com/masc-it/pyimgui-interface-generator/blob/master/imgui.pyi)
 - Save to: AppData\Roaming\Python\Python312\site-packages\imgui\__init__.pyi 
 
 ## Usage
