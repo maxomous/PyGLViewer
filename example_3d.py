@@ -45,6 +45,7 @@ class ExampleApplication(Application):
         """
         Variables can be added to a config file (JSON format) which can be loaded/saved at runtime
         """
+        
         self.config.add("variable 1", 0.5, "Value of float slider")
         self.config.add("variable 2", (0.5, 0.5, 0.5), "Value of float slider 3D")
         self.config.add("variable 3", 2, "Value of dropdown")
@@ -243,6 +244,10 @@ class ExampleApplication(Application):
         changed, self.config["variable 3"] = imgui.combo("Dropdown", self.config["variable 3"], items)
         # Checkbox
         changed, self.config["variable 4"] = imgui.checkbox("Checkbox", self.config["variable 4"])
+        
+        if imgui.image_button(self.images['image_node'], 32, 32):
+            print("Image button clicked!")
+        
         # End UI window
         imgui.end()
 
@@ -275,6 +280,9 @@ if __name__ == '__main__':
             'arial_rounded_mt_bold-medium': { 'path': 'C:/Windows/Fonts/ARLRDBD.TTF', 'size': 15 },
         },
         default_font='arial-medium',
+        images={
+            'image_node': { 'path': './img/image.png' },
+        },
         config=Config('example_3d_config.json'),
         enable_docking=True,
         selection_settings=SelectionSettings(

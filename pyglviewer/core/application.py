@@ -49,7 +49,7 @@ class Application:
         selection_settings (dict): Selection settings
     """
 
-    def __init__(self, width, height, title, camera_settings, fonts, default_font, config, enable_docking, selection_settings: SelectionSettings):
+    def __init__(self, width, height, title, camera_settings, fonts, default_font, images, config, enable_docking, selection_settings: SelectionSettings):
         self.window_width = width
         self.window_height = height
         self.title = title
@@ -66,6 +66,7 @@ class Application:
         self.camera_settings = camera_settings
         self.fonts = fonts
         self.default_font = default_font
+        self.images = images
         self.enable_docking = enable_docking
         self.selection_settings = selection_settings
         
@@ -127,12 +128,16 @@ class Application:
     def _init_imgui(self):
         self.imgui_manager = ImGuiManager(self.window, enable_docking=self.enable_docking)
         self._load_fonts()
+        self.images = self._load_images()
         self.text_renderer = ImguiTextRenderer(self.mouse, self.imgui_manager)
 
     def _load_fonts(self):
         for name, font in self.fonts.items():
             self.imgui_manager.load_font(name, font['path'], font['size'])
 
+    def _load_images(self):
+        return {name: self.imgui_manager.load_image(image['path']) for name, image in self.images.items()}
+        
     def set_frame_size(self, window, width, height):
         """Handle window resize events.
         

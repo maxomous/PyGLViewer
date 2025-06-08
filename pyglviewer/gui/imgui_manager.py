@@ -1,6 +1,8 @@
 import imgui
 from imgui.integrations.glfw import GlfwRenderer
 import os
+from PIL import Image
+from OpenGL.GL import *
 
 class ImGuiManager:
     """Manager class for ImGui integration with GLFW.
@@ -72,6 +74,34 @@ class ImGuiManager:
     def pop_font(self):
         """Pop current font from ImGui font stack."""
         imgui.pop_font()
+
+    def load_image(self, path):
+        """Load an image and convert it to an OpenGL texture.
+        Returns a blank white texture if loading fails.
+        """
+        try:
+            # Load image using PIL
+            image = Image.open(path)
+            # Convert to RGBA if not already
+            if image.mode != 'RGBA':
+                image = image.convert('RGBA')
+            # Get image data
+            image_data = image.tobytes()
+            width, height = image.size
+        except Exception as e:
+            print(f"Error loading texture: {e}")
+            # Create a 1x1 white pixel for the blank texture
+            width, height = 1, 1
+            image_data = bytes([255, 255, 255, 255])  # White RGBA pixel
+        
+        # Create OpenGL texture
+        texture_id = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, texture_id)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data)
+        
+        return texture_id
 
     def new_frame(self):
         """Begin new ImGui frame."""
