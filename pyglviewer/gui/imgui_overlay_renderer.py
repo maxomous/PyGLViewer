@@ -90,7 +90,7 @@ class ImguiOverlayRenderer:
             static=static
         ))
     
-    def clear(self, clear_static=True):
+    def clear(self, clear_static=False):
         """Clear all non-static text and images."""
         # Keep only static items
         self.text_batches = [] if clear_static else [batch for batch in self.text_batches if batch.static]
