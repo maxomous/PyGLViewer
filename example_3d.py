@@ -264,7 +264,7 @@ class ExampleApplication(Application):
         if imgui.button("Clear Renderer!", width=100, height=30):
             print("Clearing renderer!")
             self.renderer.clear()
-            self.imgui_overlay_renderer.clear()
+            self.imgui_overlay_renderer.clear(clear_static=True)
             self.init_geometry()
             
         # Sliders - this variable is stored in the config file
