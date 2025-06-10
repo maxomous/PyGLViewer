@@ -25,16 +25,49 @@ class ExampleApplication(Application):
     GRID_TRANSLATE = (0, 0, -0.005) # Move grid slightly below z=0 to avoid z-fighting
     AXIS_SIZE = 100 # px
     
+    def __init__(self):
+        """
+        Initialise the core application.
+        """
+        super().__init__(
+            width=1280,
+            height=720,
+            title='Example 3D PyGLViewer Window',
+            camera_settings={
+                'target': (0, 0, 0),
+                'distance': 10
+            },
+            fonts={
+                'arial-large': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 24 },
+                'arial-medium': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 16 },
+                'arial-small': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 12 },
+                'arial_rounded_mt_bold-medium': { 'path': 'C:/Windows/Fonts/ARLRDBD.TTF', 'size': 15 },
+            },
+            default_font='arial-medium',
+            images={
+                'image_node': { 'path': './img/image.png' },
+            },
+            config=Config('example_3d_config.json'),
+            enable_docking=True,
+            selection_settings=SelectionSettings(
+                show_cursor_point=True,
+                select_objects=True,
+                drag_objects=True
+                # select_callback=lambda obj: print(f"Selected object: {obj}"),
+                # drag_callback=lambda obj: print(f"Dragged object: {obj}")
+            )
+        )
+        
     def init(self):
         """
-        Initialise the application.
+        Initialise your application.
         Create the UI, variables, lightingand geometry.
         """
         self.init_ui()
         self.init_variables()
         # Add lighting to the scene (Custom lighting can be used instead)
         self.renderer.add_lights(default_lighting)
-        self.init_geometry(initialise=True)
+        self.init_geometry()
     
     def init_ui(self):
         """ 
@@ -52,7 +85,7 @@ class ExampleApplication(Application):
         self.config.add("variable 3", 2, "Value of dropdown")
         self.config.add("variable 4", True, "Value of checkbox")
     
-    def init_geometry(self, initialise=False):
+    def init_geometry(self):
         """
         Create an object with obj = self.renderer.add_object()
         
@@ -75,14 +108,11 @@ class ExampleApplication(Application):
         Shapes.DEFAULT_SEGMENTS = 32     # n segments in circle
         Shapes.DEFAULT_SUBDIVISIONS = 4  # n subdivisions in sphere
     
-        # Run this only once on initialisation (else we will add it each time init_geometry is called)
-        if initialise:
-            # Text Rendering
-            self.text_renderer.add_axis_labels(xlim=[-10, 10], ylim=[-10, 10], increment=2, colour=Colour.WHITE, static=True)
+        # Static Text Rendering
+        self.imgui_overlay_renderer.add_axis_labels(xlim=[-10, 10], ylim=[-10, 10], increment=2, colour=Colour.WHITE, static=True)
+        self.imgui_overlay_renderer.add_image(self.images['image_node'], (0, -3, 0), (48, 48), static=True)
         
-               
         # Static objects
-        
         # Grid and axis
         self.grid = self.renderer.add_object(Object(static=True, selectable=False)\
             .set_shapes(Shapes.grid(size=self.GRID_SIZE*2, increment=1, colour=Colour.WHITE))\
@@ -195,7 +225,7 @@ class ExampleApplication(Application):
         self.axis.set_transform_matrix(Transform(scale=self.mouse.screen_to_world(self.AXIS_SIZE, dimension=3)))
         
         # Text Rendering
-        self.text_renderer.add_text('3D LABEL', (self.timer.oscillate_translation(limits=[-1.5, 1.5], speed=0.25), -0.5, 1), Colour.ORANGE, font='arial_rounded_mt_bold-medium')
+        self.imgui_overlay_renderer.add_text('3D LABEL', (self.timer.oscillate_translation(limits=[-1.5, 1.5], speed=0.25), -0.5, 1), Colour.ORANGE, font='arial_rounded_mt_bold-medium')
 
     def events(self):
         """
@@ -220,7 +250,7 @@ class ExampleApplication(Application):
         Creates a UI window for core settings.
         """
         imgui.begin('Core', flags=imgui.WINDOW_HORIZONTAL_SCROLLING_BAR)
-        render_core_ui(self.camera, self.renderer, self.text_renderer, self.config, self.timer, self.imgui_manager)
+        render_core_ui(self.camera, self.renderer, self.imgui_overlay_renderer, self.config, self.timer, self.imgui_manager)
         imgui.end()
 
     def render_ui_window(self):
@@ -234,6 +264,7 @@ class ExampleApplication(Application):
         if imgui.button("Clear Renderer!", width=100, height=30):
             print("Clearing renderer!")
             self.renderer.clear()
+            self.imgui_overlay_renderer.clear()
             self.init_geometry()
             
         # Sliders - this variable is stored in the config file
@@ -269,34 +300,7 @@ if __name__ == '__main__':
     """ 
     Setup your application.
     """
-    app = ExampleApplication(
-        width=1280,
-        height=720,
-        title='Example 3D PyGLViewer Window',
-        camera_settings={
-            'target': (0, 0, 0),
-            'distance': 10
-        },
-        fonts={
-            'arial-large': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 24 },
-            'arial-medium': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 16 },
-            'arial-small': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 12 },
-            'arial_rounded_mt_bold-medium': { 'path': 'C:/Windows/Fonts/ARLRDBD.TTF', 'size': 15 },
-        },
-        default_font='arial-medium',
-        images={
-            'image_node': { 'path': './img/image.png' },
-        },
-        config=Config('example_3d_config.json'),
-        enable_docking=True,
-        selection_settings=SelectionSettings(
-            show_cursor_point=True,
-            select_objects=True,
-            drag_objects=True
-            # select_callback=lambda obj: print(f"Selected object: {obj}"),
-            # drag_callback=lambda obj: print(f"Dragged object: {obj}")
-        )
-    )
+    app = ExampleApplication()
     
     """ Initialise application & start the render loop. """
     if app.init_core():

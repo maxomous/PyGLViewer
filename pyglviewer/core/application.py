@@ -8,7 +8,7 @@ from pyglviewer.renderer.renderer import Renderer
 from pyglviewer.utils.timer import Timer
 from pyglviewer.utils.config import Config
 from pyglviewer.gui.imgui_manager import ImGuiManager
-from pyglviewer.gui.imgui_text_renderer import ImguiTextRenderer
+from pyglviewer.gui.imgui_overlay_renderer import ImguiOverlayRenderer
 import time
 
 
@@ -59,7 +59,7 @@ class Application:
         self.mouse = None
         self.keyboard = None
         self.imgui_manager = None
-        self.text_renderer = None
+        self.imgui_overlay_renderer = None
         self.object_selection = None
         self.timer = Timer()
         self.config = config
@@ -129,7 +129,7 @@ class Application:
         self.imgui_manager = ImGuiManager(self.window, enable_docking=self.enable_docking)
         self._load_fonts()
         self.images = self._load_images()
-        self.text_renderer = ImguiTextRenderer(self.mouse, self.imgui_manager)
+        self.imgui_overlay_renderer = ImguiOverlayRenderer(self.mouse, self.imgui_manager)
 
     def _load_fonts(self):
         for name, font in self.fonts.items():
@@ -171,7 +171,7 @@ class Application:
         self.process_inputs()
         
         # Clear text renderer
-        self.text_renderer.clear()
+        self.imgui_overlay_renderer.clear()
         # Set object's geometry & transform and set the texts to render
         self.update_scene()
         
@@ -209,7 +209,7 @@ class Application:
         self.imgui_manager.push_font(self.default_font)
         self.imgui_manager.render_dockspace()
     
-        self.text_renderer.render() 
+        self.imgui_overlay_renderer.render() 
         self.render_ui()
         self.render_scene()
         

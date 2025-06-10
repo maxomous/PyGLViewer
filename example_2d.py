@@ -23,7 +23,7 @@ class Example2DApplication(Application):
         self.camera.set_projection(orthographic=True)
         
         # Grid and axis
-        self.text_renderer.add_axis_labels(
+        self.imgui_overlay_renderer.add_axis_labels(
             xlim=[-self.GRID_SIZE, self.GRID_SIZE], 
             ylim=[-self.GRID_SIZE, self.GRID_SIZE], 
             increment=1, 
