@@ -70,18 +70,11 @@ def render_ui_selection_widget(renderer):
                     
                 imgui.tree_pop()
         
-def render_ui_camera(camera):
-    """Render camera control panel.
-    
-    Includes:
-    - 2D/3D mode toggle buttons
-    - Orthographic/Perspective projection toggle buttons
-    - Detailed camera information table
-    """
-        
+def render_ui_camera_2d_3d_mode(camera):
+    """Render camera 2D/3D mode settings panel."""
     # Dimension Mode buttons
     is_2d_mode = camera.is_2d_mode
-    
+        
     # 2D button
     if is_2d_mode:
         imgui.push_style_color(imgui.COLOR_BUTTON, 0.2, 0.6, 0.2, 1.0)  # Green when active
@@ -105,9 +98,9 @@ def render_ui_camera(camera):
             camera.toggle_2d_mode()
             camera.update_projection()
     imgui.pop_style_color()
-    
-    imgui.same_line(spacing=20)
-    
+        
+def render_ui_camera_projection(camera):
+    """Render camera Orthographic/Perspective projection settings panel."""
     # Projection Mode buttons
     is_orthographic = camera.is_orthographic
     
@@ -134,6 +127,22 @@ def render_ui_camera(camera):
             camera.toggle_projection()
             camera.update_projection()
     imgui.pop_style_color()
+        
+def render_ui_camera(camera):
+    """Render camera control panel.
+    
+    Includes:
+    - 2D/3D mode toggle buttons
+    - Orthographic/Perspective projection toggle buttons
+    - Detailed camera information table
+    """
+    # 2D/3D mode toggle buttons
+    render_ui_camera_2d_3d_mode(camera)
+    
+    imgui.same_line(spacing=20)
+    
+    # Orthographic/Perspective projection toggle buttons
+    render_ui_camera_projection(camera)
     
     if imgui.tree_node('Information'):
         imgui.create_table(
