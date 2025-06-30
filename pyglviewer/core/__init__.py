@@ -8,6 +8,9 @@ from .object_selection import ObjectSelection, SelectionSettings
 __all__ = [
     "Application",
     "render_core_ui",
+    "render_ui_camera",
+    "render_ui_camera_2d_3d_mode",
+    "render_ui_camera_projection",
     "ThirdPersonCamera",
     "Keyboard",
     "Mouse",
