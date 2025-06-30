@@ -123,7 +123,7 @@ def render_ui_camera_projection(camera):
     else:
         imgui.push_style_color(imgui.COLOR_BUTTON, 0.4, 0.4, 0.4, 1.0)  # Gray when inactive
     if imgui.button("Perspective"):
-        if is_orthographic:
+        if is_orthographic: 
             camera.toggle_projection()
             camera.update_projection()
     imgui.pop_style_color()
