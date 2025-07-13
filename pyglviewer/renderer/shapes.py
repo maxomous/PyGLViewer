@@ -179,7 +179,11 @@ class Shape:
             return self
 
         transform = Transform(translate, rotate, scale)
-        normal_matrix = np.linalg.inv(transform.transform_matrix()[:3, :3]).T
+        
+        try:
+            normal_matrix = np.linalg.inv(transform.transform_matrix()[:3, :3]).T
+        except np.linalg.LinAlgError:
+            return self
 
         for vertex in self.vertices:
             # Transform position
