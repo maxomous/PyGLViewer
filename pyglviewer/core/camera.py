@@ -175,10 +175,10 @@ class ThirdPersonCamera(Camera):
         right (np.array): Camera right vector
     """
 
-    def __init__(self, target, up, distance):
+    def __init__(self, is_2d_mode, target, up, distance):
         super().__init__(target, up, distance)
         self.world_up = np.array(up, dtype=np.float32)
-        self.is_2d_mode = False
+        self.set_2d_mode(is_2d_mode)
         self.update_vectors()
         # self.update_projection() # aspect needs to be set first
 
@@ -264,8 +264,8 @@ class ThirdPersonCamera(Camera):
         if enabled:
             self.pitch = -90.0  # Look straight down
         else:
-            # When in 3D mode, use a reasonable pitch value
-            self.pitch = -45.0
+            # When in 3D mode
+            self.pitch = -27.0
         self.update_vectors()
 
     def toggle_2d_mode(self):

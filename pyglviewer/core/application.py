@@ -114,10 +114,12 @@ class Application:
 
     def _init_components(self):
         self.camera = ThirdPersonCamera(
+            is_2d_mode=self.camera_settings['2d_mode'],
             target=self.camera_settings['target'],
             up=(0, 0, 1),  # Constant up vector
             distance=self.camera_settings['distance']
         )
+            
         self.mouse = Mouse(self)
         self.keyboard = Keyboard(self.camera)
         self.renderer = Renderer(self.config, max_static_vertices=50000, max_static_indices=150000, max_dynamic_vertices=50000, max_dynamic_indices=150000)
