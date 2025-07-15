@@ -44,10 +44,10 @@ class ExampleApplication(Application):
                 'arial-small': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 12 },
                 'arial_rounded_mt_bold-medium': { 'path': 'C:/Windows/Fonts/ARLRDBD.TTF', 'size': 15 },
             },
-            # default_font='arial-medium',
-            # images={
-            #     'image_node': { 'path': './img/image.png' },
-            # },
+            default_font='arial-medium',
+            images={
+                'image_node': { 'path': './img/image.png' },
+            },
             config=Config('example_3d_config.json'),
             enable_docking=True,
             selection_settings=SelectionSettings(
