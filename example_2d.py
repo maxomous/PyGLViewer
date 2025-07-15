@@ -19,7 +19,7 @@ class Example2DApplication(Application):
     def init(self):
         """ Initialise the application. Create the UI, variables, lighting and geometry. """
         # Set 2D mode and orthographic projection
-        self.camera.set_2d_mode(True)
+        # self.camera.set_2d_mode(True)
         self.camera.set_projection(orthographic=True)
         
         # Grid and axis
@@ -112,12 +112,13 @@ if __name__ == '__main__':
         width=1280,
         height=720,
         title='Example 2D PyGLViewer Window',
-        camera_settings={ 'target': (4, 0, 0), 'distance': 5 },
+        camera_settings={ '2d_mode': True, 'target': (4, 0, 0), 'distance': 5 },
         fonts={
             'arial-medium': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 16 },
             'arial_rounded_mt_bold-medium': { 'path': 'C:/Windows/Fonts/ARLRDBD.TTF', 'size': 15 },
         },
         default_font='arial-medium',
+        images={},
         config=Config('example_2d_config.json'),
         enable_docking=True,
         selection_settings=SelectionSettings()
