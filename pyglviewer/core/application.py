@@ -170,13 +170,12 @@ class Application:
         """
         # Update
         self.timer.update()  # Update the timer to calculate delta time
-        self.process_inputs()
-        
-        # Clear text renderer
+        # Clear imgui text & image renderer
         self.imgui_overlay_renderer.clear()
+        # Process GLFW & imgui input events
+        self.process_inputs()
         # Set object's geometry & transform and set the texts to render
         self.update_scene()
-        
         # Clear object renderer
         self.renderer.clear_framebuffer()
         # Render

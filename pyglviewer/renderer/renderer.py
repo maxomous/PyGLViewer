@@ -90,7 +90,7 @@ class Renderer:
                                             max_dynamic_vertices, max_dynamic_indices)
         
     def clear(self):
-        """Clear the renderer."""   
+        """Clear the renderer. Used to clear all (including static) objects"""   
         self.objects = []
         Object.reset_global_id_counter()
         

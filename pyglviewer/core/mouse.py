@@ -120,10 +120,10 @@ class Mouse:
         io = imgui.get_io()
         
         if io.want_capture_mouse:
-            # Get ImGui's desired cursor
+            # Get ImGui's cursor type
             cursor = imgui.get_mouse_cursor()
             
-            # Only update if cursor changed
+            # If cursor changed, update glfw cursor from imgui's cursor type
             if cursor != self.last_cursor:
                 # print(f"Cursor: {cursor}")
                 if cursor == imgui.MOUSE_CURSOR_ARROW:
