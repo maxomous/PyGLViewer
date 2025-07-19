@@ -75,7 +75,7 @@ class ImguiOverlayRenderer:
         
         return id 
     
-    def remove_text(self, text_id):
+    def remove_texts(self, text_id):
         # Support both single int and list of ints
         if isinstance(text_id, int):
             ids_to_remove = [text_id]
@@ -130,7 +130,7 @@ class ImguiOverlayRenderer:
         ))
         return id 
     
-    def remove_image(self, image_id):
+    def remove_images(self, image_id):
         # Support both single int and list of ints
         if isinstance(image_id, int):
             ids_to_remove = [image_id]
