@@ -22,14 +22,19 @@ class Example2DApplication(Application):
         # self.camera.set_2d_mode(True)
         self.camera.set_projection(orthographic=True)
         
+        # Store the static texts in case we want to remove them later (same process for images)
+        self.static_text = {}
         # Grid and axis
-        self.imgui_overlay_renderer.add_axis_labels(
+        self.static_text['axis_labels'] = self.imgui_overlay_renderer.add_axis_labels(
             xlim=[-self.GRID_SIZE, self.GRID_SIZE], 
             ylim=[-self.GRID_SIZE, self.GRID_SIZE], 
             increment=1, 
             colour=Colour.WHITE, 
             static=True
         )
+        # Remove static text
+        # self.imgui_overlay_renderer.remove_text(self.static_text['axis_labels'])
+        
         # Create grid params with translation
         self.grid = self.renderer.add_object(Object(static=True, selectable=False)\
             .set_shapes(Shapes.grid(size=self.GRID_SIZE*2, increment=1, colour=Colour.WHITE))\
