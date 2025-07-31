@@ -27,6 +27,7 @@ It includes:
 
 ### 2. Install PyGLViewer
 ```bash
+pip uninstall pyglviewer -y 
 pip install git+https://github.com/maxomous/pyglviewer.git
 ```
 

@@ -90,7 +90,7 @@ class Renderer:
                                             max_dynamic_vertices, max_dynamic_indices)
         
     def clear(self):
-        """Clear the renderer."""   
+        """Clear the renderer. Used to clear all (including static) objects"""   
         self.objects = []
         Object.reset_global_id_counter()
         
@@ -151,9 +151,17 @@ class Renderer:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
     def add_object(self, object):
+        '''Add new object to batch, returns that object'''
         self.objects.append(object)
         return self.objects[-1]
             
     def remove_object(self, object):
-        self.objects.remove(object)
+        '''Remove object(s) from the batch. object can be an Object or a list of Objects'''
+        if isinstance(object, list):
+            for obj in object:
+                if obj in self.objects:
+                    self.objects.remove(obj)
+        else:
+            if object in self.objects:
+                self.objects.remove(object)
         

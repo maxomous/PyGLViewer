@@ -34,6 +34,7 @@ class ExampleApplication(Application):
             height=720,
             title='Example 3D PyGLViewer Window',
             camera_settings={
+                '2d_mode': False,
                 'target': (0, 0, 0),
                 'distance': 10
             },
@@ -108,9 +109,15 @@ class ExampleApplication(Application):
         Shapes.DEFAULT_SEGMENTS = 32     # n segments in circle
         Shapes.DEFAULT_SUBDIVISIONS = 4  # n subdivisions in sphere
     
-        # Static Text Rendering
-        self.imgui_overlay_renderer.add_axis_labels(xlim=[-10, 10], ylim=[-10, 10], increment=2, colour=Colour.WHITE, static=True)
-        self.imgui_overlay_renderer.add_image(self.images['image_node'], (0, -3, 0), (48, 48), static=True)
+        # Static Text Rendering - A dictionary of text ids (or lists of text ids)
+        self.static_text = {}
+        self.static_text['axis_labels'] = self.imgui_overlay_renderer.add_axis_labels(xlim=[-10, 10], ylim=[-10, 10], increment=2, colour=Colour.WHITE, static=True)
+        # self.imgui_overlay_renderer.remove_text(self.static_text['axis_labels'])
+        
+        # Static Image Rendering - A dictionary of image ids (or lists of image ids)
+        self.static_images = {}
+        self.static_images['my image'] = self.imgui_overlay_renderer.add_image(self.images['image_node'], (0, -3, 0), (48, 48), static=True)
+        # self.imgui_overlay_renderer.remove_image(self.static_images['my image'])
         
         # Static objects
         # Grid and axis

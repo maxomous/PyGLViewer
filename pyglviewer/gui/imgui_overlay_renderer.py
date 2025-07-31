@@ -10,6 +10,7 @@ from pyglviewer.utils.colour import Colour
 @dataclass
 class TextInfo:
     """Store information about text to be rendered."""
+    id: int
     text: str
     world_pos: Tuple[float, float, float]
     align_text: Tuple[float, float]
@@ -17,18 +18,10 @@ class TextInfo:
     font: str = None
     static: bool = False
 
-    def set_text(self, text=None, world_pos=None, colour=None, align_text=None, font=None, static=None):
-        ''' Allows for updating text after it has been added to the renderer '''
-        self.text = text if text is not None else self.text
-        self.world_pos = world_pos if world_pos is not None else self.world_pos
-        self.align_text = align_text if align_text is not None else self.align_text
-        self.colour = colour if colour is not None else self.colour
-        self.font = font if font is not None else self.font
-        self.static = static if static is not None else self.static
-    
 @dataclass
 class ImageInfo:
     """Store information about an image to be rendered."""
+    id: int
     texture_id: int  # OpenGL texture ID
     world_pos: Tuple[float, float, float]
     size: Tuple[float, float]  # Width, height
@@ -52,6 +45,8 @@ class ImguiOverlayRenderer:
         self.imgui_manager = imgui_manager
         self.text_batches = []  # Store text information for batch rendering
         self.image_batches = []  # Store image information for batch rendering
+        self.global_text_counter = 0
+        self.global_image_counter = 0
     
     def add_text(self, text='', world_pos=(0, 0, 0), colour=Colour.WHITE, align_text=(0, 0), font=None, static=False):
         """Add text to be rendered at a 3D world position. 
@@ -66,29 +61,59 @@ class ImguiOverlayRenderer:
             font (imgui.Font, optional): ImGui font to use. Uses default if None.
             static (bool): If True, text will not be removed when clearing text batches
         """
+        # Create new id
+        id = self.global_text_counter
+        self.global_text_counter += 1
+        
         # Convert colour to ImGui format (packed 32-bit RGBA)
         if len(colour) == 3:
             colour = (*colour, 1.0)
         imgui_colour = imgui.get_color_u32_rgba(*colour)
               
         # Store text information instead of rendering immediately
-        self.text_batches.append(TextInfo(text=text, world_pos=world_pos, align_text=align_text, colour=imgui_colour, font=font, static=static))
-        return self.text_batches[-1]
+        self.text_batches.append(TextInfo(
+            id=id,
+            text=text, 
+            world_pos=world_pos, 
+            align_text=align_text, 
+            colour=imgui_colour, 
+            font=font, 
+            static=static
+        ))
         
+        return id 
+    
+    def remove_texts(self, text_id):
+        # Support both single int and list of ints
+        if isinstance(text_id, int):
+            ids_to_remove = [text_id]
+        elif isinstance(text_id, (list, tuple, set)):
+            ids_to_remove = list(text_id)
+        else:
+            return  # Invalid type
+
+        # Get indexes of any text with matching ids and delete them
+        indexes = [i for i, text in enumerate(self.text_batches) if text.id in ids_to_remove]
+        for index in sorted(indexes, reverse=True):
+            del self.text_batches[index]
+        
+                
     
     def add_axis_labels(self, xlim=[-10, 10], ylim=[-10, 10], increment=1, colour=Colour.WHITE, font=None, static=False):
         """Add axis labels to the viewport."""
+        text_ids = []
         # Text in 3d space
         for i in range(xlim[0], xlim[1]+1, increment):
             if i != 0:
-                self.add_text(f"{i}", (i, 0, 0), colour, (-5, 12), font, static)
+                text_ids.append(self.add_text(f"{i}", (i, 0, 0), colour, (-5, 12), font, static))
 
         for i in range(ylim[0], ylim[1]+1, increment):
             if i != 0:
-                self.add_text(f"{i}", (0, i, 0), colour, (-20, -8), font, static)
+                text_ids.append(self.add_text(f"{i}", (0, i, 0), colour, (-20, -8), font, static))
 
         # Draw 0 label
-        self.add_text(f"{0}", (0, 0, 0), colour, (-20, 12), font, static)
+        text_ids.append(self.add_text(f"{0}", (0, 0, 0), colour, (-20, 12), font, static))
+        return text_ids
             
     def add_image(self, texture_id=None, world_pos=(0, 0, 0), size=(32, 32), align_image=(0, 0), static=False):
         """Add an image to be rendered at a 3D world position.
@@ -100,20 +125,44 @@ class ImguiOverlayRenderer:
             align_image (tuple): Image alignment offset (x,y)
             static (bool): If True, image will not be removed when clearing batches
         """
+        id = self.global_image_counter
+        self.global_image_counter += 1
+        
         self.image_batches.append(ImageInfo(
+            id=id,
             texture_id=texture_id,
             world_pos=world_pos,
             size=size,
             align_image=align_image,
             static=static
         ))
-        return self.image_batches[-1]
+        return id 
     
+    def remove_images(self, image_id):
+        # Support both single int and list of ints
+        if isinstance(image_id, int):
+            ids_to_remove = [image_id]
+        elif isinstance(image_id, (list, tuple, set)):
+            ids_to_remove = list(image_id)
+        else:
+            return  # Invalid type
+
+        # Get indexes of any images with matching ids and delete them
+        indexes = [i for i, img in enumerate(self.image_batches) if img.id in ids_to_remove]
+        for index in sorted(indexes, reverse=True):
+            del self.image_batches[index]
+        
     def clear(self, clear_static=False):
         """Clear all non-static text and images."""
-        # Keep only static items
-        self.text_batches = [] if clear_static else [batch for batch in self.text_batches if batch.static]
-        self.image_batches = [] if clear_static else [batch for batch in self.image_batches if batch.static]
+        if clear_static:
+            self.text_batches = []
+            self.image_batches = []
+            self.global_text_counter = 0
+            self.global_image_counter = 0
+            return
+        # Keep static items
+        self.text_batches =  [batch for batch in self.text_batches if batch.static]
+        self.image_batches = [batch for batch in self.image_batches if batch.static]
         
     def render(self):
         """
@@ -158,7 +207,7 @@ class ImguiOverlayRenderer:
                 
             if batch.font:
                 self.imgui_manager.pop_font()
-                
+            
         # Render image batches
         for batch in self.image_batches:
             # Project 3D position to screen space
