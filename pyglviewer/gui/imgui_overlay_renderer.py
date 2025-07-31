@@ -17,6 +17,15 @@ class TextInfo:
     font: str = None
     static: bool = False
 
+    def set_text(self, text=None, world_pos=None, colour=None, align_text=None, font=None, static=None):
+        ''' Allows for updating text after it has been added to the renderer '''
+        self.text = text if text is not None else self.text
+        self.world_pos = world_pos if world_pos is not None else self.world_pos
+        self.align_text = align_text if align_text is not None else self.align_text
+        self.colour = colour if colour is not None else self.colour
+        self.font = font if font is not None else self.font
+        self.static = static if static is not None else self.static
+    
 @dataclass
 class ImageInfo:
     """Store information about an image to be rendered."""
@@ -25,6 +34,14 @@ class ImageInfo:
     size: Tuple[float, float]  # Width, height
     align_image: Tuple[float, float] = (0, 0)
     static: bool = False
+    
+    def set_image(self, texture_id=None, world_pos=None, size=None, align_image=None, static=None):
+        ''' Allows for updating image after it has been added to the renderer '''
+        self.texture_id = texture_id if texture_id is not None else self.texture_id
+        self.world_pos = world_pos if world_pos is not None else self.world_pos
+        self.size = size if size is not None else self.size
+        self.align_image = align_image if align_image is not None else self.align_image
+        self.static = static if static is not None else self.static
 
 class ImguiOverlayRenderer:
     """Batch renderer for drawing text and images at 3D world positions using ImGui."""
@@ -36,7 +53,7 @@ class ImguiOverlayRenderer:
         self.text_batches = []  # Store text information for batch rendering
         self.image_batches = []  # Store image information for batch rendering
     
-    def add_text(self, text, world_pos, colour, align_text=(0, 0), font=None, static=False):
+    def add_text(self, text='', world_pos=(0, 0, 0), colour=Colour.WHITE, align_text=(0, 0), font=None, static=False):
         """Add text to be rendered at a 3D world position. 
         Stores text data to later (in that frame) be rendered in imgui window.
         Can be called any time in frame,
@@ -56,7 +73,8 @@ class ImguiOverlayRenderer:
               
         # Store text information instead of rendering immediately
         self.text_batches.append(TextInfo(text=text, world_pos=world_pos, align_text=align_text, colour=imgui_colour, font=font, static=static))
-    
+        return self.text_batches[-1]
+        
     
     def add_axis_labels(self, xlim=[-10, 10], ylim=[-10, 10], increment=1, colour=Colour.WHITE, font=None, static=False):
         """Add axis labels to the viewport."""
@@ -72,7 +90,7 @@ class ImguiOverlayRenderer:
         # Draw 0 label
         self.add_text(f"{0}", (0, 0, 0), colour, (-20, 12), font, static)
             
-    def add_image(self, texture_id, world_pos, size, align_image=(0, 0), static=False):
+    def add_image(self, texture_id=None, world_pos=(0, 0, 0), size=(32, 32), align_image=(0, 0), static=False):
         """Add an image to be rendered at a 3D world position.
         
         Args:
@@ -89,6 +107,7 @@ class ImguiOverlayRenderer:
             align_image=align_image,
             static=static
         ))
+        return self.image_batches[-1]
     
     def clear(self, clear_static=False):
         """Clear all non-static text and images."""
@@ -144,7 +163,7 @@ class ImguiOverlayRenderer:
         for batch in self.image_batches:
             # Project 3D position to screen space
             screen_pos = self.mouse.project_world_to_screen(batch.world_pos)
-            if screen_pos != (None, None):
+            if screen_pos != (None, None) and batch.texture_id is not None:
                 # Adjust window position
                 screen_pos = np.array(screen_pos) - np.array(self.window_pos) + np.array(batch.align_image)
                 # Draw image
