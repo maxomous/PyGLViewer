@@ -111,7 +111,7 @@ class ObjectSelection:
         
     def process_selection_targets(self):
         # Draw target on selected objects
-        selected_geometry = Shapes.blank(GL_LINES)
+        targets = Shapes.blank(GL_LINES)
         # Get object under cursor
         for obj in self.renderer.get_selected_object():
             bounds = obj.get_bounds()
@@ -124,12 +124,13 @@ class ObjectSelection:
                 continue
             
             if obj._render_objects[0].draw_type == GL_POINTS:
-                offset += self.mouse.screen_to_world(obj._render_objects[0]._point_size)
+                point_size = obj._render_objects[0]._point_size
+                offset += self.mouse.screen_to_world(point_size)
             
             edge_length = self.camera.distance * self.target_edge_length
-            selected_geometry += Shapes.target(mid_point, size + np.array([offset, offset, offset]), edge_length, Colour.WHITE) 
+            targets += Shapes.target(mid_point, size + np.array([offset, offset, offset]), edge_length, Colour.WHITE) 
 
-        self.selection_target.set_shapes(selected_geometry)
+        self.selection_target.set_shapes(targets)
         
     def get_object_under_cursor(self, cursor_pos):
         """Determine which object is under the cursor"""

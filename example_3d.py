@@ -234,6 +234,46 @@ class ExampleApplication(Application):
         # Text Rendering
         self.imgui_overlay_renderer.add_text('3D LABEL', (self.timer.oscillate_translation(limits=[-1.5, 1.5], speed=0.25), -0.5, 1), Colour.ORANGE, font='arial_rounded_mt_bold-medium')
 
+
+
+
+
+(application)
+self.renderer.object(shape=Shapes.cube(size=0.5, colour=Colour.YELLOW), )
+
+
+    # Handles static and dynamic objects
+
+
+    self.renderer.add(Object(shape=my_shape, selectable=False))
+
+
+        viewer.begin()
+            # 
+            viewer.object(Shapes.cube(size=0.5, colour=Colour.YELLOW), )
+            
+        renderer.end()
+
+
+
+        # Static objects
+        self.grid = self.renderer.add_object(Object(static=True, selectable=False).set_shapes(my_shape).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
+        # Dynamic objects
+        self.dynamic_object = self.renderer.add_object(Object()) 
+        self.dynamic_object.set_shapes(Shapes.cube(size=size, colour=Colour.WHITE))
+    
+        # Static text / images
+        self.static_text['axis_labels'] = self.imgui_overlay_renderer.add_axis_labels(xlim=[-10, 10], ylim=[-10, 10], increment=2, colour=Colour.WHITE, static=True)
+        self.static_images['my image'] = self.imgui_overlay_renderer.add_image(self.images['image_node'], (0, -3, 0), (48, 48), static=True)
+        # Dynamic text / images
+        self.imgui_overlay_renderer.add_text('3D LABEL', (self.timer.oscillate_translation(limits=[-1.5, 1.5], speed=0.25), -0.5, 1), Colour.ORANGE, font='arial_rounded_mt_bold-medium')
+
+
+
+
+
+
+
     def events(self):
         """
         Process custom events, such as the keyboard & mouse.

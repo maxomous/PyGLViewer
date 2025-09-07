@@ -288,7 +288,7 @@ class Object:
         self.id = _global_object_counter
         _global_object_counter += 1
         # Set properties
-        self._point_size = point_size
+        self._point_size = point_size # TODO: can we remove these from here?
         self._line_width = line_width
         self._point_shape = point_shape
         self._alpha = alpha
