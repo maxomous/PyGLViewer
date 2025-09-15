@@ -52,6 +52,11 @@ class Vertex:
         """Get the size of a vertex in bytes."""
         return 9 * np.dtype(np.float32).itemsize
     
+    @staticmethod
+    def index_size():
+        """Get the size of a index in bytes."""
+        return np.dtype(np.uint32).itemsize
+    
 class Shape:
     
     """
@@ -71,24 +76,26 @@ class Shape:
             vertices (list[Vertex]): List of vertices
             indices (list[int]): List of indices
         """
-        self.draw_type = draw_type
-        self.shader = shader or DefaultShaders.default_shader
-        self.vertices = np.array(vertices, dtype=Vertex) if vertices is not None else []
-        self.indices = np.array(indices, dtype=np.uint32) if indices is not None else []
+        self.draw_type = self.set_draw_type(draw_type) # TODO: Rename primitive
+        self.shader = self.set_shader(shader)
+        self.vertices = np.array(vertices, dtype=Vertex) if vertices is not None else np.array([], dtype=np.float32)
+        self.vertex_data = self.flatten_vertices() # must be updated anytime vertices change
+        self.indices = np.array(indices, dtype=np.uint32) if indices is not None else np.array([], dtype=np.float32)
         self.vertex_count = len(vertices) if vertices is not None else 0
         self.index_count = len(indices) if indices is not None else 0
-        
+
     def __add__(self, other):
         """Combine two shapes into a single shape.
-        
+
         Args:
             other (Shape): Shape to combine with this one
-        
+
         Returns:
             Shape: Combined shape with adjusted indices
-            
+
         Raises:
             TypeError: If other is not a Shape instance
+            ValueError: If shapes are incompatible (different draw types or shaders)
         """
         if not isinstance(other, Shape):
             raise TypeError("Can only add Shape to Shape")
@@ -99,36 +106,36 @@ class Shape:
         if self.shader != other.shader:
             raise ValueError("Cannot combine shapes with different shaders")
 
-        # Combine vertices
-        combined_vertices = np.concatenate((self.vertices, other.vertices))
+        # Combine vertices (list of Vertex objects)
+        combined_vertices = list(self.vertices) + list(other.vertices)
 
-        # Adjust indices for the second object
-        max_index = len(self.vertices)
-        adjusted_other_indices = [index + max_index for index in other.indices]
+        # Adjust indices for the second shape
+        offset = len(self.vertices)
+        adjusted_other_indices = [i + offset for i in other.indices]
 
         # Combine indices
-        combined_indices = np.concatenate((self.indices, adjusted_other_indices))
+        combined_indices = np.concatenate(
+            (self.indices, np.array(adjusted_other_indices, dtype=np.uint32))
+        )
 
-        result = Shape(self.draw_type, combined_vertices, combined_indices, self.shader)
-        return result
+        # Create new Shape (constructor will regenerate vertex_data etc.)
+        return Shape(self.draw_type, combined_vertices, combined_indices, self.shader)
 
-    def get_vertices(self):
-        """Return interleaved vertex data as a flattened numpy array.
+
+    def flatten_vertices(self):
+        '''Returns np.ndarray: Flattened array of vertex data [x,y,z, r,g,b, nx,ny,nz, x,y,z...]'''
+        vertices = np.array([]) if len(self.vertices) == 0 else np.concatenate([vertex.to_array() for vertex in self.vertices])
+        return vertices.astype(np.float32)
+    
+    def set_draw_type(self, draw_type):
+        self.draw_type = draw_type
+        return draw_type
         
-        Returns:
-            np.ndarray: Flattened array of vertex data [x,y,z, r,g,b, nx,ny,nz, x,y,z...]
-        """
-        return np.array([vertex.to_array() for vertex in self.vertices], dtype=np.float32).flatten()
+    def set_shader(self, shader):
+        self.shader = shader or DefaultShaders.default_shader
+        return self.shader
 
-    def get_indices(self):
-        """Get index data for batch rendering.
-        
-        Returns:
-            np.ndarray: Array of vertex indices for rendering
-        """
-        return self.indices
-
-    def update_vertices(self, data):
+    def set_vertices(self, data):
         """Update vertex data.
         
         Args:
@@ -151,8 +158,10 @@ class Shape:
         else:
             self.vertices = np.array(data, dtype=Vertex)
         self.vertex_count = len(self.vertices)
+        self.vertex_data = self.flatten_vertices()
 
-    def update_indices(self, data):
+
+    def set_indices(self, data):
         """Update index data.
         
         Args:
@@ -191,6 +200,8 @@ class Shape:
             # Transform normal
             vertex.normal = normal_matrix @ vertex.normal
             vertex.normal = vertex.normal / np.linalg.norm(vertex.normal)
+        # Update the vertex data since vertices has changed
+        self.vertex_data = self.flatten_vertices()
 
         return self
     
@@ -1248,8 +1259,7 @@ class Shapes:
 
         Returns
         -------
-        RenderObject
-            Points render object
+            Shape: 2D (XY) points
         """
         x = np.atleast_1d(x)
         y = np.atleast_1d(y)
@@ -1278,8 +1288,7 @@ class Shapes:
 
         Returns
         -------
-        RenderObject
-            Line render object
+            Shape: 2D (XY) lines
         """
         x = np.atleast_1d(x)
         y = np.atleast_1d(y)

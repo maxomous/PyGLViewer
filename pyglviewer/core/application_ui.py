@@ -27,48 +27,50 @@ def render_core_ui(camera, renderer, text_renderer, config, timer, imgui_manager
 
 def render_ui_selection_widget(renderer):
     """Render widget showing information about selected object."""
-    selected_object = renderer.get_selected_object()
+    selected_objects = renderer.get_selected_objects()
 
-    if not selected_object:
-        imgui.text("No object selected")
+    if not selected_objects:
+        imgui.text("No objects selected")
     else:
-        for obj in selected_object:
-            if imgui.tree_node(f"Object {obj.id}"):
-                for i, render_obj in enumerate(obj._render_objects):
+        for obj, name, buffer in selected_objects:
+            if imgui.tree_node(f"Object: {name}"):
+                
+                # Display transform info
+                if imgui.tree_node("Transform"):
+                    # Extract position from model matrix (last column)
+                    position = obj.model_matrix[3, :3]
+                    # imgui.text(f"Position: {position[0]:.2f}, {position[1]:.2f}, {position[2]:.2f}")
                     
-                    if imgui.tree_node(f"Render Object {i}"):
-                        # Display object properties
-                        imgui.text(f"Draw Type: {render_obj.draw_type}")
-                            
-                        # Display transform info
-                        if imgui.tree_node("Transform"):
-                            # Extract position from model matrix (last column)
-                            position = render_obj.model_matrix[3, :3]
-                            # imgui.text(f"Position: {position[0]:.2f}, {position[1]:.2f}, {position[2]:.2f}")
-                            
-                            # Add transform controls
-                            changed, new_pos = imgui.drag_float3("Position", *position, 0.1)
-                            if changed:
-                                # Update object position
-                                render_obj.set_translate(translate=new_pos)
-                                
-                            # Display vertex count
-                            if render_obj._vertex_data is not None:
-                                vertex_count = len(render_obj._vertex_data) // 3  # Assuming 3 components per vertex
-                                imgui.text(f"Vertex Count: {vertex_count}")
-                            
-                            
-                            imgui.tree_pop()
+                    # Add transform controls
+                    changed, new_pos = imgui.drag_float3("Position", *position, 0.1)
+                    if changed:
+                        # Update object position
+                        obj.set_translate(translate=new_pos)
                         
-                        # Display bounds info
-                        if imgui.tree_node("Bounds"):
-                            bounds = render_obj.get_bounds()
-                            if bounds:
-                                imgui.text(f"Min: {bounds['min'][0]:.2f}, {bounds['min'][1]:.2f}, {bounds['min'][2]:.2f}")
-                                imgui.text(f"Max: {bounds['max'][0]:.2f}, {bounds['max'][1]:.2f}, {bounds['max'][2]:.2f}")
-                            imgui.tree_pop()
+                    imgui.tree_pop()
+                
+                # Display bounds info
+                if imgui.tree_node("Bounds"):
+                    bounds = obj.get_bounds()
+                    if bounds:
+                        imgui.text(f"Min: {bounds['min'][0]:.2f}, {bounds['min'][1]:.2f}, {bounds['min'][2]:.2f}")
+                        imgui.text(f"Max: {bounds['max'][0]:.2f}, {bounds['max'][1]:.2f}, {bounds['max'][2]:.2f}")
+                    imgui.tree_pop()
                     
-                imgui.tree_pop()
+                if imgui.tree_node("Shapes"):
+                    for shape_data in obj.shape_data:
+                        
+                        shape = shape_data['shape']
+                        # Display object properties
+                        imgui.text(f"Draw Type: {shape.draw_type}")
+                        
+                        # Display vertex count
+                        if shape._vertex_data is not None:
+                            vertex_count = len(shape._vertex_data) // 3  # Assuming 3 components per vertex
+                            imgui.text(f"Vertex Count: {vertex_count}")
+                    imgui.tree_pop()
+                
+            imgui.tree_pop()
         
 def render_ui_camera_2d_3d_mode(camera):
     """Render camera 2D/3D mode settings panel."""
@@ -206,7 +208,7 @@ def render_ui_renderer(config, renderer, text_renderer):
     _, config["background_colour"] = imgui.color_edit3("Background Colour", *config["background_colour"])
    
     # Add ImGui stats window
-    def render_batch_renderer_stats(renderer_name, renderer):
+    def render_buffer_stats(renderer_name, renderer):
         if imgui.tree_node(renderer_name):
             stats = renderer.get_stats()
             for key, value in stats.items():
@@ -221,16 +223,16 @@ def render_ui_renderer(config, renderer, text_renderer):
                     imgui.text(f"{key}: {value}")
             imgui.tree_pop()
     
-    def render_batch_renderer_stats(renderer_name, renderer):
+    def render_buffer_stats(renderer_name, renderer):
         if imgui.tree_node(renderer_name):
             stats = renderer.get_stats()
             for key, value in stats.items():
                 imgui.text(f"{key.replace('_', ' ').title()}: {value}")
             imgui.tree_pop()    
     
-    render_batch_renderer_stats('Static Buffer Info', renderer.batch_renderer.static_buffer)
-    render_batch_renderer_stats('Dynamic Buffer Info', renderer.batch_renderer.dynamic_buffer)
-    render_batch_renderer_stats('Text Buffer Info', text_renderer)
+    render_buffer_stats('Static Buffer Info', renderer.static_buffer)
+    render_buffer_stats('Dynamic Buffer Info', renderer.dynamic_buffer)
+    render_buffer_stats('Text Buffer Info', text_renderer)
 
 
 def render_ui_config(config):

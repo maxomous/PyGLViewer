@@ -7,9 +7,6 @@ from pyglviewer.renderer.shader import Shader, PointShape
 from pyglviewer.renderer.shapes import Shape
 from dataclasses import dataclass
 
-# Used to give each object a unique ID
-_global_object_counter = 0
-
 class Buffer:
     """Base class for OpenGL buffer objects. Set size when using a dynamic / stream buffer."""
     def __init__(self, data, buffer_type, target, size):
@@ -34,13 +31,23 @@ class Buffer:
         data_size = data.nbytes
         
         # If new data is larger than current buffer, reallocate
-        if data_size > self.size:
-            self.bind()
-            # Allocate new buffer with new size (maybe add some extra space for future growth)
-            new_size = data_size * 2  # Double the size for future growth
-            glBufferData(self.target, new_size, None, self.buffer_type)  # Allocate new size
-            self.size = new_size
+        if data_size + offset > self.size:
+            raise MemoryError('Buffer is not large enough')
+            # self.bind()
+            # # Allocate new buffer with new size (maybe add some extra space for future growth)
+            # new_size = (data_size + offset) * 2  # Double the size for future growth
+            # glBufferData(self.target, new_size, None, self.buffer_type)  # Allocate new size
+            # self.size = new_size
         
+            # TODO: Replace with:
+            # # if self.index_count > 0:
+            # #     old_index_buffer.bind()
+            # #     glCopyBufferSubData(
+            # #         GL_ELEMENT_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER,
+            # #         0, 0,
+            # #         self.index_count * np.dtype(np.uint32).itemsize
+            # #     )
+                
         self.bind()
         glBufferSubData(self.target, offset, data_size, data)
 
@@ -123,72 +130,109 @@ class VertexArray:
         if hasattr(self, 'deleted') and not self.deleted:
             self.shutdown()
 
-class RenderObject:
-    """Represents a renderable object with vertex, index buffers, and shader."""
-    def __init__(self, point_size=1.0, line_width=1.0, point_shape=PointShape.CIRCLE, alpha=1.0, static=False, selectable=True):
-        """Initialize object with given data and parameters.
 
-        Parameters
-        ----------
-        is_static : bool
-            Static or Dynamic buffer type
-        point_size : float
-            Size for point primitives
-        line_width : float
-            Width for line primitives
-        point_shape : PointShape
-            Shape for point primitives
-        alpha : float
-            Alpha value for transparency
-        selectable : bool
-            Allow object to be selected
-        """
-        
-        # These should be controlled by the Object class
-        self._point_size = point_size
+class Object:
+    """An object is a container for multiple similar render objects (for example a body and its wireframe)."""
+    def __init__(self, transform: Transform=None, point_size=1.0, line_width=1.0, point_shape=PointShape.CIRCLE, alpha=1.0, selectable=True, metadata=None):
+        # List of Shapes (usually body and wireframe)
+        self.shape_data = [] # list of dictionarys: [{'shape': shape, 'vertex_offset': 0, 'index_offset': 0}]
+
+        # Set properties
+        self.set_transform(transform) # set transform and model matrix
+        self._point_size = point_size # TODO: can we remove these from here?
         self._line_width = line_width
         self._point_shape = point_shape
-        self._alpha = alpha  # Add alpha value (1.0 = fully opaque, 0.0 = fully transparent)
-        self._static = static
-        # Add selection-related properties
-        self._selectable = selectable  # Flag to control if object can be selected
-        self.selected = False
-        # Set with set_transform_matrix
-        self.model_matrix = np.identity(4, dtype=np.float32)
-        # These are set with set_shapes
-        self.draw_type = None
-        self.shader = None
-        self._vertex_data = None
-        self._index_data = None
+        self._alpha = alpha
+        self._selectable = selectable
+        self._selected = False
+        self._metadata = metadata
         # Cached boundary region
         self._world_bounds = None
         self._bounds_needs_update = True
-
-    def set_shape(self, shape: Shape):
-        """Update the vertex and index data from a Shape object.
-        Returns self to allow chaining.
+        
+    # Setters
+    def set_shape_data(self, shape_data):
+        '''
+        Update the shape data (vertex buffer, index buffer, draw type, and shader) 
+        from one or more Shape objects
+        
         Parameters
         ----------
-        shape : Shape
-            Shape object containing vertex and index data
+        shape_data : list[dict]
+            A list of dictionaries, each describing a shape entry. Each dictionary 
+            should contain:
+            
+            - 'shape' : Shape
+                The Shape object providing vertex and index data.
+            - 'vertex_offset' : int
+                Offset into the vertex buffer where this shape’s vertices begin.
+            - 'index_offset' : int
+                Offset into the index buffer where this shape’s indices begin.
+        '''
+        # Set shapes
+        self.shape_data = shape_data
+        # Mark bounds for recalculation
+        self._bounds_needs_update = True
+    def set_transform(self, transform: Transform):
+        """Set the 4x4 transformation matrix.
+        point_size=1.0, line_width=1.0, point_shape=PointShape.CIRCLE, alpha=1.0, static=False, selectable=True, metadata=None
+        Parameters
+        ----------
+        transform : Transform
+            Transform object
         """
-        self.draw_type = shape.draw_type
-        self.shader = shape.shader
-        self._vertex_data = np.array(shape.get_vertices(), dtype=np.float32)
-        self._index_data = np.array(shape.get_indices(), dtype=np.uint32)
+        self._transform = transform
+        self._model_matrix = np.identity(4, dtype=np.float32) if transform is None else transform.transform_matrix().T 
         self._bounds_needs_update = True  # Mark bounds for recalculation
-        return self
-    
-    def get_mid_point(self):
-        """Get the mid point of the object.
+    def set_translate(self, translate=(0, 0, 0)):
+        """Set the translation component of the object's model matrix.
         
-        Returns
-        -------
-        np.ndarray
-            Mid point coordinates (x,y,z)
+        Parameters
+        ----------
+        translate : tuple, optional
+            Translation vector (x,y,z) (default: (0,0,0))
         """
+        self._transform.set_translate(translate[0], translate[1], translate[2])
+        self._model_matrix[3, :3] = translate
+        self._bounds_needs_update = True  # Mark bounds for recalculation
+    def set_point_size(self, point_size):
+        self._point_size = point_size
+    def set_line_width(self, line_width):
+        self._line_width = line_width
+    def set_point_shape(self, point_shape):
+        self._point_shape = point_shape
+    def set_alpha(self, alpha):
+        self._alpha = alpha
+    def set_selectable(self, selectable):
+        self._selectable = selectable
+    def select(self):        
+        """Mark this object as selected. Only selects if object's selectable flag is True."""
+        if self._selectable:
+            self._selected = True
+    def deselect(self):
+        """Mark this object as not selected."""
+        self._selected = False
+    def toggle_select(self):
+        """Toggle the selection state of this object. Only toggles if object's selectable flag is True."""
+        if self._selectable:
+            self._selected = not self._selected
+    
+    # Getters
+    def get_point_size(self):
+        return self._point_size
+    def get_line_width(self):
+        return self._line_width
+    def get_point_shape(self):
+        return self._point_shape
+    def get_alpha(self):
+        return self._alpha
+    def get_selectable(self):
+        return self._selectable
+    def get_selected(self):
+        return self._selected
+    def get_mid_point(self):
+        '''Returns midpoint of bounding box of object'''
         return (self.get_bounds()['min'] + self.get_bounds()['max']) / 2
-
     def get_bounds(self):
         """Calculate accurate bounds in world space.
         
@@ -197,20 +241,21 @@ class RenderObject:
         dict or None
             Dictionary containing 'min' and 'max' bounds as np.ndarray, or None if no vertex data
         """
-        if self._vertex_data is None or len(self._vertex_data) == 0:
+        if self.shape_data is None or len(self.shape_data) == 0:
             return None
         # Return cached bounds if available and doesnt need update
         if not self._bounds_needs_update:
             return self._world_bounds
         
+        # Combine all shape vertices and reshape to Nx3 array of positions and remove colours / normals
+        vertices = np.concatenate([shape_data['shape'].vertex_data for shape_data in self.shape_data]).reshape(-1, 3, 3)[:,0,:]
         # Get local bounds from actual vertex data
-        vertices = self._vertex_data.reshape(-1, 3, 3)[:,0,:]  # Reshape to Nx3 array of positions and remove colours / normals
         local_min = np.min(vertices, axis=0)
         local_max = np.max(vertices, axis=0)
         
         # Apply transform to bounds
-        world_min = (self.model_matrix.T @ np.append(local_min, 1))[:3]
-        world_max = (self.model_matrix.T @ np.append(local_max, 1))[:3]
+        world_min = (self._model_matrix.T @ np.append(local_min, 1))[:3]
+        world_max = (self._model_matrix.T @ np.append(local_max, 1))[:3]
                 
         # Ensure min is actually min and max is actually max after transform
         bounds_min = np.minimum(world_min, world_max)
@@ -222,171 +267,43 @@ class RenderObject:
         }
         self._bounds_needs_update = False
         return self._world_bounds
-
-    def set_transform_matrix(self, transform: Transform):
-        """Set the transform matrix.
-        Returns self to allow chaining.
+    def get_transform(self):
+        """Get the transform of the object.
         
-        Parameters
-        ----------
-        transform : Transform
-            Transform object
+        Returns
+        -------
+        Transform
+            The Transform of the object
         """
-        self.model_matrix = transform.transform_matrix().T
-        self._bounds_needs_update = True  # Mark bounds for recalculation
-        return self
-    
+        return self._transform
     def get_translate(self):
         """Get the translation of the object.
         
         Returns
         -------
         np.ndarray
-            Translation vector (x,y,z)
+            Translation vector (x, y, z)
         """
-        return self.model_matrix[3, :3]
-    
-    def set_translate(self, translate=(0, 0, 0)):
-        """Set the translation component of the object's model matrix.
-        Returns self to allow chaining.
+        return self._transform.translate   # return self._model_matrix[3, :3]
+    def get_scale(self):
+        """Get the translation of the object.
         
-        Parameters
-        ----------
-        translate : tuple, optional
-            Translation vector (x,y,z) (default: (0,0,0))
+        Returns
+        -------
+        np.ndarray
+            Scale vector (sx, sy, sz)
         """
-        self.model_matrix[3, :3] = translate
-        self._bounds_needs_update = True  # Mark bounds for recalculation
-        return self
-    
-    def select(self):
-        """Mark this object as selected.
+        return self._transform.scale
+    def get_rotate(self):
+        """Get the rotation of the object.
         
-        Only selects if object's selectable flag is True.
+        Returns
+        -------
+        np.ndarray
+            Rotation vector (rx, ry, rz) in radians
         """
-        if self._selectable:
-            self.selected = True
+        return self._transform.rotate
 
-    def deselect(self):
-        """Mark this object as not selected."""
-        self.selected = False
-
-    def toggle_selection(self):
-        """Toggle the selection state of this object.
-        
-        Only toggles if object's selectable flag is True.
-        """
-        if self._selectable:
-            self.selected = not self.selected
-
-
-class Object:
-    """An object is a container for multiple similar render objects (for example a body and its wireframe)."""
-    def __init__(self, point_size=1.0, line_width=1.0, point_shape=PointShape.CIRCLE, alpha=1.0, static=False, selectable=True, metadata=None):
-        # Give each object a unique ID and increment the counter
-        global _global_object_counter
-        self.id = _global_object_counter
-        _global_object_counter += 1
-        # Set properties
-        self._point_size = point_size # TODO: can we remove these from here?
-        self._line_width = line_width
-        self._point_shape = point_shape
-        self._alpha = alpha
-        self._static = static
-        self._selectable = selectable
-        self.metadata = metadata
-        self._render_objects = []
-
-    @staticmethod
-    def reset_global_id_counter():
-        """Reset the global object counter. Warning: only call this if all objects have been deleted from renderer."""
-        global _global_object_counter
-        _global_object_counter = 0
-        
-    # These functions are used to set the properties of each of the render objects inside the object
-    def set_point_size(self, point_size):
-        for obj in [self] + self._render_objects: obj._point_size = point_size
-    def set_line_width(self, line_width):
-        for obj in [self] + self._render_objects: obj._line_width = line_width
-    def set_point_shape(self, point_shape):
-        for obj in [self] + self._render_objects: obj._point_shape = point_shape
-    def set_alpha(self, alpha):
-        for obj in [self] + self._render_objects: obj._alpha = alpha
-    def set_static(self, static):
-        for obj in [self] + self._render_objects: obj._static = static
-    def set_selectable(self, selectable):
-        for obj in [self] + self._render_objects: obj._selectable = selectable
-        
-    def set_shapes(self, shapes):
-        # Convert single shape to list if needed
-        if not isinstance(shapes, list):
-            shapes = [shapes]
-
-        # Initialise objects if they don't exist
-        if len(self._render_objects) == 0:
-            # Create objects
-            for shape in shapes:   
-                # Create object for each shape
-                self._render_objects.append(RenderObject(
-                    point_size=self._point_size,
-                    line_width=self._line_width,
-                    point_shape=self._point_shape,
-                    alpha=self._alpha,
-                    static=self._static,
-                    selectable=self._selectable,
-                ))
-                
-        if len(shapes) != len(self._render_objects):
-            raise ValueError("Number of shapes does not match number of objects")
-        
-        for i, shape in enumerate(shapes):
-            self._render_objects[i].set_shape(shape)
-        
-        return self
-    
-    
-    def get_mid_point(self):
-        bounds = self.get_bounds()
-        return (bounds['min'] + bounds['max']) / 2
-
-    def get_bounds(self):
-        bounds = []
-        for obj in self._render_objects:
-            bounds.append(obj.get_bounds())
-        min = [b['min'] for b in bounds]
-        max = [b['max'] for b in bounds]
-        # get min and max bounds
-        min_bounds = np.min(min, axis=0)
-        max_bounds = np.max(max, axis=0)
-        return {'min': min_bounds, 'max': max_bounds}
-
-    def set_transform_matrix(self, transform):
-        for obj in self._render_objects:
-            obj.set_transform_matrix(transform)
-        return self
-    
-    def get_translate(self):
-        if len(self._render_objects) == 0:
-            return None
-        return self._render_objects[0].get_translate()
-    
-    def set_translate(self, translate):
-        for obj in self._render_objects:
-            obj.set_translate(translate)
-        return self
-    
-    def select(self):
-        for obj in self._render_objects:
-            obj.select()
-        return self
-    
-    def deselect(self):
-        for obj in self._render_objects:
-            obj.deselect()
-        return self
-    
-    def toggle_selection(self):
-        for obj in self._render_objects:
-            obj.toggle_selection()
-        return self
-    
+    def is_point(self):
+        '''Returns true if any shape is a point'''
+        return any([shape_data['shape'].draw_type == GL_POINTS for shape_data in self.shape_data])

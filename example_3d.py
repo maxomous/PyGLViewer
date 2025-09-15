@@ -123,12 +123,12 @@ class ExampleApplication(Application):
         # Grid and axis
         self.grid = self.renderer.add_object(Object(static=True, selectable=False)\
             .set_shapes(Shapes.grid(size=self.GRID_SIZE*2, increment=1, colour=Colour.WHITE))\
-            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
+            .set_transform(Transform(translate=self.GRID_TRANSLATE)))
         self.axis = self.renderer.add_object(Object(static=True, selectable=False)\
             .set_shapes(Shapes.axis(size=1)))
         self.axis_ticks = self.renderer.add_object(Object(static=True, selectable=False)\
             .set_shapes(Shapes.axis_ticks(size=self.GRID_SIZE))\
-            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
+            .set_transform(Transform(translate=self.GRID_TRANSLATE)))
         
         # Points with different shapes
         self.renderer.add_object(Object(point_size=15, point_shape=PointShape.CIRCLE, static=True)\
@@ -170,11 +170,11 @@ class ExampleApplication(Application):
         # 3D shapes with transforms
         self.renderer.add_object(Object(static=True)\
             .set_shapes(Shapes.cone(colour=Colour.rgb(255, 165, 0)))\
-            .set_transform_matrix(Transform(translate=(0, 0.75, 0.5), scale=(0.5, 0.5, 0.5), rotate=(-np.pi/2, 0, 0))))
+            .set_transform(Transform(translate=(0, 0.75, 0.5), scale=(0.5, 0.5, 0.5), rotate=(-np.pi/2, 0, 0))))
             
         self.renderer.add_object(Object(static=True)\
             .set_shapes(Shapes.cylinder(colour=Colour.MAGENTA))\
-            .set_transform_matrix(Transform(translate=(2, 1, 0.25), scale=(0.5, 0.5, 0.5))))
+            .set_transform(Transform(translate=(2, 1, 0.25), scale=(0.5, 0.5, 0.5))))
             
         self.renderer.add_object(Object(static=True)\
             .set_shapes(Shapes.prism(position=(4, 1, 0), radius=1, depth=1, colour=Colour.ORANGE)))
@@ -257,7 +257,7 @@ self.renderer.object(shape=Shapes.cube(size=0.5, colour=Colour.YELLOW), )
 
 
         # Static objects
-        self.grid = self.renderer.add_object(Object(static=True, selectable=False).set_shapes(my_shape).set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
+        self.grid = self.renderer.add_object(Object(static=True, selectable=False).set_shapes(my_shape).set_transform(Transform(translate=self.GRID_TRANSLATE)))
         # Dynamic objects
         self.dynamic_object = self.renderer.add_object(Object()) 
         self.dynamic_object.set_shapes(Shapes.cube(size=size, colour=Colour.WHITE))

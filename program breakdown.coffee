@@ -7,7 +7,7 @@ Changes Needed:
         remove batch_renderer_update but handle obj.remove() from static_buffer / dyn...
     # shouldnt be updating every frame
     # static shouldnt be cleared also
-
+    render_object is not object with shapes stored directly instead
 
 ############################
 IN PYGLVIEWER (CURRENT)
@@ -96,6 +96,9 @@ no need to call create_render_objects()
 ############################
 
 
+# vertex_data & index_data is now updated when a shape's vertices change so we can 
+DONE: Store the [shape] directly in object
+
 
 
 # use object name to read a map
@@ -108,10 +111,12 @@ def get_object():
     return object
     
 
-renderer.set_object_data('my_object', shape, transform, )
-    if not exist: 
+renderer.update_object('my_object', shape, transform, is_static=true)
+    if not exist or len(shapes) has changed: 
+        object = Object()
         self.renderer.add_object_to_batch_buffer(f'my_object_{i}')
-            add object to static / dynamic batch
+            buffer = self.static_buffer if render_object._static else self.dynamic_buffer # # add object to static / dynamic batch buffer
+            buffer.add_object_to_buffer(render_object)
     object._set_shapes(Shapes.beam(p0=e['p0'], p1=e['p1'], width=e['height'], height=e['width'], colour=colour))
     object._set_point_size():
     object._set_line_width():
@@ -122,12 +127,13 @@ renderer.set_object_data('my_object', shape, transform, )
     object._set_selectable():
     object._set_metadata() # todo add this
     object._set_transform_matrix()
-    object._toggle_selection()
+    object._toggle_select()
     renderer.set_object_transform('my_object', transform)
     renderer.set_object_translate('my_object', translate)
     update_batch_key()
         batch_key = create_batch_key()
-        if changed: move to new location, delete old, set object_map['my_object']['batch_key']
+        if changed: move to new location, delete old, 
+        set object_map['my_object']['batch_key']
 
 
 
@@ -152,4 +158,17 @@ renderer.toggle_object('my_object')
 
 
 
-    still todo, think about text and images
+    still todo
+        - think about text and images
+        - BatchRenderer(buffers={
+                'static':  RenderBuffer(10000, 10000, GL_STATIC_DRAW),
+                'dynamic':  RenderBuffer(10000, 10000, GL_DYNAMIC_DRAW),
+            }) # to allow n buffer (might be hard see add_object_to_batch)
+            # rename BatchRenderer to Buffers
+            # BatchRenderer._render_buffer() should be in Buffer?
+
+
+TO TEST:
+    Object.get_bounds()
+rename draw_type to primitive
+check vertex_offset & index_offset arent incrementing constantly

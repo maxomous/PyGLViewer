@@ -36,72 +36,87 @@ class Example2DApplication(Application):
         # self.imgui_overlay_renderer.remove_text(self.static_text['axis_labels'])
         
         # Create grid params with translation
-        self.grid = self.renderer.add_object(Object(static=True, selectable=False)\
-            .set_shapes(Shapes.grid(size=self.GRID_SIZE*2, increment=1, colour=Colour.WHITE))\
-            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
-        self.axis_ticks = self.renderer.add_object(Object(static=True, selectable=False)\
-            .set_shapes(Shapes.axis_ticks(size=self.GRID_SIZE))\
-            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
-        self.axis = self.renderer.add_object(Object(static=True, selectable=False)\
-            .set_shapes(Shapes.axis(size=1))\
-            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
-        
+        # Grid
+        self.renderer.update_object('grid', static=True, selectable=False,
+            shape=Shapes.grid(size=self.GRID_SIZE*2, increment=1, colour=Colour.WHITE),
+            transform=Transform(translate=self.GRID_TRANSLATE)
+        )
+        # Axis ticks
+        self.renderer.update_object('axis_ticks', static=True, selectable=False,
+            shape=Shapes.axis_ticks(size=self.GRID_SIZE),
+            transform=Transform(translate=self.GRID_TRANSLATE)
+        )
+        # Axis
+        self.renderer.update_object('axis', static=True, selectable=False,
+            shape=Shapes.axis(size=1),
+            transform=Transform(translate=self.GRID_TRANSLATE)
+        )
+
         # Transparent circle
-        self.renderer.add_object(Object(static=True, alpha=0.2)\
-            .set_shapes(Shapes.circle(position=(3, 1, 0), radius=0.1, colour=Colour.YELLOW))\
-            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
+        self.renderer.update_object('circle', static=True, alpha=0.2,
+            shape=Shapes.circle(position=(3, 1, 0), radius=0.1, colour=Colour.YELLOW),
+            transform=Transform(translate=self.GRID_TRANSLATE)
+        )
         # Rectangle
-        self.renderer.add_object(Object(static=True, alpha=0.5)\
-            .set_shapes(Shapes.rectangle(position=(4, 1, 0), width=0.1, height=0.1, colour=Colour.RED))\
-            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
+        self.renderer.update_object( 'rectangle', static=True, alpha=0.5,
+            shape=Shapes.rectangle(position=(4, 1, 0), width=0.1, height=0.1, colour=Colour.RED),
+            transform=Transform(translate=self.GRID_TRANSLATE)
+        )
         # Triangle
-        self.renderer.add_object(Object(static=True, alpha=0.8)\
-            .set_shapes(Shapes.triangle(p1=(5, 1.1, 0), p2=(4.9, 0.9, 0), p3=(5.1, 0.9, 0), colour=Colour.GREEN))\
-            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
+        self.renderer.update_object('triangle', static=True, alpha=0.8,
+            shape=Shapes.triangle(p1=(5, 1.1, 0), p2=(4.9, 0.9, 0), p3=(5.1, 0.9, 0), colour=Colour.GREEN),
+            transform=Transform(translate=self.GRID_TRANSLATE)
+        )
         
         # Example sine wave scatter plot
         x1 = np.linspace(-self.GRID_SIZE, self.GRID_SIZE, 500)
         y1 = np.sin(x1)
         x2 = np.linspace(-self.GRID_SIZE, self.GRID_SIZE, 200)
         y2 = np.sin(x2)
-        
+
         # Plot lines with custom widths
-        self.renderer.add_object(Object(static=True, selectable=False, line_width=1.0)\
-            .set_shapes(Shapes.plot(x=x1, y=2*y1, colour=Colour.CYAN))\
-            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
-        self.renderer.add_object(Object(static=True, selectable=False, line_width=3.0)\
-            .set_shapes(Shapes.plot(x=x1, y=-0.5*y1, colour=Colour.RED))\
-            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
-        
+        self.renderer.update_object('plot_cyan_line', static=True, selectable=False, line_width=1.0,
+            shape=Shapes.plot(x=x1, y=2*y1, colour=Colour.CYAN),
+            transform=Transform(translate=self.GRID_TRANSLATE)
+        )
+        self.renderer.update_object('plot_red_line', static=True, selectable=False, line_width=3.0,
+            shape=Shapes.plot(x=x1, y=-0.5*y1, colour=Colour.RED),
+            transform=Transform(translate=self.GRID_TRANSLATE)
+        )
+
         # Scatter plots with custom point sizes and shapes
-        self.renderer.add_object(Object(static=True, selectable=False, point_size=12.0, point_shape=PointShape.CIRCLE)\
-            .set_shapes(Shapes.scatter(x=x2, y=-1.5*y2, colour=Colour.GREEN))\
-            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
-        self.renderer.add_object(Object(static=True, selectable=False, point_size=12.0, point_shape=PointShape.TRIANGLE)\
-            .set_shapes(Shapes.scatter(x=x2, y=1*y2, colour=Colour.ORANGE))\
-            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
-        
+        self.renderer.update_object('scatter_green_circle', static=True, selectable=False, point_size=12.0, point_shape=PointShape.CIRCLE,
+            shape=Shapes.scatter(x=x2, y=-1.5*y2, colour=Colour.GREEN),
+            transform=Transform(translate=self.GRID_TRANSLATE)
+        )
+        self.renderer.update_object('scatter_orange_triangle', static=True, selectable=False, point_size=12.0, point_shape=PointShape.TRIANGLE,
+            shape=Shapes.scatter(x=x2, y=1*y2, colour=Colour.ORANGE),
+            transform=Transform(translate=self.GRID_TRANSLATE)
+        )
+
         # Add circles with custom rendering parameters
-        self.renderer.add_object(Object(static=True, selectable=False)\
-            .set_shapes(Shapes.circle(position=(3, 2, 0), radius=0.2, colour=Colour.RED))\
-            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
-        self.renderer.add_object(Object(static=True, selectable=False)\
-            .set_shapes(Shapes.circle(position=(4, 2, 0), radius=0.2, colour=Colour.GREEN))\
-            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
-        self.renderer.add_object(Object(static=True, selectable=False)\
-            .set_shapes(Shapes.circle(position=(5, 2, 0), radius=0.2, colour=Colour.BLUE))\
-            .set_transform_matrix(Transform(translate=self.GRID_TRANSLATE)))
-        
+        self.renderer.update_object('circle_red', static=True, selectable=False,
+            shape=Shapes.circle(position=(3, 2, 0), radius=0.2, colour=Colour.RED),
+            transform=Transform(translate=self.GRID_TRANSLATE)
+        )
+        self.renderer.update_object('circle_green', static=False, selectable=False,
+            shape=Shapes.circle(position=(4, 2, 0), radius=0.2, colour=Colour.GREEN),
+            transform=Transform(translate=self.GRID_TRANSLATE)
+        )
+        self.renderer.update_object('circle_blue', static=False, selectable=False,
+            shape=Shapes.circle(position=(5, 2, 0), radius=0.2, colour=Colour.BLUE),
+            transform=Transform(translate=self.GRID_TRANSLATE)
+        )
+
     def update_scene(self):
         """ update the scene """
-        # Update axis size
-        self.axis.set_transform_matrix(Transform(scale=self.mouse.screen_to_world(self.AXIS_SIZE, dimension=3)))
+        # Update axis size with zoom
+        self.renderer.update_object('axis', transform=Transform(scale=self.mouse.screen_to_world(self.AXIS_SIZE, dimension=3)))
 
-        # Update axis size
-        if self.camera.distance > 2.5:
-            self.grid.set_transform_matrix(Transform(scale=(10, 10, 1))) # TODO: Only update on change
-        else:
-            self.grid.set_transform_matrix(Transform(scale=(1, 1, 1)))
+        size = self.timer.oscillate_translation(limits=[0.5, 1.5], speed=0.5)
+        # Dynamic objects
+        self.renderer.update_object('circle_green', transform=Transform(translate=(size,0,0)))
+        self.renderer.update_object('circle_blue', shape=Shapes.circle(position=(5, 2+size, 0), radius=0.2, colour=Colour.BLUE))
   
     def events(self):
         """ Process custom events, such as the keyboard & mouse. """
