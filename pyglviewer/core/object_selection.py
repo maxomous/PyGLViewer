@@ -69,6 +69,8 @@ class ObjectSelection:
             if not hasattr(self, 'object_start_pos') or self.object_start_pos is None:
                 self.object_start_pos = []
                 for obj, name, buffer in self.selected_objects:
+                    if len(obj.shape_data) == 0:
+                        continue
                     self.object_start_pos.append(obj.get_translate().copy())
                     
     def process_drag(self):
@@ -89,6 +91,8 @@ class ObjectSelection:
                 return
             
             for i, (obj, name, buffer) in enumerate(self.selected_objects):
+                if len(obj.shape_data) == 0:
+                    continue
                 # Set new object transform
                 translate = self.object_start_pos[i] + mouse_delta
                 obj.set_translate(translate)
@@ -115,9 +119,7 @@ class ObjectSelection:
         for obj, name, buffer in self.renderer.get_selected_objects():
             if len(obj.shape_data) == 0:
                 continue
-            bounds = obj.get_bounds()
-            mid_point = obj.get_mid_point()
-            size = (bounds['max'] - bounds['min'])
+            size = (obj.get_bounds()['max'] - obj.get_bounds()['min'])
             # Get offset for target size
             offset = self.mouse.screen_to_world(10)
             
@@ -126,9 +128,9 @@ class ObjectSelection:
                 offset += self.mouse.screen_to_world(point_size)
             
             edge_length = self.camera.distance * self.target_edge_length
-            targets += Shapes.target(mid_point, size + np.array([offset, offset, offset]), edge_length, Colour.WHITE) 
+            targets += Shapes.target(obj.get_midpoint(), size + np.array([offset, offset, offset]), edge_length, Colour.WHITE) 
 
-        self.renderer.update_object('selection_target', static=False, selectable=False, shape=targets)
+        self.renderer.update_object('selection_targets', static=False, selectable=False, shape=targets)
         
     def get_object_under_cursor(self):
         """Determine which object is under the cursor"""
@@ -191,7 +193,7 @@ class ObjectSelection:
         cursor_pos = np.round(cursor_pos, 3)
         if cursor_pos[0] >= bounds['min'][0] and cursor_pos[0] <= bounds['max'][0] and \
            cursor_pos[1] >= bounds['min'][1] and cursor_pos[1] <= bounds['max'][1]:
-            midpoint = obj.get_mid_point()
+            midpoint = obj.get_midpoint()
             distance = np.linalg.norm(cursor_pos - midpoint)
             return True, distance
         else:

@@ -7,13 +7,10 @@ from pyglviewer.utils.config import Config
 from pyglviewer.utils.transform import Transform
 from pyglviewer.renderer.shapes import Shapes, Shape, ArrowDimensions
 from pyglviewer.renderer.objects import VertexBuffer, IndexBuffer, VertexArray, Object
-from pyglviewer.renderer.batch_renderer import RenderBuffer
+from pyglviewer.renderer.render_buffer import RenderBuffer
 from pyglviewer.renderer.light import Light, default_lighting
 from pyglviewer.renderer.shader import Shader, DefaultShaders, PointShape
 
-# TODO: buffer_type is not really implemented for static buffer
-# TODO: Remove the 1.01 scaling and replace with a input for every function
-# TODO: transform is not the same for everything, cube vs cylinder for example
 
 # @dataclass
 # class RenderParams:
@@ -109,15 +106,6 @@ class Renderer:
             self.add_lights(default_lighting)
         return self.lights
 
-    # def batch_renderer_update(self):
-    #     """Update buffers if required."""
-    #     # Clear batch renderer buffers (if update is required)
-    #     self.batch_renderer.clear()
-    #     # Submit all objects to the batch renderer 
-    #     for obj in self.objects:
-    #         # Add objects to appropriate buffer based on their type (if update is required)
-    #         self.batch_renderer.add_object_to_batch(obj)
-        
     def draw(self, view_matrix: np.ndarray, projection_matrix: np.ndarray, 
              camera_pos: np.ndarray, lights: Optional[List] = None):
         """Render all objects in the scene, using batching"""
@@ -137,8 +125,6 @@ class Renderer:
         r, g, b = self.config["background_colour"]
         glClearColor(r, g, b, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
-
 
     def update_object(
         self, 
@@ -186,42 +172,19 @@ class Renderer:
         if metadata is not None:
             object.set_metadata(metadata)
     
-        # select()
-        # deselect()
-        # toggle_select()
-            
-    
+    def delete_object(self, name: str):
+        # Check object exists  
+        if name not in self.object_map:
+            return
+        buffer = self.static_buffer if self.object_map[name]['buffer'] == 'static' else self.dynamic_buffer
+        object = buffer.objects[name]
+        # Free vertices / indices from the buffer
+        for shape_data in object.shape_data:
+            buffer._free_segment(shape_data)
+        # Remove from object list
+        del buffer.objects[name]
+        del self.object_map[name]
 
-        
-
-
-    # def add_object_to_batch(self, name, object: Object):
-    #     """Add object to appropriate buffer based on type."""
-    #     buffer = self.static_buffer if object._static else self.dynamic_buffer
-    #     buffer.add_object(object)
-
-
-    #     self.batch_renderer.add_object
-
-    # def add_object(self, object):
-    #     '''Add new object to batch, returns that object'''
-    #     self.objects.append(object)
-    #     return self.objects[-1]
-            
-    # def remove_object(self, object):
-    #     '''Remove object(s) from the batch. object can be an Object or a list of Objects'''
-    #     if isinstance(object, list):
-    #         for obj in object:
-    #             if obj in self.objects:
-    #                 self.objects.remove(obj)
-    #     else:
-    #         if object in self.objects:
-    #             self.objects.remove(object)
-        
-    # def clear(self):
-    #     """Clear the renderer. Used to clear all (including static) objects"""   
-    #     self.objects = []
-        
     def get_selected_objects(self): 
         """Get all selected objects."""
         selected_objects = []
@@ -233,24 +196,10 @@ class Renderer:
         # Remove duplicates
         return list(set(selected_objects))
 
-    
-    
-    
-    # def add_object_to_batch(self, object: Object):
-    #     """Add object to appropriate buffer based on type."""
-    #     buffer = self.static_buffer if object._static else self.dynamic_buffer
-    #     buffer.add_object_to_buffer(object)
-        
     def clear(self):
         """Clear both static and dynamic buffers."""
         self.static_buffer.clear()
         self.dynamic_buffer.clear()
-    
-    # def update_buffers(self):
-    #     """Update static buffer if needed."""
-    #     self.static_buffer.update_buffers()
-    #     self.dynamic_buffer.update_buffers()
-    
     
     def get_stats(self):
         """Get combined rendering statistics."""

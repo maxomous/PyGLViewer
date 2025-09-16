@@ -39,12 +39,11 @@ class ExampleApplication(Application):
                 'distance': 10
             },
             fonts={
+                'arial-medium': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 16 }, # defaults to first font in list
                 'arial-large': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 24 },
-                'arial-medium': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 16 },
                 'arial-small': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 12 },
                 'arial_rounded_mt_bold-medium': { 'path': 'C:/Windows/Fonts/ARLRDBD.TTF', 'size': 15 },
             },
-            default_font='arial-medium',
             images={
                 'image_node': { 'path': './img/image.png' },
             },

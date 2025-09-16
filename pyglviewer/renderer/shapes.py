@@ -2,6 +2,7 @@
 Core Shapes module providing classes for creating and manipulating 3D primitives.
 Includes vertex data structures, shapes, and shape factory methods.
 """
+# TODO: transform is not the same for everything, cube vs cylinder for example
 
 import numpy as np
 from dataclasses import dataclass

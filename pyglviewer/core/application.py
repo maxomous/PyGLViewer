@@ -23,12 +23,12 @@ class Application:
     input handling, and scene rendering.
     
     To use this class:
-    1. Inherit from BaseApplication
+    1. Inherit from Application
     2. Override render_ui() to add custom UI elements
     3. Override init_scene() to setup geometry and lights
     
     Example:
-        class MyApp(BaseApplication):
+        class MyApp(Application):
             def init_scene(self):
                 self.init_geometry()
                 self.init_lights()
@@ -43,13 +43,12 @@ class Application:
         title (str): Window title
         camera_settings (dict): Camera configuration parameters
         fonts (dict): Font configurations for ImGui
-        default_font (str): Name of default font to use
         config (Config): Configuration container with custom variables which are saved to a JSON file
         enable_docking (bool): Enable ImGui docking functionality
         selection_settings (dict): Selection settings
     """
 
-    def __init__(self, width, height, title, camera_settings, fonts, default_font, images, config, enable_docking, selection_settings: SelectionSettings):
+    def __init__(self, width, height, title, camera_settings, fonts, images, config, enable_docking, selection_settings: SelectionSettings):
         self.window_width = width
         self.window_height = height
         self.title = title
@@ -65,7 +64,6 @@ class Application:
         self.config = config
         self.camera_settings = camera_settings
         self.fonts = fonts
-        self.default_font = default_font
         self.images = images
         self.enable_docking = enable_docking
         self.selection_settings = selection_settings
@@ -122,7 +120,7 @@ class Application:
             
         self.mouse = Mouse(self)
         self.keyboard = Keyboard(self.camera)
-        self.renderer = Renderer(self.config, max_static_vertices=50000, max_static_indices=150000, max_dynamic_vertices=50000, max_dynamic_indices=150000)
+        self.renderer = Renderer(self.config, max_static_vertices=100000, max_static_indices=300000, max_dynamic_vertices=100000, max_dynamic_indices=300000)
         
         self.object_selection = ObjectSelection(self.camera, self.renderer, self.mouse, self.selection_settings)
         self.set_frame_size(self.window, self.window_width, self.window_height)
@@ -168,6 +166,7 @@ class Application:
         
         Updates timer, handles events, updates state, and renders frame.
         """
+        
         # Update
         self.timer.update()  # Update the timer to calculate delta time
         # Clear imgui text & image renderer
@@ -180,7 +179,8 @@ class Application:
         self.renderer.clear_framebuffer()
         # Render
         self.render_core()
-        
+        # OpenGL Error check
+        self.check_errors()
 
     def process_inputs(self):
         """Process input events from GLFW and ImGui."""
@@ -206,8 +206,8 @@ class Application:
         Handles ImGui frame setup, font management, and buffer swapping.
         """
         self.imgui_manager.new_frame()
-        
-        self.imgui_manager.push_font(self.default_font)
+        default_font = next(iter(self.fonts))
+        self.imgui_manager.push_font(default_font)
         self.imgui_manager.render_dockspace()
     
         self.imgui_overlay_renderer.render() 
@@ -233,6 +233,12 @@ class Application:
         camera_position = self.camera.position
         lights = self.renderer.get_lights()
         self.renderer.draw(view_matrix, projection, camera_position, lights)
+
+    def check_errors(self):
+        # Check for OpenGL errors
+        error = glGetError()
+        if error != GL_NO_ERROR:
+            print(f"OpenGL Error: {error}")
 
     def cleanup(self):
         """Clean up resources before application exit.

@@ -32,7 +32,7 @@ class Buffer:
         
         # If new data is larger than current buffer, reallocate
         if data_size + offset > self.size:
-            raise MemoryError('Buffer is not large enough')
+            raise MemoryError(f'Buffer is not large enough (current: {self.size}, required: {data_size + offset})')
             # self.bind()
             # # Allocate new buffer with new size (maybe add some extra space for future growth)
             # new_size = (data_size + offset) * 2  # Double the size for future growth
@@ -135,11 +135,11 @@ class Object:
     """An object is a container for multiple similar render objects (for example a body and its wireframe)."""
     def __init__(self, transform: Transform=None, point_size=1.0, line_width=1.0, point_shape=PointShape.CIRCLE, alpha=1.0, selectable=True, metadata=None):
         # List of Shapes (usually body and wireframe)
-        self.shape_data = [] # list of dictionarys: [{'shape': shape, 'vertex_offset': 0, 'index_offset': 0}]
+        self.shape_data = [] # list of dictionarys: [{'shape': shape, 'segment': buffer_segment}] where segment = {'vertex_offset': 0, 'index_offset': 0, 'vertex_size': 0, 'index_size': 0}
 
         # Set properties
         self.set_transform(transform) # set transform and model matrix
-        self._point_size = point_size # TODO: can we remove these from here?
+        self._point_size = point_size
         self._line_width = line_width
         self._point_shape = point_shape
         self._alpha = alpha
@@ -181,7 +181,7 @@ class Object:
         transform : Transform
             Transform object
         """
-        self._transform = transform
+        self._transform = Transform() if transform is None else transform
         self._model_matrix = np.identity(4, dtype=np.float32) if transform is None else transform.transform_matrix().T 
         self._bounds_needs_update = True  # Mark bounds for recalculation
     def set_translate(self, translate=(0, 0, 0)):
@@ -230,9 +230,12 @@ class Object:
         return self._selectable
     def get_selected(self):
         return self._selected
-    def get_mid_point(self):
+    def get_midpoint(self):
         '''Returns midpoint of bounding box of object'''
-        return (self.get_bounds()['min'] + self.get_bounds()['max']) / 2
+        bounds = self.get_bounds()
+        if bounds is None:
+            return None
+        return (bounds['min'] + bounds['max']) / 2
     def get_bounds(self):
         """Calculate accurate bounds in world space.
         

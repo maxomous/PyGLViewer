@@ -38,7 +38,7 @@ def render_ui_selection_widget(renderer):
                 # Display transform info
                 if imgui.tree_node("Transform"):
                     # Extract position from model matrix (last column)
-                    position = obj.model_matrix[3, :3]
+                    position = obj._model_matrix[3, :3]
                     # imgui.text(f"Position: {position[0]:.2f}, {position[1]:.2f}, {position[2]:.2f}")
                     
                     # Add transform controls
@@ -56,6 +56,12 @@ def render_ui_selection_widget(renderer):
                         imgui.text(f"Min: {bounds['min'][0]:.2f}, {bounds['min'][1]:.2f}, {bounds['min'][2]:.2f}")
                         imgui.text(f"Max: {bounds['max'][0]:.2f}, {bounds['max'][1]:.2f}, {bounds['max'][2]:.2f}")
                     imgui.tree_pop()
+                # Display bounds info
+                if imgui.tree_node("Midpoint"):
+                    midpoint = obj.get_midpoint()
+                    if midpoint is not None:
+                        imgui.text(f"{midpoint[0]:.2f}, {midpoint[1]:.2f}, {midpoint[2]:.2f}")
+                    imgui.tree_pop()
                     
                 if imgui.tree_node("Shapes"):
                     for shape_data in obj.shape_data:
@@ -65,12 +71,12 @@ def render_ui_selection_widget(renderer):
                         imgui.text(f"Draw Type: {shape.draw_type}")
                         
                         # Display vertex count
-                        if shape._vertex_data is not None:
-                            vertex_count = len(shape._vertex_data) // 3  # Assuming 3 components per vertex
+                        if shape.vertex_data is not None:
+                            vertex_count = len(shape.vertex_data) // 3  # Assuming 3 components per vertex
                             imgui.text(f"Vertex Count: {vertex_count}")
                     imgui.tree_pop()
                 
-            imgui.tree_pop()
+                imgui.tree_pop()
         
 def render_ui_camera_2d_3d_mode(camera):
     """Render camera 2D/3D mode settings panel."""
