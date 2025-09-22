@@ -323,5 +323,4 @@ class Renderer:
         return {
             'static': self.static_buffer.get_stats(),
             'dynamic': self.dynamic_buffer.get_stats(),
-            'imgui_render_buffer': self.imgui_render_buffer.get_stats()
-        }
+        } |  self.imgui_render_buffer.get_stats()

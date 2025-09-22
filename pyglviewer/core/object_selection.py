@@ -52,8 +52,13 @@ class ObjectSelection:
             # Clear previous selection if not holding shift
             if not self.mouse.shift_down:
                 for buffer in [self.renderer.static_buffer, self.renderer.dynamic_buffer]:
-                    for _, obj in buffer.objects.items():
+                    for obj in buffer.objects.values():
                         obj.deselect()
+                for obj in self.renderer.imgui_render_buffer.text_objects.values():
+                    obj.deselect()
+                for obj in self.renderer.imgui_render_buffer.image_objects.values():
+                    obj.deselect()
+                    
             # Get Object under cursor
             closest_obj, _, _ = self.get_object_under_cursor()       
             # Select the picked object
@@ -138,30 +143,44 @@ class ObjectSelection:
         
         # Test intersection with objects
         valid_hits = []
-        for buffer_type in ['static', 'dynamic']:
-            buffer = self.renderer.static_buffer if buffer_type == 'static' else self.renderer.dynamic_buffer
-            for name, obj in buffer.objects.items():
-                hit, distance = self.intersect_cursor(obj, self.renderer.cursor_pos, scale_factor, min_distance=self.min_selection_distance)
-                if hit and distance > 0 and distance < float('inf'):
-                    valid_hits.append((distance, name, buffer_type))
-    
+        # Intersect cursor with static, dynamic, text & image objects
+        valid_hits = self.intersect_objects(valid_hits, 'static', self.renderer.static_buffer.objects, scale_factor)
+        valid_hits = self.intersect_objects(valid_hits, 'dynamic', self.renderer.dynamic_buffer.objects, scale_factor)
+        valid_hits = self.intersect_objects(valid_hits, 'text', self.renderer.imgui_render_buffer.text_objects, scale_factor)
+        valid_hits = self.intersect_objects(valid_hits, 'image', self.renderer.imgui_render_buffer.image_objects, scale_factor)
+
         if not valid_hits:
             return (None, None, None)
             
         # Sort by distance and get closest
         valid_hits.sort(key=lambda x: x[0])
         distance, name, buffer_type = valid_hits[0]
-        buffer = self.renderer.static_buffer if buffer_type == 'static' else self.renderer.dynamic_buffer
-        return (buffer.objects[name], name, buffer_type)
         
-
+        if buffer_type == 'static':
+            buffer = self.renderer.static_buffer.objects
+        elif buffer_type == 'dynamic':
+            buffer = self.renderer.dynamic_buffer.objects
+        elif buffer_type == 'text':
+            buffer = self.renderer.imgui_render_buffer.text_objects
+        elif buffer_type == 'image':
+            buffer = self.renderer.imgui_render_buffer.image_objects
+            
+        return (buffer[name], name, buffer_type)
+        
+    def intersect_objects(self, valid_hits, buffer_type, objects, scale_factor):
+        for name, obj in objects:
+            hit, distance = self.intersect_cursor(obj, self.renderer.cursor_pos, scale_factor, min_distance=self.min_selection_distance)
+            if hit and distance > 0 and distance < float('inf'):
+                valid_hits.append((distance, name, buffer_type))
+        return valid_hits
+    
     @staticmethod
     def intersect_cursor(obj, cursor_pos, scale_factor, min_distance):
         """Intersect ray with object bounds.
         
         Parameters
         ----------
-        obj : Object
+        obj : Object or TextObject or ImageObject
             Object to test intersection with
         cursor_pos : np.ndarray
             Cursor position in world space
@@ -175,12 +194,13 @@ class ObjectSelection:
         tuple
             (bool, float) - (intersection found, distance to intersection)
         """
+TODO
         if not obj._selectable:
             return False, float('inf')
         bounds = obj.get_bounds()
         if bounds is None:
             return False, float('inf')
-        
+
         # Expand bounds by offset
         scale = scale_factor * min_distance
         # Expand bounds by point_size if this is a point object
