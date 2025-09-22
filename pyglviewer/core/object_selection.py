@@ -69,7 +69,7 @@ class ObjectSelection:
             if not hasattr(self, 'object_start_pos') or self.object_start_pos is None:
                 self.object_start_pos = []
                 for obj, name, buffer in self.selected_objects:
-                    if len(obj.shape_data) == 0:
+                    if len(obj._shape_data) == 0:
                         continue
                     self.object_start_pos.append(obj.get_translate().copy())
                     
@@ -91,7 +91,7 @@ class ObjectSelection:
                 return
             
             for i, (obj, name, buffer) in enumerate(self.selected_objects):
-                if len(obj.shape_data) == 0:
+                if len(obj._shape_data) == 0:
                     continue
                 # Set new object transform
                 translate = self.object_start_pos[i] + mouse_delta
@@ -117,7 +117,7 @@ class ObjectSelection:
         targets = Shapes.blank(GL_LINES)
         # Get object under cursor
         for obj, name, buffer in self.renderer.get_selected_objects():
-            if len(obj.shape_data) == 0:
+            if len(obj._shape_data) == 0:
                 continue
             size = (obj.get_bounds()['max'] - obj.get_bounds()['min'])
             # Get offset for target size

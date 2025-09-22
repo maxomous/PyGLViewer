@@ -110,12 +110,12 @@ class ExampleApplication(Application):
     
         # Static Text Rendering - A dictionary of text ids (or lists of text ids)
         self.static_text = {}
-        self.static_text['axis_labels'] = self.imgui_overlay_renderer.add_axis_labels(xlim=[-10, 10], ylim=[-10, 10], increment=2, colour=Colour.WHITE, static=True)
+        self.static_text['axis_labels'] = self.imgui_render_buffer.add_axis_labels(xlim=[-10, 10], ylim=[-10, 10], increment=2, colour=Colour.WHITE, static=True)
         # self.imgui_overlay_renderer.remove_text(self.static_text['axis_labels'])
         
         # Static Image Rendering - A dictionary of image ids (or lists of image ids)
         self.static_images = {}
-        self.static_images['my image'] = self.imgui_overlay_renderer.add_image(self.images['image_node'], (0, -3, 0), (48, 48), static=True)
+        self.static_images['my image'] = self.imgui_render_buffer.add_image(self.images['image_node'], (0, -3, 0), (48, 48), static=True)
         # self.imgui_overlay_renderer.remove_image(self.static_images['my image'])
         
         # Static objects
@@ -231,7 +231,7 @@ class ExampleApplication(Application):
         self.axis.set_transform_matrix(Transform(scale=self.mouse.screen_to_world(self.AXIS_SIZE, dimension=3)))
         
         # Text Rendering
-        self.imgui_overlay_renderer.add_text('3D LABEL', (self.timer.oscillate_translation(limits=[-1.5, 1.5], speed=0.25), -0.5, 1), Colour.ORANGE, font='arial_rounded_mt_bold-medium')
+        self.imgui_render_buffer.add_text('3D LABEL', (self.timer.oscillate_translation(limits=[-1.5, 1.5], speed=0.25), -0.5, 1), Colour.ORANGE, font='arial_rounded_mt_bold-medium')
 
 
 

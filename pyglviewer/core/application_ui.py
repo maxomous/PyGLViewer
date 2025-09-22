@@ -1,7 +1,7 @@
 import imgui
 from pyglviewer.gui.imgui_widgets import imgui
 
-def render_core_ui(camera, renderer, text_renderer, config, timer, imgui_manager):
+def render_core_ui(camera, renderer, config, timer, imgui_manager):
     """Render UI panels."""
     imgui_manager.push_font('arial_rounded_mt_bold-medium')
     
@@ -10,7 +10,7 @@ def render_core_ui(camera, renderer, text_renderer, config, timer, imgui_manager
         ('CAMERA', render_ui_camera, [camera]),
         ('MOUSE', render_ui_mouse, [config]),
         ('PERFORMANCE', render_ui_performance, [timer.dt]),
-        ('RENDERER', render_ui_renderer, [config, renderer, text_renderer]),
+        ('RENDERER', render_ui_renderer, [config, renderer]),
         ('CONFIGURATION', render_ui_config, [config]),
     ]
     
@@ -64,7 +64,7 @@ def render_ui_selection_widget(renderer):
                     imgui.tree_pop()
                     
                 if imgui.tree_node("Shapes"):
-                    for shape_data in obj.shape_data:
+                    for shape_data in obj._shape_data:
                         
                         shape = shape_data['shape']
                         # Display object properties
@@ -208,7 +208,7 @@ def render_ui_performance(dt):
     fps = 1.0 / dt if dt > 0 else 0.0
     imgui.text(f'FPS: {fps:.1f}')
 
-def render_ui_renderer(config, renderer, text_renderer):
+def render_ui_renderer(config, renderer):
     """Render renderer settings panel."""
     # Changed to use a single array of RGB values (each from 0-1)
     _, config["background_colour"] = imgui.color_edit3("Background Colour", *config["background_colour"])
@@ -238,7 +238,7 @@ def render_ui_renderer(config, renderer, text_renderer):
     
     render_buffer_stats('Static Buffer Info', renderer.static_buffer)
     render_buffer_stats('Dynamic Buffer Info', renderer.dynamic_buffer)
-    render_buffer_stats('Text Buffer Info', text_renderer)
+    render_buffer_stats('ImGui Render Buffer Info', renderer.imgui_render_buffer)
 
 
 def render_ui_config(config):

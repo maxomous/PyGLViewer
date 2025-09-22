@@ -8,7 +8,7 @@ from pyglviewer.renderer.renderer import Renderer
 from pyglviewer.utils.timer import Timer
 from pyglviewer.utils.config import Config
 from pyglviewer.gui.imgui_manager import ImGuiManager
-from pyglviewer.gui.imgui_overlay_renderer import ImguiOverlayRenderer
+
 import time
 
 
@@ -58,7 +58,6 @@ class Application:
         self.mouse = None
         self.keyboard = None
         self.imgui_manager = None
-        self.imgui_overlay_renderer = None
         self.object_selection = None
         self.timer = Timer()
         self.config = config
@@ -129,7 +128,6 @@ class Application:
         self.imgui_manager = ImGuiManager(self.window, enable_docking=self.enable_docking)
         self._load_fonts()
         self.images = self._load_images()
-        self.imgui_overlay_renderer = ImguiOverlayRenderer(self.mouse, self.imgui_manager)
 
     def _load_fonts(self):
         for name, font in self.fonts.items():
@@ -169,8 +167,6 @@ class Application:
         
         # Update
         self.timer.update()  # Update the timer to calculate delta time
-        # Clear imgui text & image renderer
-        self.imgui_overlay_renderer.clear()
         # Process GLFW & imgui input events
         self.process_inputs()
         # Set object's geometry & transform and set the texts to render
@@ -210,7 +206,7 @@ class Application:
         self.imgui_manager.push_font(default_font)
         self.imgui_manager.render_dockspace()
     
-        self.imgui_overlay_renderer.render() 
+        self.renderer.imgui_render_buffer.draw(self.mouse, self.imgui_manager, self.images) 
         self.render_ui()
         self.render_scene()
         

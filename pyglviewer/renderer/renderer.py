@@ -10,6 +10,7 @@ from pyglviewer.renderer.objects import VertexBuffer, IndexBuffer, VertexArray, 
 from pyglviewer.renderer.render_buffer import RenderBuffer
 from pyglviewer.renderer.light import Light, default_lighting
 from pyglviewer.renderer.shader import Shader, DefaultShaders, PointShape
+from pyglviewer.gui.imgui_render_buffer import ImguiRenderBuffer, Image, Text
 
 
 # @dataclass
@@ -67,7 +68,8 @@ class Renderer:
         self.dynamic_buffer = RenderBuffer(max_dynamic_vertices, max_dynamic_indices, GL_DYNAMIC_DRAW)
         # Stores the buffer locations of the objects (i.e. object_map['my object'] = { 'buffer': 'static'})
         self.object_map = {}
-                
+        self.imgui_render_buffer = ImguiRenderBuffer()
+
         self.lights = []
                
         # Config file
@@ -125,7 +127,7 @@ class Renderer:
         r, g, b = self.config["background_colour"]
         glClearColor(r, g, b, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
+        
     def update_object(
         self, 
         name:        str,
@@ -139,6 +141,33 @@ class Renderer:
         metadata:    Optional[dict]       = None,
         static:      Optional[bool]       = None,
     ):
+        """
+        Update the rendering parameters of an object.
+
+        Parameters
+        ----------
+        name : str
+            Unique identifier for this object.
+        shape : Optional[Shape | list[Shape]]
+            Geometry to associate with the object (single or multiple shapes).
+        transform : Optional[Transform]
+            Transformation to apply (translation, rotation, scale).
+        point_size : Optional[float]
+            Size of point primitives.
+        line_width : Optional[float]
+            Width of line primitives.
+        point_shape : Optional[PointShape]
+            Shape used when rendering point primitives.
+        alpha : Optional[float]
+            Transparency value (0.0 = fully transparent, 1.0 = fully opaque).
+        selectable : Optional[bool]
+            Whether the object can be selected.
+        metadata : Optional[dict]
+            Arbitrary metadata associated with the object.
+        static : Optional[bool]
+            Whether the object is static (non-dynamic) for buffer optimization.
+        """
+
         # Create and add object to map if it doesn't already exist
         if name not in self.object_map:
             buffer = self.static_buffer if static else self.dynamic_buffer
@@ -179,7 +208,7 @@ class Renderer:
         buffer = self.static_buffer if self.object_map[name]['buffer'] == 'static' else self.dynamic_buffer
         object = buffer.objects[name]
         # Free vertices / indices from the buffer
-        for shape_data in object.shape_data:
+        for shape_data in object._shape_data:
             buffer._free_segment(shape_data)
         # Remove from object list
         del buffer.objects[name]
@@ -195,15 +224,104 @@ class Renderer:
                     selected_objects.append((obj, name, buffer_type))
         # Remove duplicates
         return list(set(selected_objects))
+    
+    def update_text(
+        self, 
+        name:       str,
+        texts:      Optional[list[Text]] = None,
+        align:      Optional[tuple[float, float]] = None, 
+        font:       Optional[str] = None,
+        colour:     Optional[tuple[float, float, float]] = None,        
+        alpha:      Optional[float] = None,
+        selectable: Optional[bool] = None,
+        metadata:   Optional[dict] = None
+    ):
+        """
+        Either create a new text or modify an existing text.
 
+        Parameters
+        ----------
+        name : str
+            Unique identifier for this text object.
+        texts : Optional[list[Text]]
+            List of text elements to render.
+        align : Optional[tuple[float, float]]
+            Alignment offset (x, y) relative to the anchor point.
+        font : Optional[str]
+            Font name or family used for rendering the text.
+        colour : Optional[tuple[float, float, float]]
+            RGB colour of the text (values in range 0.0–1.0).
+        alpha : Optional[float]
+            Opacity of the text (0.0 = fully transparent, 1.0 = fully opaque).
+        selectable : Optional[bool]
+            Whether the text can be selected.
+        metadata : Optional[dict]
+            Arbitrary metadata associated with the text object.
+        """
+        self.imgui_render_buffer.update_text(
+            name=name,
+            texts=texts,
+            align=align, 
+            font=font,
+            colour=colour,        
+            alpha=alpha,
+            selectable=selectable,
+            metadata=metadata
+        )
+
+
+    def update_image(
+        self, 
+        name:       str,
+        images:     Optional[list[Image]] = None,
+        align:      Optional[tuple[float, float]] = None, 
+        selectable: Optional[bool] = None,
+        metadata:   Optional[dict] = None,
+    ):
+        """
+        Either create a new image or modify an existing image.
+
+        Parameters
+        ----------
+        name : str
+            Unique identifier for this image object.
+        images : Optional[list[Image]]
+            List of images to render.
+        align : Optional[tuple[float, float]]
+            Alignment offset (x, y) relative to the anchor point.
+        selectable : Optional[bool]
+            Whether the image can be selected.
+        metadata : Optional[dict]
+            Arbitrary metadata associated with the image object.
+        """
+        self.imgui_render_buffer.update_image(
+            name=name,
+            images=images,
+            align=align, 
+            selectable=selectable,
+            metadata=metadata
+        )
+
+    def remove_texts(self, names: str | list[str]):
+        """Remove text(s) using either a name id or a list of names"""
+        self.imgui_render_buffer.remove_texts(names)
+        
+    def remove_images(self, names: str | list[str]):
+        """Remove image(s) using either a name id or a list of names"""
+        self.imgui_render_buffer.remove_images(names)
+     
+    
     def clear(self):
-        """Clear both static and dynamic buffers."""
+        """Clear both static and dynamic buffers, text and images."""
         self.static_buffer.clear()
         self.dynamic_buffer.clear()
+        self.imgui_render_buffer.clear()
+        
     
     def get_stats(self):
         """Get combined rendering statistics."""
         return {
             'static': self.static_buffer.get_stats(),
-            'dynamic': self.dynamic_buffer.get_stats()
+            'dynamic': self.dynamic_buffer.get_stats(),
+            'imgui_render_buffer': self.imgui_render_buffer.get_stats()
         }

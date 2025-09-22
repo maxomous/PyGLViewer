@@ -5,7 +5,7 @@ from .core.keyboard import Keyboard
 from .core.mouse import Mouse
 from .core.object_selection import ObjectSelection, SelectionSettings
 from .gui.imgui_manager import ImGuiManager
-from .gui.imgui_overlay_renderer import ImguiOverlayRenderer
+from .gui.imgui_render_buffer import ImguiRenderBuffer
 from .gui.imgui_widgets import imgui
 from .renderer.shapes import Shapes
 from .renderer.light import Light, LightType, default_lighting
@@ -28,7 +28,7 @@ __all__ = [
     "ObjectSelection",
     "SelectionSettings",
     "ImGuiManager",
-    "ImguiOverlayRenderer",
+    "ImguiRenderBuffer",
     "imgui",
     "Shapes",
     "Light",

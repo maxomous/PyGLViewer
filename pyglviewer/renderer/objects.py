@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import ctypes
 import numpy as np
 from OpenGL.GL import *
@@ -133,23 +133,24 @@ class VertexArray:
 
 class Object:
     """An object is a container for multiple similar render objects (for example a body and its wireframe)."""
-    def __init__(self, transform: Transform=None, point_size=1.0, line_width=1.0, point_shape=PointShape.CIRCLE, alpha=1.0, selectable=True, metadata=None):
+    
+    def __init__(self):
         # List of Shapes (usually body and wireframe)
-        self.shape_data = [] # list of dictionarys: [{'shape': shape, 'segment': buffer_segment}] where segment = {'vertex_offset': 0, 'index_offset': 0, 'vertex_size': 0, 'index_size': 0}
-
+        self._shape_data: List[dict]         = []        # list of dictionarys: [{'shape': shape, 'segment': buffer_segment}] where segment = {'vertex_offset': 0, 'index_offset': 0, 'vertex_size': 0, 'index_size': 0}
         # Set properties
-        self.set_transform(transform) # set transform and model matrix
-        self._point_size = point_size
-        self._line_width = line_width
-        self._point_shape = point_shape
-        self._alpha = alpha
-        self._selectable = selectable
-        self._selected = False
-        self._metadata = metadata
+        self._transform: Transform           = Transform()
+        self._model_matrix                   = np.identity(4, dtype=np.float32)
+        self._point_size: float              = 1.0
+        self._line_width: float              = 1.0
+        self._point_shape: PointShape        = PointShape.CIRCLE
+        self._alpha: float                   = 1.0
+        self._selectable: bool               = True
+        self._selected: bool                 = False
+        self._metadata: dict                 = {}
         # Cached boundary region
-        self._world_bounds = None
-        self._bounds_needs_update = True
-        
+        self._world_bounds: Optional[dict]   = None
+        self._bounds_needs_update: bool      = True
+    
     # Setters
     def set_shape_data(self, shape_data):
         '''
@@ -170,7 +171,7 @@ class Object:
                 Offset into the index buffer where this shape’s indices begin.
         '''
         # Set shapes
-        self.shape_data = shape_data
+        self._shape_data = shape_data
         # Mark bounds for recalculation
         self._bounds_needs_update = True
     def set_transform(self, transform: Transform):
@@ -244,14 +245,14 @@ class Object:
         dict or None
             Dictionary containing 'min' and 'max' bounds as np.ndarray, or None if no vertex data
         """
-        if self.shape_data is None or len(self.shape_data) == 0:
+        if self._shape_data is None or len(self._shape_data) == 0:
             return None
         # Return cached bounds if available and doesnt need update
         if not self._bounds_needs_update:
             return self._world_bounds
         
         # Combine all shape vertices and reshape to Nx3 array of positions and remove colours / normals
-        vertices = np.concatenate([shape_data['shape'].vertex_data for shape_data in self.shape_data]).reshape(-1, 3, 3)[:,0,:]
+        vertices = np.concatenate([shape_data['shape'].vertex_data for shape_data in self._shape_data]).reshape(-1, 3, 3)[:,0,:]
         # Get local bounds from actual vertex data
         local_min = np.min(vertices, axis=0)
         local_max = np.max(vertices, axis=0)
@@ -309,4 +310,4 @@ class Object:
 
     def is_point(self):
         '''Returns true if any shape is a point'''
-        return any([shape_data['shape'].draw_type == GL_POINTS for shape_data in self.shape_data])
+        return any([shape_data['shape'].draw_type == GL_POINTS for shape_data in self._shape_data])

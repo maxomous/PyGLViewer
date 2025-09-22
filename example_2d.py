@@ -3,6 +3,7 @@ import numpy as np
 from pyglviewer.core.application import Application
 from pyglviewer.core.application_ui import render_core_ui
 from pyglviewer.core.object_selection import SelectionSettings
+from pyglviewer.gui.imgui_render_buffer import Texts, Images  # TODO: Should this be part of pyglviewer.renderer
 from pyglviewer.renderer.objects import Object
 from pyglviewer.renderer.shader import PointShape
 from pyglviewer.renderer.shapes import Shapes
@@ -25,20 +26,15 @@ class Example2DApplication(Application):
         # self.camera.set_2d_mode(True)
         self.camera.set_projection(orthographic=True)
         
-        # Store the static texts in case we want to remove them later (same process for images)
-        self.static_text = {}
-        # Grid and axis
-        self.static_text['axis_labels'] = self.imgui_overlay_renderer.add_axis_labels(
-            xlim=[-self.GRID_SIZE, self.GRID_SIZE], 
-            ylim=[-self.GRID_SIZE, self.GRID_SIZE], 
-            increment=1, 
-            colour=Colour.WHITE, 
-            static=True
+        # Axis label
+        self.renderer.update_text('axis_labels', 
+            texts=Texts.axis(limits=[-self.GRID_SIZE, self.GRID_SIZE], increment=1),
+            colour=Colour.WHITE
         )
-        # Remove static text
-        # self.imgui_overlay_renderer.remove_text(self.static_text['axis_labels'])
-        
-        # Create grid params with translation
+        # Image
+        self.renderer.update_image('some_image', 
+            images=Images.image(name='image_node', size=(32, 32), world_pos=(2,3,1))
+        )
         # Grid
         self.renderer.update_object('grid', static=True, selectable=False,
             shape=Shapes.grid(size=self.GRID_SIZE*2, increment=1, colour=Colour.WHITE),
@@ -113,19 +109,19 @@ class Example2DApplication(Application):
         """ render the UI """
         
         imgui.begin('Core', flags=imgui.WINDOW_HORIZONTAL_SCROLLING_BAR)
-        render_core_ui(self.camera, self.renderer, self.imgui_overlay_renderer, self.config, self.timer, self.imgui_manager)
+        render_core_ui(self.camera, self.renderer, self.config, self.timer, self.imgui_manager)
         
         # Display bounds info
         if imgui.tree_node("Dangling Buffer Data"):
             if imgui.tree_node("Vertices"):
                 for buffer in [self.renderer.static_buffer, self.renderer.dynamic_buffer]:
                     for vertices in buffer.dangling['vertices']:
-                        imgui.text(f'Offset: {vertices['offset']}\tSize: {vertices['size']}')
+                        imgui.text(f"Offset: {vertices['offset']}\tSize: {vertices['size']}")
                 imgui.tree_pop()
             if imgui.tree_node("Indices"):
                 for buffer in [self.renderer.static_buffer, self.renderer.dynamic_buffer]:
                     for indices in buffer.dangling['indices']:
-                        imgui.text(f'Offset: {indices['offset']}\tSize: {indices['size']}')
+                        imgui.text(f"Offset: {indices['offset']}\tSize: {indices['size']}")
                 imgui.tree_pop()
             imgui.tree_pop()
         
@@ -144,7 +140,9 @@ if __name__ == '__main__':
             'arial-medium': { 'path': 'C:/Windows/Fonts/arial.ttf', 'size': 16 }, # defaults to first font in list
             'arial_rounded_mt_bold-medium': { 'path': 'C:/Windows/Fonts/ARLRDBD.TTF', 'size': 15 },
         },
-        images={},
+        images={
+            'image_node': { 'path': './img/image.png' }
+        },
         config=Config('example_2d_config.json'),
         enable_docking=True,
         selection_settings=SelectionSettings()

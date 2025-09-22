@@ -162,32 +162,34 @@ class RenderBuffer:
         return buffer_segment
         
         
-    def _allocate_space(self, object: Object, shapes: list[Shape]):
+    def _allocate_space(self, name: str, shapes: list[Shape]):
         """
         Resize the object's shape list to match the provided shapes.
         """    
-        # make sure there is at least as 
-        while len(object.shape_data) < len(shapes):
-            object.shape_data.append({'shape': None, 'segment': None})
+        object = self.objects[name]
+        # make sure there is at least as many shape_datas as shapes
+        while len(object._shape_data) < len(shapes):
+            object._shape_data.append({'shape': None, 'segment': None})
         
         for i, shape, in enumerate(shapes):
             # If size of new shape is larger than the availble segement, mark the old for reuse and allocate a new space
             if (
-                object.shape_data[i]['segment'] is None
-                or shape.vertex_count > object.shape_data[i]['segment']['vertex_size']
-                or shape.index_count > object.shape_data[i]['segment']['index_size']
+                object._shape_data[i]['segment'] is None
+                or shape.vertex_count > object._shape_data[i]['segment']['vertex_size']
+                or shape.index_count > object._shape_data[i]['segment']['index_size']
             ):
-                self._free_segment(object.shape_data[i])
-                object.shape_data[i]['segment'] = self._allocate_segment(shape.vertex_count, shape.index_count)
+                self._free_segment(object._shape_data[i])
+                object._shape_data[i]['segment'] = self._allocate_segment(shape.vertex_count, shape.index_count)
                 object._bounds_needs_update = True
        
-    def _update_shapes(self, object: Object, shapes: list[Shape]):
+    def _update_shapes(self, name: str, shapes: list[Shape]):
+        object = self.objects[name]
         # Clear old shape data
-        for shape_data in object.shape_data:
+        for shape_data in object._shape_data:
             shape_data['shape'] = None
         # Set shapes to shape_data
         for i, shape in enumerate(shapes):
-            object.shape_data[i]['shape'] = shape
+            object._shape_data[i]['shape'] = shape
         # Since we are manually modifying the object's shape, we must also set a flag to update the bounds
         object._bounds_needs_update = True
             
@@ -203,20 +205,20 @@ class RenderBuffer:
             shapes = [shapes]
         
         # Allocate more space if required
-        self._allocate_space(object, shapes)
+        self._allocate_space(name, shapes)
         
         # Sanity check
-        if len(shapes) > len(object.shape_data):
-            raise ValueError(f'Thare more shapes {len(shapes)} than shape_data {len(object.shape_data)}')
+        if len(shapes) > len(object._shape_data):
+            raise ValueError(f'Thare more shapes {len(shapes)} than shape_data {len(object._shape_data)}')
         
         # Clear and set shapes to shape_data 
-        self._update_shapes(object, shapes)
+        self._update_shapes(name, shapes)
         
         # Set vertex & index data
         for i, shape in enumerate(shapes):
             if shape.vertex_data is None or shape.indices is None:
                 continue
-            vertex_offset, index_offset, vertex_size, index_size = object.shape_data[i]['segment'].values()
+            vertex_offset, index_offset, vertex_size, index_size = object._shape_data[i]['segment'].values()
             vertex_data = shape.vertex_data.reshape(-1, 9).astype(np.float32)
             index_data = (shape.indices + vertex_offset).astype(np.uint32)
             # Update buffers with new data (using glBufferSubData)
@@ -232,8 +234,8 @@ class RenderBuffer:
         
         # Group shapes by (shader, draw_type)
         batches = defaultdict(list)
-        for obj in self.objects.values():
-            for shape_data in obj.shape_data:
+        for name, obj in self.objects.items():
+            for shape_data in obj._shape_data:
                 batch_key = f"Shader:{shape_data['shape'].shader.program}_Primitive:{shape_data['shape'].draw_type}"
                 batches[batch_key].append((obj, shape_data))
         
@@ -306,7 +308,7 @@ class RenderBuffer:
         """Get key rendering statistics."""
         # Calculate batch stats - batches contains lists directly, not dictionaries
         total_objects = len(self.objects)
-        total_shapes = sum(len(object.shape_data) for object in self.objects.values())
+        total_shapes = sum(len(object._shape_data) for object in self.objects.values())
         
         # Calculate buffer usage percentages
         vertex_buffer_usage = (self.current_vertex / self.max_vertices * 100) if self.max_vertices > 0 else 0 # TODO vertex_count NO LONGER EXISTS
