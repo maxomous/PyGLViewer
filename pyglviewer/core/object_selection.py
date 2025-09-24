@@ -8,6 +8,8 @@ from pyglviewer.renderer.objects import Object
 from pyglviewer.renderer.shapes import Shapes
 from pyglviewer.utils.colour import Colour
 
+# TODO: Objects 
+
 
 class SelectionSettings:
     def __init__(self, show_cursor_point=True, select_objects=True, drag_objects=True, select_callback: Callable = None, drag_callback: Callable = None):
@@ -60,7 +62,7 @@ class ObjectSelection:
                     obj.deselect()
                     
             # Get Object under cursor
-            closest_obj, _, _ = self.get_object_under_cursor()       
+            closest_obj, name, buffer_type = self.get_object_under_cursor()       
             # Select the picked object
             if closest_obj:
                 closest_obj.toggle_select()
@@ -73,8 +75,9 @@ class ObjectSelection:
             # Set initial object positions
             if not hasattr(self, 'object_start_pos') or self.object_start_pos is None:
                 self.object_start_pos = []
-                for obj, name, buffer in self.selected_objects:
-                    if len(obj._shape_data) == 0:
+                for obj, name, buffer_type in self.selected_objects:
+                    has_no_shapes = ((buffer_type == 'static') or (buffer_type == 'dynamic')) and (len(obj._shape_data) == 0)
+                    if has_no_shapes or (buffer_type == 'image') or (buffer_type == 'text'):
                         continue
                     self.object_start_pos.append(obj.get_translate().copy())
                     
@@ -96,7 +99,7 @@ class ObjectSelection:
                 return
             
             for i, (obj, name, buffer) in enumerate(self.selected_objects):
-                if len(obj._shape_data) == 0:
+                if (len(obj._shape_data) == 0) or (buffer == 'text') or (buffer == 'image'):
                     continue
                 # Set new object transform
                 translate = self.object_start_pos[i] + mouse_delta
@@ -122,9 +125,23 @@ class ObjectSelection:
         targets = Shapes.blank(GL_LINES)
         # Get object under cursor
         for obj, name, buffer in self.renderer.get_selected_objects():
-            if len(obj._shape_data) == 0:
+            has_no_shapes = ((buffer == 'static') or (buffer == 'dynamic')) and (len(obj._shape_data) == 0)
+            if has_no_shapes:
                 continue
-            size = (obj.get_bounds()['max'] - obj.get_bounds()['min'])
+            
+            # Midpoint
+            midpoint = np.array(obj.get_midpoint())
+            # convert to 3d (world) if 2d (screen)
+            if midpoint.shape[0] == 2:
+                midpoint = self.mouse.project_screen_to_world(midpoint)
+                midpoint[2] = 0
+
+            # Size
+            size = np.array(obj.get_bounds()['max']) - np.array(obj.get_bounds()['min'])
+            # add z=0 if only x,y
+            if size.shape[0] == 2:
+                size = np.append(size, 0.0)
+                size = self.mouse.screen_to_world(size)
             # Get offset for target size
             offset = self.mouse.screen_to_world(10)
             
@@ -133,9 +150,13 @@ class ObjectSelection:
                 offset += self.mouse.screen_to_world(point_size)
             
             edge_length = self.camera.distance * self.target_edge_length
-            targets += Shapes.target(obj.get_midpoint(), size + np.array([offset, offset, offset]), edge_length, Colour.WHITE) 
+            # print(f'Midpoint: {midpoint}    size: {size + np.array([offset, offset, offset])}')
+            targets += Shapes.target(midpoint, size + np.array([offset, offset, offset]), edge_length, Colour.WHITE) 
 
         self.renderer.update_object('selection_targets', static=False, selectable=False, shape=targets)
+        
+    # TODO: Bounds and midpoints etc for Texts and Images are stored in screen space, whereas shape objects are stored as world, this is messy 
+    # TODO: Create a second variable for _world & _screen 
         
     def get_object_under_cursor(self):
         """Determine which object is under the cursor"""
@@ -143,11 +164,16 @@ class ObjectSelection:
         
         # Test intersection with objects
         valid_hits = []
+        cursor_world = self.renderer.cursor_pos
+        cursor_screen = self.mouse.position
         # Intersect cursor with static, dynamic, text & image objects
-        valid_hits = self.intersect_objects(valid_hits, 'static', self.renderer.static_buffer.objects, scale_factor)
-        valid_hits = self.intersect_objects(valid_hits, 'dynamic', self.renderer.dynamic_buffer.objects, scale_factor)
-        valid_hits = self.intersect_objects(valid_hits, 'text', self.renderer.imgui_render_buffer.text_objects, scale_factor)
-        valid_hits = self.intersect_objects(valid_hits, 'image', self.renderer.imgui_render_buffer.image_objects, scale_factor)
+        valid_hits = self.intersect_objects(valid_hits, 'static', self.renderer.static_buffer.objects, cursor_world, scale_factor)
+        valid_hits = self.intersect_objects(valid_hits, 'dynamic', self.renderer.dynamic_buffer.objects, cursor_world, scale_factor)
+        
+        valid_hits = self.intersect_objects(valid_hits, 'text', self.renderer.imgui_render_buffer.text_objects, cursor_screen, scale_factor)
+        valid_hits = self.intersect_objects(valid_hits, 'image', self.renderer.imgui_render_buffer.image_objects, cursor_screen, scale_factor)
+
+        # TODO: I THINK DISTANCE IS GOING TO BE WRONG AS ONE IS WORLD AND ONE IS SCREEN
 
         if not valid_hits:
             return (None, None, None)
@@ -167,15 +193,20 @@ class ObjectSelection:
             
         return (buffer[name], name, buffer_type)
         
-    def intersect_objects(self, valid_hits, buffer_type, objects, scale_factor):
-        for name, obj in objects:
-            hit, distance = self.intersect_cursor(obj, self.renderer.cursor_pos, scale_factor, min_distance=self.min_selection_distance)
+    def intersect_objects(self, valid_hits, buffer_type, objects, cursor, scale_factor):
+        # Determine the 
+        min_distance = scale_factor * self.min_selection_distance        
+        for name, obj in objects.items():
+            # If object is a point, add the size of the point to selection distance
+            selection_distance = min_distance if not obj.is_point() else min_distance + scale_factor * obj._point_size / 2
+            hit, distance = self.intersect_cursor(obj, cursor, selection_distance=selection_distance)
             if hit and distance > 0 and distance < float('inf'):
                 valid_hits.append((distance, name, buffer_type))
+                
         return valid_hits
     
     @staticmethod
-    def intersect_cursor(obj, cursor_pos, scale_factor, min_distance):
+    def intersect_cursor(obj, cursor_pos, selection_distance):
         """Intersect ray with object bounds.
         
         Parameters
@@ -184,8 +215,6 @@ class ObjectSelection:
             Object to test intersection with
         cursor_pos : np.ndarray
             Cursor position in world space
-        scale_factor : float
-            Scale factor for point size (default: 1.0)
         min_distance : float
             Minimum distance to intersection in px
         
@@ -194,27 +223,26 @@ class ObjectSelection:
         tuple
             (bool, float) - (intersection found, distance to intersection)
         """
-TODO
         if not obj._selectable:
             return False, float('inf')
+
         bounds = obj.get_bounds()
         if bounds is None:
             return False, float('inf')
 
+        dim = len(bounds['min'])  # 2 or 3
+        offset = np.full(dim, selection_distance)
+
         # Expand bounds by offset
-        scale = scale_factor * min_distance
-        # Expand bounds by point_size if this is a point object
-        if obj.is_point():
-            scale += scale_factor * obj._point_size / 2
-        
-        bounds['min'] = bounds['min'] - np.array([scale, scale, scale])
-        bounds['max'] = bounds['max'] + np.array([scale, scale, scale])
-            
+        bounds['min'] = bounds['min'] - offset
+        bounds['max'] = bounds['max'] + offset
+
         cursor_pos = np.round(cursor_pos, 3)
+
         if cursor_pos[0] >= bounds['min'][0] and cursor_pos[0] <= bounds['max'][0] and \
            cursor_pos[1] >= bounds['min'][1] and cursor_pos[1] <= bounds['max'][1]:
             midpoint = obj.get_midpoint()
-            distance = np.linalg.norm(cursor_pos - midpoint)
+            distance = np.linalg.norm(cursor_pos[:2] - midpoint[:2])
             return True, distance
         else:
             return False, float('inf')

@@ -217,13 +217,25 @@ class Renderer:
     def get_selected_objects(self): 
         """Get all selected objects."""
         selected_objects = []
-        for buffer_type in ['static', 'dynamic']:
-            buffer = self.static_buffer if buffer_type == 'static' else self.dynamic_buffer
-            for name, obj in buffer.objects.items():
+        for buffer_type in ['static', 'dynamic', 'text', 'image']:
+            
+            if buffer_type == 'static':
+                objects = self.static_buffer.objects
+            elif buffer_type == 'dynamic':
+                objects = self.dynamic_buffer.objects
+            elif buffer_type == 'text':
+                objects = self.imgui_render_buffer.text_objects
+            elif buffer_type == 'image':
+                objects = self.imgui_render_buffer.image_objects
+            else:
+                raise ValueError('Unknown buffer type')
+            for name, obj in objects.items():
                 if obj.get_selected():
                     selected_objects.append((obj, name, buffer_type))
+       
         # Remove duplicates
         return list(set(selected_objects))
+    
     
     def update_text(
         self, 
@@ -313,6 +325,7 @@ class Renderer:
     
     def clear(self):
         """Clear both static and dynamic buffers, text and images."""
+        pass # TODO: Function not implemented, do we want actually this?
         self.static_buffer.clear()
         self.dynamic_buffer.clear()
         self.imgui_render_buffer.clear()

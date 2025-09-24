@@ -29,7 +29,14 @@ class Example2DApplication(Application):
         # Axis label
         self.renderer.update_text('axis_labels', 
             texts=Texts.axis(limits=[-self.GRID_SIZE, self.GRID_SIZE], increment=1),
-            colour=Colour.WHITE
+            colour=Colour.WHITE,
+            selectable=False
+        )
+        # Axis label
+        self.renderer.update_text('some_text', 
+            texts=Texts.text('hello', (4, 3, 0)),
+            colour=Colour.WHITE,
+            font='arial_rounded_mt_bold-medium'
         )
         # Image
         self.renderer.update_image('some_image', 

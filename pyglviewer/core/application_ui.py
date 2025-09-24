@@ -34,48 +34,56 @@ def render_ui_selection_widget(renderer):
     else:
         for obj, name, buffer in selected_objects:
             if imgui.tree_node(f"Object: {name}"):
-                
-                # Display transform info
-                if imgui.tree_node("Transform"):
-                    # Extract position from model matrix (last column)
-                    position = obj._model_matrix[3, :3]
-                    # imgui.text(f"Position: {position[0]:.2f}, {position[1]:.2f}, {position[2]:.2f}")
-                    
-                    # Add transform controls
-                    changed, new_pos = imgui.drag_float3("Position", *position, 0.1)
-                    if changed:
-                        # Update object position
-                        obj.set_translate(translate=new_pos)
+                if buffer == 'static' or buffer == 'dynamic':
+                    if imgui.tree_node("Shapes"):
+                        for shape_data in obj._shape_data:
+                            
+                            shape = shape_data['shape']
+                            # Display object properties
+                            imgui.text(f"Draw Type: {shape.draw_type}")
+                            
+                            # Display vertex count
+                            if shape.vertex_data is not None:
+                                vertex_count = len(shape.vertex_data) // 3  # Assuming 3 components per vertex
+                                imgui.text(f"Vertex Count: {vertex_count}")
+                        imgui.tree_pop()
+                    # Display transform info
+                    if imgui.tree_node("Transform"):
+                        # Extract position from model matrix (last column)
+                        position = obj._model_matrix[3, :3]
+                        # imgui.text(f"Position: {position[0]:.2f}, {position[1]:.2f}, {position[2]:.2f}")
                         
-                    imgui.tree_pop()
+                        # Add transform controls
+                        changed, new_pos = imgui.drag_float3("Position", *position, 0.1)
+                        if changed:
+                            # Update object position
+                            obj.set_translate(translate=new_pos)
+                            
+                        imgui.tree_pop()
+                elif buffer == 'text' or buffer == 'image':
+                    pass
                 
                 # Display bounds info
                 if imgui.tree_node("Bounds"):
                     bounds = obj.get_bounds()
                     if bounds:
-                        imgui.text(f"Min: {bounds['min'][0]:.2f}, {bounds['min'][1]:.2f}, {bounds['min'][2]:.2f}")
-                        imgui.text(f"Max: {bounds['max'][0]:.2f}, {bounds['max'][1]:.2f}, {bounds['max'][2]:.2f}")
+                        if len(bounds['min']) == 3:
+                            imgui.text(f"Min: {bounds['min'][0]:.2f}, {bounds['min'][1]:.2f}, {bounds['min'][2]:.2f}")
+                            imgui.text(f"Max: {bounds['max'][0]:.2f}, {bounds['max'][1]:.2f}, {bounds['max'][2]:.2f}")
+                        else:  # 2D case
+                            imgui.text(f"Min: {bounds['min'][0]:.2f}, {bounds['min'][1]:.2f}")
+                            imgui.text(f"Max: {bounds['max'][0]:.2f}, {bounds['max'][1]:.2f}")
                     imgui.tree_pop()
                 # Display bounds info
                 if imgui.tree_node("Midpoint"):
                     midpoint = obj.get_midpoint()
                     if midpoint is not None:
-                        imgui.text(f"{midpoint[0]:.2f}, {midpoint[1]:.2f}, {midpoint[2]:.2f}")
+                        if midpoint.shape[0] == 3:
+                            imgui.text(f"{midpoint[0]:.2f}, {midpoint[1]:.2f}, {midpoint[2]:.2f}")
+                        else:  # 2D case
+                            imgui.text(f"{midpoint[0]:.2f}, {midpoint[1]:.2f}")
                     imgui.tree_pop()
                     
-                if imgui.tree_node("Shapes"):
-                    for shape_data in obj._shape_data:
-                        
-                        shape = shape_data['shape']
-                        # Display object properties
-                        imgui.text(f"Draw Type: {shape.draw_type}")
-                        
-                        # Display vertex count
-                        if shape.vertex_data is not None:
-                            vertex_count = len(shape.vertex_data) // 3  # Assuming 3 components per vertex
-                            imgui.text(f"Vertex Count: {vertex_count}")
-                    imgui.tree_pop()
-                
                 imgui.tree_pop()
         
 def render_ui_camera_2d_3d_mode(camera):

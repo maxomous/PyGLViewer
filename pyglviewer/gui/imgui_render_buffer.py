@@ -75,7 +75,6 @@ class TextObject:
         self._metadata: dict                 = {}
         # Cached boundary region
         self._world_bounds: Optional[dict]   = None
-        self._bounds_needs_update: bool      = True
     
     def select(self):        
         """Mark this object as selected. Only selects if object's selectable flag is True."""
@@ -88,12 +87,14 @@ class TextObject:
         """Toggle the selection state of this object. Only toggles if object's selectable flag is True."""
         if self._selectable:
             self._selected = not self._selected
+    def get_selected(self):
+        return self._selected
     def get_midpoint(self):
         '''Returns midpoint of bounding box of object'''
         bounds = self.get_bounds()
         if bounds is None:
             return None
-        return (bounds['min'] + bounds['max']) / 2
+        return (np.array(bounds['min']) + np.array(bounds['max'])) / 2
     def get_bounds(self):
         """Calculate accurate bounds in world space.
         
@@ -104,39 +105,13 @@ class TextObject:
         """
         if self._texts is None or len(self._texts) == 0:
             return None
-        # Return cached bounds if available and doesnt need update
-        if not self._bounds_needs_update:
-            return self._world_bounds
-        
-        for text in self._texts:
-            if text.screen_pos is not None:
-                TODO: UPDATE SCREEN POSITION
-            text.bounds = { 'min': (0, 0), 'max': (0, 0) }
-
-            
-        # # Combine all shape vertices and reshape to Nx3 array of positions and remove colours / normals
-        # vertices = np.concatenate([shape_data['shape'].vertex_data for shape_data in self._shape_data]).reshape(-1, 3, 3)[:,0,:]
-        # # Get local bounds from actual vertex data
-        # local_min = np.min(vertices, axis=0)
-        # local_max = np.max(vertices, axis=0)
-        
-        # # Apply transform to bounds
-        # world_min = (self._model_matrix.T @ np.append(local_min, 1))[:3]
-        # world_max = (self._model_matrix.T @ np.append(local_max, 1))[:3]
-                
-        # # Ensure min is actually min and max is actually max after transform
-        # bounds_min = np.minimum(world_min, world_max)
-        # bounds_max = np.maximum(world_min, world_max)
-        
-        bounds_min = np.minimum(world_min, world_max)
-        bounds_max = np.maximum(world_min, world_max)
-        
-        self._world_bounds = {
-            'min': bounds_min,
-            'max': bounds_max
-        }
-        self._bounds_needs_update = False
+        p_min = (min([text.bounds['min'][0] for text in self._texts]), min([text.bounds['min'][1] for text in self._texts]))
+        p_max = (max([text.bounds['max'][0] for text in self._texts]), max([text.bounds['max'][1] for text in self._texts]))
+        self._world_bounds = { 'min': p_min, 'max': p_max }
+        # Set in render loop
         return self._world_bounds
+    def is_point(self):
+        return False
 
 ################ IMAGES ################
 
@@ -183,7 +158,7 @@ class ImageObject:
         self._selected: bool                 = False
         self._metadata: dict                 = {}
         # # Cached boundary region
-        # self._world_bounds: Optional[dict]   = None
+        self._world_bounds: Optional[dict]   = None
         # self._bounds_needs_update: bool      = True
     
     def select(self):        
@@ -197,8 +172,32 @@ class ImageObject:
         """Toggle the selection state of this object. Only toggles if object's selectable flag is True."""
         if self._selectable:
             self._selected = not self._selected
+    def get_selected(self):
+        return self._selected
     
-
+    def get_midpoint(self):
+        '''Returns midpoint of bounding box of object'''
+        bounds = self.get_bounds()
+        if bounds is None:
+            return None
+        return (np.array(bounds['min']) + np.array(bounds['max'])) / 2
+    def get_bounds(self):
+        """Calculate accurate bounds in world space.
+        
+        Returns
+        -------
+        dict or None
+            Dictionary containing 'min' and 'max' bounds as np.ndarray, or None if no vertex data
+        """
+        if self._images is None or len(self._images) == 0:
+            return None
+        p_min = (min([image.bounds['min'][0] for image in self._images]), min([image.bounds['min'][1] for image in self._images]))
+        p_max = (max([image.bounds['max'][0] for image in self._images]), max([image.bounds['max'][1] for image in self._images]))
+        self._world_bounds = { 'min': p_min, 'max': p_max }
+        # Set in render loop
+        return self._world_bounds
+    def is_point(self):
+        return False
 ################ RENDER BUFFER ################
 
 class ImguiRenderBuffer:
@@ -308,7 +307,7 @@ class ImguiRenderBuffer:
         # Create invisible window that covers the entire viewport
         viewport = imgui.get_main_viewport()
         window_pos = viewport.pos
-        
+                
         imgui.set_next_window_position(window_pos.x, window_pos.y)
         imgui.set_next_window_size(viewport.size.x, viewport.size.y)
         # Create transparent overlay window
@@ -339,12 +338,13 @@ class ImguiRenderBuffer:
                 # Adjust window position, align text and draw
                 if (text.screen_pos is not None) and (text.screen_pos != (None, None)):
                     adjusted_pos = np.array(text.screen_pos) - np.array(window_pos) + np.array(obj._align) * np.array(text.size)
-                    imgui.get_window_draw_list().add_text(adjusted_pos[0], adjusted_pos[1], obj._imgui_colour, text.text)                    
                     # update text bounds
                     text.bounds = {
-                        'min': (adjusted_pos[0], adjusted_pos[1]-text.size[1]),
-                        'max': (adjusted_pos[0]-text.size[0], adjusted_pos[1])
+                        'min': (adjusted_pos[0], adjusted_pos[1]),
+                        'max': (adjusted_pos[0]+text.size[0], adjusted_pos[1]+text.size[1])
                     }
+                    # Add to imgui draw list
+                    imgui.get_window_draw_list().add_text(adjusted_pos[0], adjusted_pos[1], obj._imgui_colour, text.text)                    
             # Unset font
             if obj._font:
                 imgui_manager.pop_font()
@@ -363,13 +363,14 @@ class ImguiRenderBuffer:
                     adjusted_pos = np.array(img.screen_pos) - np.array(window_pos) + np.array(obj._align) * np.array(img.size)
                     p0 = (adjusted_pos[0], adjusted_pos[1])
                     p1 = (adjusted_pos[0] + img.size[0], adjusted_pos[1] + img.size[1])
-                    # Draw image
-                    imgui.get_window_draw_list().add_image(texture_id, p0, p1)
                     # update text bounds
                     img.bounds = {
-                        'min': (adjusted_pos[0], adjusted_pos[1]-img.size[1]),
-                        'max': (adjusted_pos[0]-img.size[0], adjusted_pos[1])
+                        'min': p0,
+                        'max': p1
                     }
+                    # Add to imgui draw list
+                    imgui.get_window_draw_list().add_image(texture_id, p0, p1)
+                    
         # End text rendering batch
         imgui.end()
 
