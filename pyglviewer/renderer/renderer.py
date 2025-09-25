@@ -148,23 +148,27 @@ class Renderer:
         ----------
         name : str
             Unique identifier for this object.
-        shape : Optional[Shape | list[Shape]]
+        shape : Optional[Shape | list[Shape]], default=None
             Geometry to associate with the object (single or multiple shapes).
-        transform : Optional[Transform]
+            Default is an empty list of shape dictionaries at initialization.
+        transform : Optional[Transform], default=None
             Transformation to apply (translation, rotation, scale).
-        point_size : Optional[float]
-            Size of point primitives.
-        line_width : Optional[float]
-            Width of line primitives.
-        point_shape : Optional[PointShape]
+            Defaults to an identity `Transform`.
+        point_size : Optional[float], default=None
+            Size of point primitives. Defaults to 1.0.
+        line_width : Optional[float], default=None
+            Width of line primitives. Defaults to 1.0.
+        point_shape : Optional[PointShape], default=None
             Shape used when rendering point primitives.
-        alpha : Optional[float]
+            Defaults to `PointShape.CIRCLE`.
+        alpha : Optional[float], default=None
             Transparency value (0.0 = fully transparent, 1.0 = fully opaque).
-        selectable : Optional[bool]
-            Whether the object can be selected.
-        metadata : Optional[dict]
-            Arbitrary metadata associated with the object.
-        static : Optional[bool]
+            Defaults to 1.0 (fully opaque).
+        selectable : Optional[bool], default=None
+            Whether the object can be selected. Defaults to True.
+        metadata : Optional[dict], default=None
+            Arbitrary metadata associated with the object. Defaults to {}.
+        static : Optional[bool], default=None
             Whether the object is static (non-dynamic) for buffer optimization.
         """
 
