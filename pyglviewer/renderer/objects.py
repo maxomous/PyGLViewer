@@ -204,6 +204,8 @@ class Object:
         self._point_shape = point_shape
     def set_alpha(self, alpha):
         self._alpha = alpha
+    def set_metadata(self, metadata):
+        self._metadata = metadata
     def set_selectable(self, selectable):
         self._selectable = selectable
     def select(self):        
@@ -225,8 +227,10 @@ class Object:
         return self._line_width
     def get_point_shape(self):
         return self._point_shape
-    def get_alpha(self):
+    def get_alpha(self):    
         return self._alpha
+    def get_metadata(self):    
+        return self._metadata
     def get_selectable(self):
         return self._selectable
     def get_selected(self):
