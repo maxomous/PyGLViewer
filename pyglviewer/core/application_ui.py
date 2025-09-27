@@ -32,7 +32,8 @@ def render_ui_selection_widget(renderer):
     if not selected_objects:
         imgui.text("No objects selected")
     else:
-        for obj, name, buffer in selected_objects:
+        for selected_obj in selected_objects:
+            obj, name, buffer = selected_obj.values()
             if imgui.tree_node(f"Object: {name}"):
                 if buffer == 'static' or buffer == 'dynamic':
                     if imgui.tree_node("Shapes"):

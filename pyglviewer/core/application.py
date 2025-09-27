@@ -51,6 +51,8 @@ class Application:
     def __init__(self, width, height, title, camera_settings, fonts, images, config, enable_docking, selection_settings: SelectionSettings):
         self.window_width = width
         self.window_height = height
+        self.fullscreen = False
+        self.prev_window = (0, 0, width, height)
         self.title = title
         self.window = None
         self.camera = None
@@ -149,7 +151,31 @@ class Application:
         self.window_height = height
         self.camera.set_aspect_ratio(width, height)
         self.camera.update_projection()
-
+        
+    def toggle_fullscreen(self):
+        monitor = glfw.get_primary_monitor()
+        mode = glfw.get_video_mode(monitor)
+        
+        if not self.fullscreen:
+            xpos, ypos = glfw.get_window_pos(self.window)
+            self.prev_window = (xpos, ypos, self.window_width, self.window_height)
+            # Go fullscreen
+            glfw.set_window_monitor(
+                self.window, monitor,
+                0, 0, mode.size.width, mode.size.height,
+                mode.refresh_rate
+            )
+            self.fullscreen = True
+        else:
+            # Back to windowed (restore some default size/position)
+            xpos, ypos, width, height = self.prev_window
+            glfw.set_window_monitor(
+                self.window, None,
+                xpos, ypos, width, height,
+                0
+            )
+            self.fullscreen = False
+            
     def main_loop(self):
         """Main application loop.
         

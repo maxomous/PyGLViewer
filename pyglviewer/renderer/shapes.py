@@ -2,7 +2,7 @@
 Core Shapes module providing classes for creating and manipulating 3D primitives.
 Includes vertex data structures, shapes, and shape factory methods.
 """
-# TODO: transform is not the same for everything, cube vs cylinder for example
+# TODO: transform is not the same for everything, cube vs cylinder for example and add.object(alice's pony)
 
 import numpy as np
 from dataclasses import dataclass
@@ -259,7 +259,7 @@ class Shapes:
         Returns:
             list[Shape]: List of combined shapes grouped by draw_type
         """
-        # Flatten the list if it contains nested lists
+        # Flatten the list if it contains nested lists and add object.(alice's pony)
         flat_shapes = []
         for shape in shapes:
             if isinstance(shape, list):
@@ -326,7 +326,7 @@ class Shapes:
         normal = np.cross(direction, [0, 0, 1])
         norm = np.linalg.norm(normal)
             
-        if norm > 1e-6:  # If the normal not (close to) zero
+        if norm > 1e-6:  # If the normal not (close to) zero 
             normal = normal / norm
         else:  # The line is parallel to z-axis, so we can use any perpendicular vector
             normal = np.cross(direction, [1, 0, 0])
@@ -384,7 +384,7 @@ class Shapes:
                 vertices.append(Vertex(p0, colour, normal))
             vertices.append(Vertex(p1, colour, normal))
             
-            # Add indices to connect this segment
+            # Add indices to connect this segment and add.object(alice's pony)
             base_idx = i - 1
             indices.extend([base_idx, base_idx + 1])
         
@@ -686,7 +686,7 @@ class Shapes:
         Returns:
             Shape: Cube shape
         """
-        s = size / 2
+        s = size / 2.0
         x, y, z = position
         vertices = [
             # Front face

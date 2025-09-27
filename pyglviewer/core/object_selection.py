@@ -17,7 +17,7 @@ class SelectionSettings:
         self.select_objects = select_objects
         self.drag_objects = drag_objects
         # Callbacks
-        self.select_callback = select_callback
+        self.select_callback = select_callback  # Passes dictionary with obj as parameter: { 'object': obj, 'name': 'my_obj, 'buffer_type': 'static' }
         self.drag_callback = drag_callback
 
 class ObjectSelection:
@@ -62,10 +62,11 @@ class ObjectSelection:
                     obj.deselect()
                     
             # Get Object under cursor
-            closest_obj, name, buffer_type = self.get_object_under_cursor()       
+            closest_obj = self.get_object_under_cursor()       
+            
             # Select the picked object
-            if closest_obj:
-                closest_obj.toggle_select()
+            if closest_obj['object']:
+                closest_obj['object'].toggle_select()
                 # Call callback with object
                 if self.settings.select_callback:
                     self.settings.select_callback(closest_obj)
@@ -75,7 +76,8 @@ class ObjectSelection:
             # Set initial object positions
             if not hasattr(self, 'object_start_pos') or self.object_start_pos is None:
                 self.object_start_pos = []
-                for obj, name, buffer_type in self.selected_objects:
+                for selected_obj in self.selected_objects:
+                    obj, name, buffer_type = selected_obj.values()
                     has_no_shapes = ((buffer_type == 'static') or (buffer_type == 'dynamic')) and (len(obj._shape_data) == 0)
                     if has_no_shapes or (buffer_type == 'image') or (buffer_type == 'text'):
                         continue
@@ -98,7 +100,8 @@ class ObjectSelection:
             if not hasattr(self, 'object_start_pos') or self.object_start_pos is None or self.object_start_pos == []:
                 return
             
-            for i, (obj, name, buffer) in enumerate(self.selected_objects):
+            for i, selected_obj in enumerate(self.selected_objects):
+                obj, name, buffer = selected_obj.values()
                 if (len(obj._shape_data) == 0) or (buffer == 'text') or (buffer == 'image'):
                     continue
                 # Set new object transform
@@ -106,7 +109,7 @@ class ObjectSelection:
                 obj.set_translate(translate)
                 # Call callback with object
                 if self.settings.drag_callback:
-                    self.settings.drag_callback(obj)
+                    self.settings.drag_callback(selected_obj)
                 
     def process_release(self):
         '''Release left mouse button.'''
@@ -124,7 +127,8 @@ class ObjectSelection:
         # Draw target on selected objects
         targets = Shapes.blank(GL_LINES)
         # Get object under cursor
-        for obj, name, buffer in self.renderer.get_selected_objects():
+        for selected_obj in self.renderer.get_selected_objects():
+            obj, name, buffer = selected_obj.values()
             has_no_shapes = ((buffer == 'static') or (buffer == 'dynamic')) and (len(obj._shape_data) == 0)
             if has_no_shapes:
                 continue
@@ -176,7 +180,7 @@ class ObjectSelection:
         # TODO: I THINK DISTANCE IS GOING TO BE WRONG AS ONE IS WORLD AND ONE IS SCREEN
 
         if not valid_hits:
-            return (None, None, None)
+            return { 'object': None, 'name': None, 'buffer_type': None }
             
         # Sort by distance and get closest
         valid_hits.sort(key=lambda x: x[0])
@@ -191,8 +195,8 @@ class ObjectSelection:
         elif buffer_type == 'image':
             buffer = self.renderer.imgui_render_buffer.image_objects
             
-        return (buffer[name], name, buffer_type)
-        
+        return { 'object': buffer[name], 'name': name, 'buffer_type': buffer_type }
+    
     def intersect_objects(self, valid_hits, buffer_type, objects, cursor, scale_factor):
         # Determine the 
         min_distance = scale_factor * self.min_selection_distance        

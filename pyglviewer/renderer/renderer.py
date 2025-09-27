@@ -235,10 +235,10 @@ class Renderer:
                 raise ValueError('Unknown buffer type')
             for name, obj in objects.items():
                 if obj.get_selected():
-                    selected_objects.append((obj, name, buffer_type))
-       
+                    if not any(d["object"] == obj for d in selected_objects):
+                        selected_objects.append({"object": obj, "name": name, "buffer_type": buffer_type})
         # Remove duplicates
-        return list(set(selected_objects))
+        return selected_objects
     
     
     def update_text(

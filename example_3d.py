@@ -53,7 +53,7 @@ class ExampleApplication(Application):
             selection_settings=SelectionSettings(
                 show_cursor_point=True,
                 select_objects=True,
-                drag_objects=True
+                drag_objects=True,
                 # select_callback=lambda obj: print(f"Selected object: {obj}"),
                 # drag_callback=lambda obj: print(f"Dragged object: {obj}")
             )
@@ -118,6 +118,7 @@ class ExampleApplication(Application):
         self.renderer.update_object('axis', static=True, selectable=False,
             shape=Shapes.axis(size=1)
         )
+        
         self.renderer.update_object('axis_ticks', static=True, selectable=False,
             shape=Shapes.axis_ticks(size=self.GRID_SIZE),
             transform=Transform(translate=self.GRID_TRANSLATE)
@@ -196,10 +197,7 @@ class ExampleApplication(Application):
             shape=Shapes.sphere(position=(6, 1, 0.5), radius=0.5, colour=Colour.RED)
         )
 
-        # Dynamic object (updated in update_scene)
-        self.renderer.update_object('dynamic_cube', static=False,
-            shape=Shapes.cube(size=1, colour=Colour.WHITE)
-        )
+
 
         # Plots
         x = np.linspace(-1.5, 1.5, 100)
@@ -221,26 +219,23 @@ class ExampleApplication(Application):
 
         - Use `renderer.update_object()` to update transforms or replace shapes.
         - Static objects can still have their transforms updated efficiently.
-        - Dynamic objects (`static=False`) are intended for frequently changing geometry.
-        - Dynamic text and images can be added each frame with `static=False`.
+        - Dynamic objects (`static=False`) are intended for frequently changing geometry, 
+            You should precompute the Shape else rendering will be very slow.
+            For truely changing geometry per frame, this should be done with a shader
         """
 
         # Animate dynamic cube size
         size = self.timer.oscillate_translation(limits=[0.5, 1.5], speed=0.5)
-        self.renderer.update_object('dynamic_cube',
+        # Ideally, you shouldn't change the shape every frame.... TODO: Move 
+        self.renderer.update_object('moving_cube',
             shape=Shapes.cube(size=size, colour=Colour.WHITE)
         )
-
         # Scale axis depending on camera distance
-        if self.camera.distance > 5:
-            self.renderer.update_object('grid',
-                transform=Transform(scale=(10, 10, 1))
-            )
-        else:
-            self.renderer.update_object('grid',
-                transform=Transform(scale=(1, 1, 1))
-            )
-
+        scale = 10 if self.camera.distance > 5 else 1
+        self.renderer.update_object('grid',
+            transform=Transform(scale=(scale, scale, 1))
+        )
+        
         # Update axis transform with zoom
         self.renderer.update_object('axis',
             transform=Transform(scale=self.mouse.screen_to_world(self.AXIS_SIZE, dimension=3))
@@ -266,8 +261,9 @@ class ExampleApplication(Application):
             return
 
         # Space pressed
-        if imgui.is_key_pressed(glfw.KEY_SPACE):
-            pass 
+        if imgui.is_key_pressed(glfw.KEY_F):
+            self.toggle_fullscreen()
+            
         # Left mouse button pressed
         if imgui.is_mouse_down(glfw.MOUSE_BUTTON_LEFT):
             pass 
