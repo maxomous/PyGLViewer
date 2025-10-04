@@ -227,8 +227,9 @@ class Renderer:
 
 
 
-    def get_objects_by_metadata(self, metadata_key, metadata_value):
-        objects = []
+    def get_objects_by_metadata(self, metadata_key, metadata_value) -> list[Object]:
+        """Get all objects with the given metadata key and value."""
+        object_list = []
         for buffer_type in ['static', 'dynamic', 'text', 'image']:
             if buffer_type == 'static':
                 objects = self.static_buffer.objects
@@ -243,8 +244,8 @@ class Renderer:
             for obj in objects.values():
                 metadata = obj.get_metadata()
                 if metadata_key in metadata and metadata[metadata_key] == metadata_value:
-                    objects.append(obj)
-        return objects
+                    object_list.append(obj)
+        return object_list
 
         
         
