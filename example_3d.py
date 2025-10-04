@@ -97,6 +97,14 @@ class ExampleApplication(Application):
             - Text and images persist between frames if `static=True`. 
             For dynamic text/images, set `static=False` and update each frame.
         """
+        x = 1
+        y = 1.5
+        length = 2
+        arrow_dimensions = ArrowDimensions(shaft_radius=0.05, head_radius=0.1, head_length=0.1)
+
+        shape=Shapes.arrow(p0=(x, y, 0), p1=(x, y+length, 0), dimensions=arrow_dimensions, colour=Colour.RED)
+        self.renderer.update_object(f"load", shape=shape)
+
 
         # Axis labels
         self.renderer.update_text('axis_labels',
@@ -260,7 +268,7 @@ class ExampleApplication(Application):
         if io.want_capture_keyboard:
             return
 
-        # Space pressed
+        # Press F for Fullscreen
         if imgui.is_key_pressed(glfw.KEY_F):
             self.toggle_fullscreen()
             
@@ -299,8 +307,13 @@ class ExampleApplication(Application):
         if imgui.image_button(self.images['image_node'], 32, 32):
             print("Image button 1 clicked!")
         
-        if imgui.image_button_with_text('Button', self.images['image_node'], (65, 80), (32, 32), text_offset=(0.5, 0.8), image_offset=(0, -15), is_active=True, image_when_hovered=self.images['image_node']):
-            print("Image button 2 clicked!")
+        if imgui.image_button_with_text('Clear', self.images['image_node'], (65, 80), (32, 32), text_offset=(0.5, 0.8), image_offset=(0, -15), is_active=True, image_when_hovered=self.images['image_node']):
+            print("Clearing Renderer!")
+            self.renderer.clear()
+            
+        if imgui.image_button_with_text('Redraw', self.images['image_node'], (65, 80), (32, 32), text_offset=(0.5, 0.8), image_offset=(0, -15), is_active=True, image_when_hovered=self.images['image_node']):
+            print("Drawing Geometry!")
+            self.init_geometry()
         
         # End UI window
         imgui.end()

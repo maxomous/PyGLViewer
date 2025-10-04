@@ -329,11 +329,10 @@ class Renderer:
     
     def clear(self):
         """Clear both static and dynamic buffers, text and images."""
-        pass # TODO: Function not implemented, do we want actually this?
         self.static_buffer.clear()
         self.dynamic_buffer.clear()
         self.imgui_render_buffer.clear()
-        
+        self.object_map = {}
     
     def get_stats(self):
         """Get combined rendering statistics."""

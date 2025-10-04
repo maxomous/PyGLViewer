@@ -99,21 +99,21 @@ class RenderBuffer:
             glBindBuffer(GL_COPY_WRITE_BUFFER, 0)
 
         finally:
-            # Clean up old buffers
+            # Clean up old buffers           
             old_vertex_buffer.shutdown()
             old_index_buffer.shutdown()
             old_vao.shutdown()
     
-    # def clear(self):
-    #     """Clear the buffer data."""
-    #     # print(f"Clearing buffer: {self.buffer_type}")
-    #     # if not self.needs_update:
-    #     #     return
-    #     self.batches.clear()
-    #     self.draw_calls = 0
-    #     # self.current_vertex = 0
-    #     # self.current_index = 0
-    #     # self.dangling = {'vertices': [], 'indices': []}
+    def clear(self):
+        """Clear the buffer data."""
+        for name in list(self.objects.keys()):
+            self.remove_object(name)
+        self.draw_calls = 0
+        self.current_vertex = 0
+        self.current_index = 0
+        self.dangling = {'vertices': [], 'indices': []}
+    
+        print(f'Clear() is not properly implemented')
     
     def add_object(self, name, object: Object):
         if name in self.objects:
@@ -126,7 +126,6 @@ class RenderBuffer:
         # TOOD: is there anything else to clear before the deleting an object?
         del self.objects[name]
     
-        
     def _free_segment(self, shape_data):
         '''Make list of redundant vertices and indices we can later reuse'''
         shape = shape_data['shape']
@@ -200,6 +199,9 @@ class RenderBuffer:
         if name not in self.objects:
             raise ValueError('Object does not exist in buffer')
         object = self.objects[name]
+        
+        if not isinstance(shapes, list) and not isinstance(shapes, Shape):
+            raise ValueError('Shapes must be a list of Shapes or a single Shape')
         # Make sure we have a list of Shapes
         if not isinstance(shapes, list):
             shapes = [shapes]
