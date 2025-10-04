@@ -241,7 +241,8 @@ class Renderer:
             else:
                 raise ValueError('Unknown buffer type')
             for obj in objects.values():
-                if obj.get_metadata()[metadata_key] == metadata_value:
+                metadata = obj.get_metadata()
+                if metadata_key in metadata and metadata[metadata_key] == metadata_value:
                     objects.append(obj)
         return objects
 
