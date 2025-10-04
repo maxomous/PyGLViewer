@@ -218,7 +218,8 @@ class Renderer:
         del buffer.objects[name]
         del self.object_map[name]
         
-    def get_object_by_metadata(self, metadata_key, metadata_value):
+    def get_objects_by_metadata(self, metadata_key, metadata_value):
+        objects = []
         for buffer_type in ['static', 'dynamic', 'text', 'image']:
             if buffer_type == 'static':
                 objects = self.static_buffer.objects
@@ -231,9 +232,10 @@ class Renderer:
             else:
                 raise ValueError('Unknown buffer type')
             for obj in objects.values():
-                if obj.get_metadata(metadata_key) == metadata_value:
-                    return obj
-        return None
+                if obj.get_metadata()[metadata_key] == metadata_value:
+                    objects.append(obj)
+        return objects
+
         
         
         
