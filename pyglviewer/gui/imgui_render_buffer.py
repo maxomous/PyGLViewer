@@ -89,6 +89,10 @@ class TextObject:
             self._selected = not self._selected
     def get_selected(self):
         return self._selected
+    def get_selectable(self):
+        return self._selectable
+    def get_metadata(self):
+        return self._metadata
     def get_midpoint(self):
         '''Returns midpoint of bounding box of object'''
         bounds = self.get_bounds()
@@ -174,7 +178,10 @@ class ImageObject:
             self._selected = not self._selected
     def get_selected(self):
         return self._selected
-    
+    def get_selectable(self):
+        return self._selectable
+    def get_metadata(self):
+        return self._metadata
     def get_midpoint(self):
         '''Returns midpoint of bounding box of object'''
         bounds = self.get_bounds()

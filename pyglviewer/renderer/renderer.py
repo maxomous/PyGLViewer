@@ -217,7 +217,26 @@ class Renderer:
         # Remove from object list
         del buffer.objects[name]
         del self.object_map[name]
-
+        
+    def get_object_by_metadata(self, metadata_key, metadata_value):
+        for buffer_type in ['static', 'dynamic', 'text', 'image']:
+            if buffer_type == 'static':
+                objects = self.static_buffer.objects
+            elif buffer_type == 'dynamic':
+                objects = self.dynamic_buffer.objects
+            elif buffer_type == 'text':
+                objects = self.imgui_render_buffer.text_objects
+            elif buffer_type == 'image':
+                objects = self.imgui_render_buffer.image_objects
+            else:
+                raise ValueError('Unknown buffer type')
+            for obj in objects.values():
+                if obj.get_metadata(metadata_key) == metadata_value:
+                    return obj
+        return None
+        
+        
+        
     def get_selected_objects(self): 
         """Get all selected objects."""
         selected_objects = []
