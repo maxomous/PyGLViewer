@@ -205,7 +205,7 @@ class Renderer:
         if metadata is not None:
             object.set_metadata(metadata)
     
-    def delete_object(self, name: str):
+    def _delete_object(self, name: str):
         # Check object exists  
         if name not in self.object_map:
             return
@@ -218,6 +218,15 @@ class Renderer:
         del buffer.objects[name]
         del self.object_map[name]
         
+    def delete_objects(self, names: str | list[str]):
+        # Support both single name and list of names
+        if isinstance(names, str):
+            names = [names]
+        for name in names:
+            self._delete_object(name)
+
+
+
     def get_objects_by_metadata(self, metadata_key, metadata_value):
         objects = []
         for buffer_type in ['static', 'dynamic', 'text', 'image']:
