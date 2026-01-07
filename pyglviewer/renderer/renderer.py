@@ -130,16 +130,17 @@ class Renderer:
         
     def update_object(
         self, 
-        name:        str,
-        shape:       Optional[Shape | list[Shape]] = None,
-        transform:   Optional[Transform]  = None,
-        point_size:  Optional[float]      = None,
-        line_width:  Optional[float]      = None,
-        point_shape: Optional[PointShape] = None,
-        alpha:       Optional[float]      = None,
-        selectable:  Optional[bool]       = None,
-        metadata:    Optional[dict]       = None,
-        static:      Optional[bool]       = None,
+        name:         str,
+        shape:        Optional[Shape | list[Shape]] = None,
+        update_shape: Optional[bool]       = None,
+        transform:    Optional[Transform]  = None,
+        point_size:   Optional[float]      = None,
+        line_width:   Optional[float]      = None,
+        point_shape:  Optional[PointShape] = None,
+        alpha:        Optional[float]      = None,
+        selectable:   Optional[bool]       = None,
+        metadata:     Optional[dict]       = None,
+        static:       Optional[bool]       = None,
     ):
         """
         Update the rendering parameters of an object.
@@ -151,6 +152,9 @@ class Renderer:
         shape : Optional[Shape | list[Shape]], default=None
             Geometry to associate with the object (single or multiple shapes).
             Default is an empty list of shape dictionaries at initialization.
+        update_shape : Optional[bool], default=None
+            A flag to force shape to update on subsequent calls
+            Note: Updating shape every frame is very inefficient and iddeally should be done with a transform (or shader) 
         transform : Optional[Transform], default=None
             Transformation to apply (translation, rotation, scale).
             Defaults to an identity `Transform`.
@@ -171,13 +175,14 @@ class Renderer:
         static : Optional[bool], default=None
             Whether the object is static (non-dynamic) for buffer optimization.
         """
-
+        
         # Create and add object to map if it doesn't already exist
         if name not in self.object_map:
             buffer = self.static_buffer if static else self.dynamic_buffer
             buffer.add_object(name, Object())
             self.object_map[name] = {'buffer': 'static' if static else 'dynamic'} # will default to dynamic if None
-        
+            update_shape = True
+            
         # Buffer type (static / dynamic) cannot be changed after first call to this function TODO: It wouldn't be hard to add in this feature, make sure to set object_map['my_object']['buffer']
 
         buffer_type = self.object_map[name]['buffer']
@@ -187,7 +192,8 @@ class Renderer:
         buffer = self.static_buffer if buffer_type == 'static' else self.dynamic_buffer
         object = buffer.objects[name]
         # Add shape data to objects and upload data to opengl buffer 
-        if shape is not None:
+        if shape is not None and update_shape:
+            print('setting objects shape')
             buffer.set_object_shapes(name, shape)
         # Setters
         if transform is not None:

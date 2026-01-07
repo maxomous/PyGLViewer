@@ -281,7 +281,7 @@ class Shapes:
         return Shape(draw_type)
     
     @staticmethod
-    def point(position, colour=DEFAULT_POINT_COLOUR):
+    def point(position=(0,0,0), colour=DEFAULT_POINT_COLOUR):
         """Create a single point in 3D space.
         
         Args:
@@ -311,7 +311,7 @@ class Shapes:
         return Shape(GL_POINTS, vertices, indices, DefaultShaders.default_point_shader)
     
     @staticmethod
-    def line(p0, p1, colour=DEFAULT_LINE_COLOUR):
+    def line(p0=(0,0,-0.5), p1=(0,0,0.5), colour=DEFAULT_LINE_COLOUR):
         """Create a line segment between two points.
         
         Args:
@@ -391,7 +391,7 @@ class Shapes:
         return Shape(GL_LINES, vertices, indices)
 
     @staticmethod
-    def triangle(p1, p2, p3, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
+    def triangle(p1=(0.0, 0.5774, 0), p2=(-0.5, -0.2887, 0), p3=(0.5, -0.2887, 0), colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
         """Create a filled triangle from three points.
         
         Args:
@@ -411,7 +411,7 @@ class Shapes:
         return shapes
     
     @staticmethod
-    def triangle_body(p1, p2, p3, colour=DEFAULT_FACE_COLOUR):
+    def triangle_body(p1=(0.0, 0.5774, 0), p2=(-0.5, -0.2887, 0), p3=(0.5, -0.2887, 0), colour=DEFAULT_FACE_COLOUR):
         """Create a filled triangle from three points.
         
         Args:
@@ -435,7 +435,7 @@ class Shapes:
         return Shape(GL_TRIANGLES, vertices, indices)
 
     @staticmethod
-    def triangle_wireframe(p1, p2, p3, colour=DEFAULT_WIREFRAME_COLOUR):
+    def triangle_wireframe(p1=(0.0, 0.5774, 0), p2=(-0.5, -0.2887, 0), p3=(0.5, -0.2887, 0), colour=DEFAULT_WIREFRAME_COLOUR):
         """Create a triangle wireframe from three points.
         
         Args:
@@ -506,7 +506,7 @@ class Shapes:
         return Shapes.line(p1, p2, colour) + Shapes.line(p2, p3, colour) + Shapes.line(p3, p4, colour) + Shapes.line(p4, p1, colour)
 
     @staticmethod
-    def rectangle(position, width, height, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
+    def rectangle(position=(0,0,0), width=1, height=1, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
         """Create a 2D rectangle.
         
         Args:
@@ -529,7 +529,7 @@ class Shapes:
         return shapes
 
     @staticmethod
-    def rectangle_body(position, width, height, colour=DEFAULT_FACE_COLOUR):
+    def rectangle_body(position=(0,0,0), width=1, height=1, colour=DEFAULT_FACE_COLOUR):
         """Create a 2D rectangle in the XY plane.
         
         Args:
@@ -554,7 +554,7 @@ class Shapes:
         return Shape(GL_TRIANGLES, vertices, indices)
 
     @staticmethod
-    def rectangle_wireframe(position, width, height, colour=DEFAULT_WIREFRAME_COLOUR):
+    def rectangle_wireframe(position=(0,0,0), width=1, height=1, colour=DEFAULT_WIREFRAME_COLOUR):
         """Create a 2D rectangle wireframe in the XY plane.
         
         Args:
@@ -579,7 +579,7 @@ class Shapes:
         return Shape(GL_LINES, vertices, indices)
 
     @staticmethod
-    def circle(position, radius, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
+    def circle(position=(0,0,0), radius=0.5, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
         """Create a circle.
         
         Args:
@@ -602,7 +602,7 @@ class Shapes:
         return shapes
 
     @staticmethod
-    def circle_body(position, radius, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR):
+    def circle_body(position=(0,0,0), radius=0.5, segments=DEFAULT_SEGMENTS, colour=DEFAULT_FACE_COLOUR):
         """Create a filled circle in the XY plane.
         
         Args:
@@ -628,7 +628,7 @@ class Shapes:
         return Shape(GL_TRIANGLES, vertices, indices)
         
     @staticmethod
-    def circle_wireframe(position, radius, segments=DEFAULT_SEGMENTS, colour=DEFAULT_WIREFRAME_COLOUR):
+    def circle_wireframe(position=(0,0,0), radius=0.5, segments=DEFAULT_SEGMENTS, colour=DEFAULT_WIREFRAME_COLOUR):
         """Create a circle wireframe in the XY plane.
         
         Args:
@@ -813,9 +813,9 @@ class Shapes:
             normal = normal / np.linalg.norm(normal)  # Normalize the normal
             
             # Bottom vertex
-            vertices.append(Vertex([x, y, 0], colour, normal))
+            vertices.append(Vertex([x, y, -height/2], colour, normal))
             # Top vertex
-            vertices.append(Vertex([x, y, height], colour, normal))
+            vertices.append(Vertex([x, y, height/2], colour, normal))
 
         # Indices for the side faces
         for i in range(segments):
@@ -828,8 +828,8 @@ class Shapes:
         # Cylinder body
         cylinder = Shape(GL_TRIANGLES, vertices, indices)
         # Bottom and top circle bodies + wireframes
-        bottom = Shapes.circle_body(position=(0,0,0), radius=radius, segments=segments, colour=colour).transform(rotate=(np.pi,0,0))
-        top = Shapes.circle_body(position=(0,0,height), radius=radius, segments=segments, colour=colour)
+        bottom = Shapes.circle_body(position=(0,0,height/2), radius=radius, segments=segments, colour=colour).transform(rotate=(np.pi,0,0))
+        top = Shapes.circle_body(position=(0,0,height/2), radius=radius, segments=segments, colour=colour)
         body = cylinder + bottom + top
         # Transform to position
         if position != (0,0,0):
@@ -849,14 +849,15 @@ class Shapes:
         Returns:
             Shape: Combined wireframe for cylinder outline
         """
-        bottom = Shapes.circle_wireframe(position=position, radius=radius, segments=segments, colour=colour)
-        top_position = np.array(position) + np.array([0,0,height])
+        bottom_position = np.array(position) + np.array([0,0,-height/2])
+        bottom = Shapes.circle_wireframe(position=bottom_position, radius=radius, segments=segments, colour=colour)
+        top_position = np.array(position) + np.array([0,0,height/2])
         top = Shapes.circle_wireframe(position=top_position, radius=radius, segments=segments, colour=colour)
         return bottom + top
 
 
     @staticmethod
-    def prism(position=(0,0,0), radius=1, depth=1, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
+    def prism(position=(0,0,0), radius=0.5, depth=1, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
         """Create a prism.
         
         Args:
@@ -878,7 +879,7 @@ class Shapes:
         return shapes
             
     @staticmethod
-    def prism_body(position=(0,0,0), radius=1, depth=1, colour=DEFAULT_FACE_COLOUR):
+    def prism_body(position=(0,0,0), radius=0.5, depth=1, colour=DEFAULT_FACE_COLOUR):
         """Create a prism body.
         
         Args:
@@ -890,9 +891,9 @@ class Shapes:
         Returns:
             Shape: Prism body shape
         """
-        p1 = np.array([0, radius/2, 0])
-        p2 = np.array([-0.866 * radius/2, -0.5 * radius/2, 0])
-        p3 = np.array([0.866 * radius/2, -0.5 * radius/2, 0])
+        p1 = np.array([0, radius, 0])
+        p2 = np.array([-0.866 * radius, -0.5 * radius, 0])
+        p3 = np.array([0.866 * radius, -0.5 * radius, 0])
         z = np.array([0, 0, depth/2])
         # Top and bottom triangles
         top = Shapes.triangle_body(p1+z, p2+z, p3+z, colour)
@@ -904,7 +905,7 @@ class Shapes:
         return (top + bottom + side_1 + side_2 + side_3).transform(translate=position)
     
     @staticmethod
-    def prism_wireframe(position=(0,0,0), radius=1, depth=1, colour=DEFAULT_WIREFRAME_COLOUR):
+    def prism_wireframe(position=(0,0,0), radius=0.5, depth=1, colour=DEFAULT_WIREFRAME_COLOUR):
         """Create a prism wireframe.
         
         Args:
@@ -915,9 +916,9 @@ class Shapes:
         Returns:
             Shape: Prism wireframe shape
         """
-        p1 = np.array([0, radius/2, 0])
-        p2 = np.array([-0.866 * radius/2, -0.5 * radius/2, 0])
-        p3 = np.array([0.866 * radius/2, -0.5 * radius/2, 0])
+        p1 = np.array([0, radius, 0])
+        p2 = np.array([-0.866 * radius, -0.5 * radius, 0])
+        p3 = np.array([0.866 * radius, -0.5 * radius, 0])
         z = np.array([0, 0, depth/2])
         top = Shapes.triangle_wireframe(p1+z, p2+z, p3+z, colour)
         bottom = Shapes.triangle_wireframe(p1-z, p3-z, p2-z, colour)
@@ -971,7 +972,7 @@ class Shapes:
         indices = []
         normal_apex = [0, 0, 1]  # Normal pointing outwards
         # Apex
-        vertices.append(Vertex([0, 0, height], colour, normal_apex))
+        vertices.append(Vertex([0, 0, height/2], colour, normal_apex))
         # Side vertices
         for i in range(segments):
             angle = 2 * np.pi * i / segments
@@ -979,10 +980,7 @@ class Shapes:
             y = radius * np.sin(angle)
             normal = [x, y, 0.5]  # Adjusted normal for smooth shading
             normal = normal / np.linalg.norm(normal)
-            vertices.append(Vertex([x, y, 0], colour, normal))
-
-        # Base centre vertex
-        vertices.append(Vertex([0, 0, 0], colour, [0, 0, -1]))  # Base centre with normal pointing down
+            vertices.append(Vertex([x, y, -height/2], colour, normal))
 
         # Indices for the sides
         for i in range(segments):
@@ -992,7 +990,7 @@ class Shapes:
 
         cone = Shape(GL_TRIANGLES, vertices, indices)
         # Create bottom circle
-        base_circle = Shapes.circle_body(position=(0,0,0), radius=0.5, segments=segments, colour=colour).transform(rotate=(np.pi,0,0))
+        base_circle = Shapes.circle_body(segments=segments, colour=colour).transform(translate=(0,0,-0.5), rotate=(np.pi,0,0))
         body = cone + base_circle
         # Transform to position
         if position != (0,0,0):
@@ -1012,8 +1010,11 @@ class Shapes:
         Returns:
             Shape: Cone wireframe shape
         """
-        return Shapes.circle_wireframe(position=position, radius=radius, segments=segments, colour=colour)
-
+        body = Shapes.circle_wireframe(position=(0,0,-0.5), radius=radius, segments=segments, colour=colour)
+        if position != (0,0,0):
+            body.transform(translate=position)
+        return body
+        
     @staticmethod
     def sphere(position=(0,0,0), radius=0.5, subdivisions=DEFAULT_SUBDIVISIONS, colour=DEFAULT_FACE_COLOUR):
         """Create a sphere.
@@ -1181,7 +1182,7 @@ class Shapes:
 
 
     @staticmethod
-    def target(position, size, edge_length, colour):
+    def target(position=(0,0,0), size=(1,1,1), edge_length=0.2, colour=(1,1,1)):
         """Create a target around a 3D shape.
         
         Args:
@@ -1303,50 +1304,51 @@ class Shapes:
     ###########################################################################
     ###########  MULTIPLE GEOMETRIES  #########################################
     
-    @staticmethod
-    def beam(p0, p1, width, height, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
-        """Create a rectangular beam between two points.
+    # @staticmethod
+    # def beam(p0=(0,0,0), p1=(0,1,0), width=1, height=1, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, show_body=True, show_wireframe=True):
+    #     """Create a rectangular beam between two points.
         
-        Args:
-            p0 (tuple): Start point XYZ coordinates
-            p1 (tuple): End point XYZ coordinates
-            width (float): Width of beam cross-section
-            height (float): Height of beam cross-section
-            colour (tuple): RGB colour values for filled shape
-            wireframe_colour (tuple): RGB colour values for wireframe. Defaults to white
-            show_body (bool): Whether to show the body of the beam
-            show_wireframe (bool): Whether to show the wireframe of the beam
+    #     Args:
+    #         p0 (tuple): Start point XYZ coordinates
+    #         p1 (tuple): End point XYZ coordinates
+    #         width (float): Width of beam cross-section
+    #         height (float): Height of beam cross-section
+    #         colour (tuple): RGB colour values for filled shape
+    #         wireframe_colour (tuple): RGB colour values for wireframe. Defaults to white
+    #         show_body (bool): Whether to show the body of the beam
+    #         show_wireframe (bool): Whether to show the wireframe of the beam
 
-        Returns:
-            list[Shape]: [Filled beam shape, Wireframe shape]
-        """
-        p0, p1 = np.array(p0), np.array(p1)
-        direction = p1 - p0
-        length = np.linalg.norm(direction)
+    #     Returns:
+    #         list[Shape]: [Filled beam shape, Wireframe shape]
+    #     """
+    #     p0, p1 = np.array(p0), np.array(p1)
+    #     direction = p1 - p0
+    #     length = np.linalg.norm(direction)
         
-        if length == 0:
-            return [Shape(GL_TRIANGLES), Shape(GL_LINES)]  # Return empty shape if p0 and p1 are the same
+    #     if length == 0:
+    #         return [Shape(GL_TRIANGLES), Shape(GL_LINES)]  # Return empty shape if p0 and p1 are the same
             
-        # Calculate transforms - note we use midpoint since cube is centreed at origin
-        dimensions = (width, height) if direction[0] == 0 and direction[1] == 0 else (height, width) # width & height get swapped if beam is vertical
-        translation, rotation, scale = Shapes._calculate_transform(p0, p1, dimensions)
-        # Create body and wireframe using cube, offset by 0.5 in z-direction, and transform to between p0 and p1
-        shapes = []
-        if show_body:
-            body = Shapes.cube_body(colour=colour) \
-                .transform(translate=(0, 0, 0.5)) \
-                .transform(translation, rotation, scale)
-            shapes.append(body)
-        if show_wireframe:
-            wireframe = Shapes.cube_wireframe(colour=wireframe_colour) \
-                .transform(translate=(0, 0, 0.5)) \
-                .transform(translation, rotation, scale)
-            shapes.append(wireframe)
+    #     # Calculate transforms - note we use midpoint since cube is centreed at origin
+    #     dimensions = (width, height) if direction[0] == 0 and direction[1] == 0 else (height, width) # width & height get swapped if beam is vertical
+    #     transform = Shapes.calculate_transform(p0, p1, dimensions)
+    #     translation, rotation, scale = tuple(transform.translate), tuple(transform.rotate), tuple(transform.scale) 
+    #     # Create body and wireframe using cube, offset by 0.5 in z-direction, and transform to between p0 and p1
+    #     shapes = []
+    #     if show_body:
+    #         body = Shapes.cube_body(colour=colour) \
+    #             .transform(translate=(0, 0, 0.5)) \
+    #             .transform(translation, rotation, scale)
+    #         shapes.append(body)
+    #     if show_wireframe:
+    #         wireframe = Shapes.cube_wireframe(colour=wireframe_colour) \
+    #             .transform(translate=(0, 0, 0.5)) \
+    #             .transform(translation, rotation, scale)
+    #         shapes.append(wireframe)
         
-        return shapes
+    #     return shapes
             
     @staticmethod
-    def arrow(p0, p1, dimensions=DEFAULT_ARROW_DIMENSIONS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, segments=DEFAULT_SEGMENTS, show_body=True, show_wireframe=True):
+    def arrow(p0=(0,0,-0.5), p1=(0,0,0.5), dimensions=DEFAULT_ARROW_DIMENSIONS, colour=DEFAULT_FACE_COLOUR, wireframe_colour=DEFAULT_WIREFRAME_COLOUR, segments=DEFAULT_SEGMENTS, show_body=True, show_wireframe=True):
         """Create a 3D arrow from p0 to p1.
         
         Args:
@@ -1373,10 +1375,11 @@ class Shapes:
         pHead = p1 - unit_direction * dimensions.head_length
 
         # Calculate transforms
-        translation_shaft, rotation_shaft, scale_shaft = Shapes._calculate_transform(
-            p0, pHead, (dimensions.shaft_radius, dimensions.shaft_radius))
-        translation_head, rotation_head, scale_head = Shapes._calculate_transform(
-            pHead, p1, (dimensions.head_radius, dimensions.head_radius))
+        transform_shaft = Shapes.calculate_transform(p0, pHead, (dimensions.shaft_radius, dimensions.shaft_radius))
+        translation_shaft, rotation_shaft, scale_shaft = tuple(transform_shaft.translate), tuple(transform_shaft.rotate), tuple(transform_shaft.scale) 
+
+        transform_head = Shapes.calculate_transform(pHead, p1, (dimensions.head_radius, dimensions.head_radius))
+        translation_head, rotation_head, scale_head = tuple(transform_head.translate), tuple(transform_head.rotate), tuple(transform_head.scale) 
 
         shapes = []
         if show_body:
@@ -1484,42 +1487,87 @@ class Shapes:
                 
         return shapes
     
-    @staticmethod
-    def _calculate_transform(p0, p1, cross_section=(1, 1)):
-        """Calculate transformation between (0, 1) and (p0, p1).
+    # @staticmethod
+    # def calculate_transform(p0, p1, cross_section=(1, 1)):
+    #     """Calculate transformation of a shape at centre (0,0,0) and size (1,1,1) to between p0->p1.
         
-        Args:
-            p0 (tuple): Start point XYZ coordinates
-            p1 (tuple): End point XYZ coordinates
-            cross_section (tuple): XY scale factors. Defaults to (1, 1)
+    #     Args:
+    #         p0 (tuple): Start point XYZ coordinates
+    #         p1 (tuple): End point XYZ coordinates
+    #         cross_section (tuple): XY scale factors. Defaults to (1, 1)
         
-        Returns:
-            tuple: (translation, rotation, scale) transformation parameters
-        """
-        # Convert inputs to numpy arrays
-        p0, p1 = np.array(p0), np.array(p1)
+    #     Returns:
+    #         tuple: (translation, rotation, scale) transformation parameters
+    #     """
+    #     # Convert inputs to numpy arrays
+    #     p0, p1 = np.array(p0), np.array(p1)
 
-        # Calculate direction vector
+    #     # Calculate direction vector
+    #     direction = p1 - p0
+    #     length = np.linalg.norm(direction)
+
+    #     # Calculate rotation angles
+    #     if length > 0:
+    #         # Normalize the direction vector
+    #         unit_direction = direction / length
+
+    #         # Calculate rotation angles
+    #         rz = np.arctan2(unit_direction[1], unit_direction[0])
+    #         ry = np.arctan2(unit_direction[0] * np.cos(rz) + unit_direction[1] * np.sin(rz), unit_direction[2])
+    #         rx = 0  # We don't need to rotate around x-axis for this alignment
+
+    #         rotation = (rx, ry, rz)
+    #     else:
+    #         # If p0 and p1 are the same point, no rotation is needed
+    #         rotation = (0, 0, 0)
+
+    #     # Calculate translation and scale
+    #     translation = p0
+    #     scale = np.array([cross_section[0], cross_section[1], length])
+
+    #     return Transform(translation, rotation, scale)
+    
+        
+    @staticmethod
+    def calculate_transform(p0, p1, cross_section=(1, 1)):
+        """
+        Transform a unit cube centred at (0,0,0), aligned along +Z,
+        so it spans from p0 to p1.
+        """
+        p0 = np.array(p0, dtype=float)
+        p1 = np.array(p1, dtype=float)
+
         direction = p1 - p0
         length = np.linalg.norm(direction)
 
-        # Calculate rotation angles
-        if length > 0:
-            # Normalize the direction vector
-            unit_direction = direction / length
+        if length == 0:
+            return Transform(
+                translate=tuple(p0),
+                rotate=(0.0, 0.0, 0.0),
+                scale=(cross_section[1], cross_section[0], 0.0)
+            )
 
-            # Calculate rotation angles
-            rz = np.arctan2(unit_direction[1], unit_direction[0])
-            ry = np.arctan2(unit_direction[0] * np.cos(rz) + unit_direction[1] * np.sin(rz), unit_direction[2])
-            rx = 0  # We don't need to rotate around x-axis for this alignment
+        unit = direction / length
 
-            rotation = (rx, ry, rz)
-        else:
-            # If p0 and p1 are the same point, no rotation is needed
-            rotation = (0, 0, 0)
+        # --- rotation: align +Z to direction ---
+        # yaw (around Z)
+        rz = np.arctan2(unit[1], unit[0])
 
-        # Calculate translation and scale
-        translation = p0
-        scale = np.array([cross_section[0], cross_section[1], length])
+        # pitch (around Y)
+        ry = np.arctan2(np.sqrt(unit[0]**2 + unit[1]**2), unit[2])
 
-        return translation, rotation, scale
+        rx = 0.0
+
+        rotation = (rx, ry, rz)
+
+        # --- translation: midpoint ---
+        translation = (p0 + p1) / 2
+
+        # --- scale ---
+        scale = (cross_section[1], cross_section[0], length)
+
+        return Transform(
+            translate=tuple(translation),
+            rotate=rotation,
+            scale=scale
+        )

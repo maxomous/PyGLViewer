@@ -206,9 +206,10 @@ class RenderBuffer:
         if not isinstance(shapes, list):
             shapes = [shapes]
         
+        
         # Allocate more space if required
         self._allocate_space(name, shapes)
-        
+         
         # Sanity check
         if len(shapes) > len(object._shape_data):
             raise ValueError(f'Thare more shapes {len(shapes)} than shape_data {len(object._shape_data)}')

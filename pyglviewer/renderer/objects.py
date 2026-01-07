@@ -152,28 +152,31 @@ class Object:
         self._bounds_needs_update: bool      = True
     
     # Setters
-    def set_shape_data(self, shape_data):
-        '''
-        Update the shape data (vertex buffer, index buffer, draw type, and shader) 
-        from one or more Shape objects
+    
+    # handled in render_buffer.py
+    # def set_shape_data(self, shape_data):
+    #     '''
+    #     Update the shape data (vertex buffer, index buffer, draw type, and shader) 
+    #     from one or more Shape objects
         
-        Parameters
-        ----------
-        shape_data : list[dict]
-            A list of dictionaries, each describing a shape entry. Each dictionary 
-            should contain:
+    #     Parameters
+    #     ----------
+    #     shape_data : list[dict]
+    #         A list of dictionaries, each describing a shape entry. Each dictionary 
+    #         should contain:
             
-            - 'shape' : Shape
-                The Shape object providing vertex and index data.
-            - 'vertex_offset' : int
-                Offset into the vertex buffer where this shape’s vertices begin.
-            - 'index_offset' : int
-                Offset into the index buffer where this shape’s indices begin.
-        '''
-        # Set shapes
-        self._shape_data = shape_data
-        # Mark bounds for recalculation
-        self._bounds_needs_update = True
+    #         - 'shape' : Shape
+    #             The Shape object providing vertex and index data.
+    #         - 'vertex_offset' : int
+    #             Offset into the vertex buffer where this shape’s vertices begin.
+    #         - 'index_offset' : int
+    #             Offset into the index buffer where this shape’s indices begin.
+    #     '''
+    #     # Set shapes
+    #     self._shape_data = shape_data
+    #     # Mark bounds for recalculation
+    #     self._bounds_needs_update = True
+    
     def set_transform(self, transform: Transform):
         """Set the 4x4 transformation matrix.
         point_size=1.0, line_width=1.0, point_shape=PointShape.CIRCLE, alpha=1.0, static=False, selectable=True, metadata=None
