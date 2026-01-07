@@ -143,6 +143,8 @@ class Object:
         self._point_size: float              = 1.0
         self._line_width: float              = 1.0
         self._point_shape: PointShape        = PointShape.CIRCLE
+        self._colour                         = None     # Overrides the colour for the object (if None, the colour of the vertex is used instead 
+        self._wireframe_colour               = None     # Overrides the wireframe colour for the object (if None, the colour of the vertex is used instead
         self._alpha: float                   = 1.0
         self._selectable: bool               = True
         self._selected: bool                 = False
@@ -179,7 +181,6 @@ class Object:
     
     def set_transform(self, transform: Transform):
         """Set the 4x4 transformation matrix.
-        point_size=1.0, line_width=1.0, point_shape=PointShape.CIRCLE, alpha=1.0, static=False, selectable=True, metadata=None
         Parameters
         ----------
         transform : Transform
@@ -205,6 +206,10 @@ class Object:
         self._line_width = line_width
     def set_point_shape(self, point_shape):
         self._point_shape = point_shape
+    def set_colour(self, colour):
+        self._colour = colour
+    def set_wireframe_colour(self, colour):
+        self._wireframe_colour = colour
     def set_alpha(self, alpha):
         self._alpha = alpha
     def set_metadata(self, metadata):

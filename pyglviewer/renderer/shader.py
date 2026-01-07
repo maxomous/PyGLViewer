@@ -14,23 +14,29 @@ class PointShape(Enum):
 vertex_shader_lighting = """
 #version 330 core
 layout (location = 0) in vec3 aPos;      // Vertex position
-layout (location = 1) in vec3 aColour;    // Vertex colour
+layout (location = 1) in vec3 aColour;   // Optional vertex colour
 layout (location = 2) in vec3 aNormal;   // Vertex normal
 
-out vec3 FragPos;   // Fragment position in world space
-out vec3 Normal;    // Fragment normal in world space
-out vec3 Colour;     // Fragment colour
+out vec3 FragPos;    // Fragment position in world space
+out vec3 Normal;     // Fragment normal in world space
+out vec3 Colour;     // Final colour passed to fragment shader
 
 // Transformation matrices
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
+// Colour control
+uniform vec3 uColor;           // Per-object / per-shape colour
+uniform bool uUseVertexColor = true;  // true = use aColour, false = uColor
+
 void main() {
     vec4 worldPos = model * vec4(aPos, 1.0);
     FragPos = worldPos.xyz;
     Normal = mat3(transpose(inverse(model))) * aNormal;
-    Colour = aColour;
+
+    Colour = uUseVertexColor ? aColour : uColor;
+
     gl_Position = projection * view * worldPos;
 }
 """
@@ -66,7 +72,7 @@ vec3 calcLight(Light light, vec3 normal, vec3 fragPos, vec3 viewDir) {
     if (light.type == 0) {  // Ambient light
         return light.colour * light.intensity;
     }
-    
+
     vec3 lightDir;
     float attenuation = 1.0;
 
@@ -75,8 +81,10 @@ vec3 calcLight(Light light, vec3 normal, vec3 fragPos, vec3 viewDir) {
     } else {                // Point or spot light
         lightDir = normalize(light.position - fragPos);
         float distance = length(light.position - fragPos);
-        attenuation = 1.0 / (light.attenuation.x + light.attenuation.y * distance + 
-                            light.attenuation.z * distance * distance);
+        attenuation = 1.0 /
+            (light.attenuation.x +
+             light.attenuation.y * distance +
+             light.attenuation.z * distance * distance);
 
         if (light.type == 3) {  // Spot light cone check
             float theta = dot(lightDir, normalize(-light.direction));
@@ -88,7 +96,6 @@ vec3 calcLight(Light light, vec3 normal, vec3 fragPos, vec3 viewDir) {
 
     // Blinn-Phong lighting calculation
     vec3 ambient = 0.1 * light.colour;
-
     float diff = max(dot(normal, lightDir), 0.0);
     vec3 diffuse = diff * light.colour;
 
@@ -108,7 +115,7 @@ void main() {
         result += calcLight(lights[i], norm, FragPos, viewDir);
     }
 
-    FragColour = vec4(result * Colour, alpha);  // Use alpha uniform
+    FragColour = vec4(result * Colour, alpha);
 }
 """
 
@@ -118,41 +125,37 @@ layout (location = 0) in vec3 aPos;      // Vertex position
 layout (location = 1) in vec3 aColour;    // Vertex colour
 layout (location = 2) in vec3 aNormal;   // Vertex normal
 
-out vec3 FragPos;   // Fragment position in world space
-out vec3 Normal;    // Fragment normal in world space
-out vec3 Colour;     // Fragment colour
-
+out vec3 Colour;
 // Transformation matrices
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
-uniform float pointSize = 10.0;  // Added point size uniform
+uniform float pointSize = 10.0;
+
+// Colour control
+uniform vec3 uColor;
+uniform bool uUseVertexColor = true;
 
 void main() {
-    vec4 worldPos = model * vec4(aPos, 1.0);
-    FragPos = worldPos.xyz;
-    Normal = mat3(transpose(inverse(model))) * aNormal;
-    Colour = aColour;
-    gl_Position = projection * view * worldPos;
-    gl_PointSize = pointSize;  // Set the point size
+    Colour = uUseVertexColor ? aColour : uColor;
+
+    gl_Position = projection * view * model * vec4(aPos, 1.0);
+    gl_PointSize = pointSize;
 }
 """
 
 fragment_shader_points = """
 #version 330 core
-in vec3 FragPos;
-in vec3 Normal;
 in vec3 Colour;
 
 out vec4 FragColour;
 
 uniform int pointShape = 0;  // 0=circle, 1=square, 2=triangle
-uniform float alpha = 1.0;   // Add alpha uniform
+uniform float alpha = 1.0;
 
 void main() {
     // Convert from [0,1] to [-0.5,0.5]
     vec2 coord = gl_PointCoord - vec2(0.5);
-    
     // Different shape masks
     bool inside = false;
     
@@ -163,15 +166,15 @@ void main() {
         inside = max(abs(coord.x), abs(coord.y)) <= 0.5;
     }
     else if (pointShape == 2) {  // Triangle
-        vec2 triCoord = vec2(coord.x * 2, coord.y + 0.5);
+        vec2 triCoord = vec2(coord.x * 2.0, coord.y + 0.5);
         inside = triCoord.y >= 0.0 &&
-                triCoord.y <= 1.0 &&
-                triCoord.x >= -triCoord.y &&
-                triCoord.x <= triCoord.y;
+                 triCoord.y <= 1.0 &&
+                 triCoord.x >= -triCoord.y &&
+                 triCoord.x <= triCoord.y;
     }
-    
+
     if (!inside) discard;
-    FragColour = vec4(Colour, alpha);  // Use alpha uniform
+    FragColour = vec4(Colour, alpha);
 }
 """
     
@@ -360,6 +363,14 @@ class Shader:
             shape = 0
         
         self.set_uniform("pointShape", shape)
+
+    def set_colour(self, colour):
+        """Override colour for rendering."""
+        if colour is None:
+            self.set_uniform("uUseVertexColor", True)
+        else:
+            self.set_uniform('uColor', colour)
+            self.set_uniform("uUseVertexColor", False)
 
     def set_alpha(self, alpha):
         """Set the alpha (transparency) value for rendering."""

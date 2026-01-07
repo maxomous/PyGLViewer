@@ -137,6 +137,8 @@ class Renderer:
         point_size:   Optional[float]      = None,
         line_width:   Optional[float]      = None,
         point_shape:  Optional[PointShape] = None,
+        colour:       Optional[list[tuple]] = None,     # override colour instead of using vertex colour
+        wireframe_colour: Optional[list[tuple]] = None, # override wireframe colour instead of using vertex colour
         alpha:        Optional[float]      = None,
         selectable:   Optional[bool]       = None,
         metadata:     Optional[dict]       = None,
@@ -204,8 +206,14 @@ class Renderer:
             object.set_line_width(line_width)
         if point_shape is not None:
             object.set_point_shape(point_shape)
+            
+        if colour is not None:
+            object.set_colour(colour)
+        if wireframe_colour is not None:
+            object.set_wireframe_colour(wireframe_colour)
         if alpha is not None:
             object.set_alpha(alpha)
+            
         if selectable is not None:
             object.set_selectable(selectable)
         if metadata is not None:

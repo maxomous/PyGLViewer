@@ -99,7 +99,7 @@ class ExampleApplication(Application):
             For dynamic text/images, set `static=False` and update each frame.
         """
         # Render grid and axes (as we don't want to create the geometry every frame)
-        self.renderer.update_object('grid', static=True, selectable=False, shape=Shapes.grid(size=self.GRID_SIZE*2, increment=1, colour=Colour.WHITE))
+        self.renderer.update_object('grid', static=True, selectable=False, shape=Shapes.grid(size=self.GRID_SIZE*2, increment=1), wireframe_colour=Colour.WHITE)
         self.renderer.update_object('axis_ticks', static=True, selectable=False, shape=Shapes.axis_ticks(size=self.GRID_SIZE))
         self.renderer.update_object('axis', static=True, selectable=False, shape=Shapes.axis(size=1))
         
@@ -118,100 +118,100 @@ class ExampleApplication(Application):
 
 
         # Points with different shapes
-        self.renderer.update_object('point_red', static=True, point_size=15, point_shape=PointShape.CIRCLE,
-            shape=Shapes.point(colour=Colour.RED), 
-            transform=Transform(translate=(-4, 4, 0))
+        self.renderer.update_object('point_red', static=True, point_size=15, point_shape=PointShape.CIRCLE, colour=Colour.RED,
+            shape=Shapes.point(), 
+            transform=Transform(translate=(-4, 4, 0)),
         )
-        self.renderer.update_object('point_green', static=True, point_size=15, point_shape=PointShape.TRIANGLE,
-            shape=Shapes.point(colour=Colour.GREEN), 
+        self.renderer.update_object('point_green', static=True, point_size=15, point_shape=PointShape.TRIANGLE, colour=Colour.GREEN,
+            shape=Shapes.point(), 
             transform=Transform(translate=(-4, 2.5, 0))
         )
-        self.renderer.update_object('point_blue', static=True, point_size=15, point_shape=PointShape.SQUARE,
-            shape=Shapes.point(colour=Colour.BLUE), 
+        self.renderer.update_object('point_blue', static=True, point_size=15, point_shape=PointShape.SQUARE, colour=Colour.BLUE,
+            shape=Shapes.point(), 
             transform=Transform(translate=(-4, 1, 0))
         )
 
         # Lines and beams
-        self.renderer.update_object('line_orange', static=True, line_width=5,
-            shape=Shapes.line(colour=Colour.ORANGE),
+        self.renderer.update_object('line_orange', static=True, line_width=5, wireframe_colour=Colour.ORANGE,
+            shape=Shapes.line(),
             transform=Shapes.calculate_transform(p0=(-2.5, 3.5, 0), p1=(-1.5, 4.5, 0))
         )
 
         # Beam (created by transforming a cube)
-        self.renderer.update_object('beam_yellow', static=True,
-            shape=Shapes.cube(colour=Colour.YELLOW),
+        self.renderer.update_object('beam_yellow', static=True, colour=Colour.YELLOW,
+            shape=Shapes.cube(),
             transform=Shapes.calculate_transform(p0=(-2.5, 2.0, 0.25), p1=(-1.5, 3.0, 0.75), cross_section=(0.2,0.2))
         )
 
         # Arrow with dimensions
         arrow_dimensions = ArrowDimensions(shaft_radius=0.4, head_radius=0.7, head_length=0.3)
-        self.renderer.update_object('arrow_purple', static=True,
-            shape=Shapes.arrow(dimensions=arrow_dimensions, colour=Colour.PURPLE),
+        self.renderer.update_object('arrow_purple', static=True, colour=Colour.PURPLE,
+            shape=Shapes.arrow(dimensions=arrow_dimensions),
             transform=Shapes.calculate_transform(p0=(-2.4, 0.6, 0.25), p1=(-1.6, 1.4, 0.75), cross_section=(0.2,0.2))
         )
 
         # Basic shapes (wireframe)
-        self.renderer.update_object('triangle_wire', static=True,
-            shape=Shapes.triangle(wireframe_colour=Colour.YELLOW, show_body=False),
+        self.renderer.update_object('triangle_wire', static=True, wireframe_colour=Colour.YELLOW, 
+            shape=Shapes.triangle(show_body=False),
             transform=Transform(translate=(0, 4, 0), scale=(1,1,1))
         )
-        self.renderer.update_object('rectangle_wire', static=True,
-            shape=Shapes.rectangle(wireframe_colour=Colour.GREEN, show_body=False),
+        self.renderer.update_object('rectangle_wire', static=True, wireframe_colour=Colour.GREEN, 
+            shape=Shapes.rectangle(show_body=False),
             transform=Transform(translate=(2, 4, 0), scale=(1,1,1))
         )
-        self.renderer.update_object('circle_wire', static=True,
-            shape=Shapes.circle(wireframe_colour=Colour.BLUE, show_body=False),
+        self.renderer.update_object('circle_wire', static=True, wireframe_colour=Colour.BLUE, 
+            shape=Shapes.circle(show_body=False),
             transform=Transform(translate=(4, 4, 0), scale=(1,1,1))
         )
 
         # Basic shapes (filled)
-        self.renderer.update_object('triangle_filled', static=True,
-            shape=Shapes.triangle(colour=Colour.YELLOW),
+        self.renderer.update_object('triangle_filled', static=True, colour=Colour.YELLOW,
+            shape=Shapes.triangle(),
             transform=Transform(translate=(0, 2.5, 0), scale=(1,1,1))
         )
-        self.renderer.update_object('rectangle_green', static=True,
-            shape=Shapes.rectangle(colour=Colour.GREEN),
+        self.renderer.update_object('rectangle_green', static=True, colour=Colour.GREEN,
+            shape=Shapes.rectangle(),
             transform=Transform(translate=(2, 2.5, 0), scale=(1,1,1))
         )
-        self.renderer.update_object('circle_blue', static=True,
-            shape=Shapes.circle(colour=Colour.BLUE),
+        self.renderer.update_object('circle_blue', static=True, colour=Colour.BLUE,
+            shape=Shapes.circle(),
             transform=Transform(translate=(4, 2.5, 0), scale=(1,1,1))
         )
         
         # Generic quad (filled) - Note: It is very inefficient to be changing p1,p2 etc each frame, ideally a transform
-        self.renderer.update_object('quad_red', static=True,
-            shape=Shapes.quad(p1=(5.5, 3, 0.5), p2=(5.5, 2, 0), p3=(6.5, 2, 0.5), p4=(6.5, 3, 1), colour=Colour.RED)
+        self.renderer.update_object('quad_red', static=True, colour=Colour.RED,
+            shape=Shapes.quad(p1=(5.5, 3, 0.5), p2=(5.5, 2, 0), p3=(6.5, 2, 0.5), p4=(6.5, 3, 1))
         )
         
         # 3D shapes with transforms
-        self.renderer.update_object('cone', static=True,
-            shape=Shapes.cone(colour=Colour.rgb(255, 165, 0)),
+        self.renderer.update_object('cone', static=True, colour=Colour.rgb(255, 165, 0),
+            shape=Shapes.cone(),
             transform=Transform(translate=(0, 0.75, 0.5), scale=(0.5, 0.5, 0.5), rotate=(-np.pi/2, 0, 0))
         )
-        self.renderer.update_object('cylinder', static=True,
-            shape=Shapes.cylinder(colour=Colour.MAGENTA),
+        self.renderer.update_object('cylinder', static=True, colour=Colour.MAGENTA,
+            shape=Shapes.cylinder(),
             transform=Transform(translate=(2, 1, 0.25), scale=(0.5, 0.5, 0.5))
         )
-        self.renderer.update_object('prism', static=True,
-            shape=Shapes.prism(colour=Colour.ORANGE),
+        self.renderer.update_object('prism', static=True, colour=Colour.ORANGE,
+            shape=Shapes.prism(),
             transform=Transform(translate=(4, 1, 0), scale=(1, 1, 1))
         )
-        self.renderer.update_object('sphere_red', static=True,
-            shape=Shapes.sphere(colour=Colour.RED),
+        self.renderer.update_object('sphere_red', static=True, colour=Colour.RED,
+            shape=Shapes.sphere(),
             transform=Transform(translate=(6, 1, 0), scale=(0.5, 0.5, 0.5))
         )
 
         # Plots
         x = np.linspace(-1.5, 1.5, 100)
         y = x**2
-        self.renderer.update_object('plot_green', static=True, line_width=2.0,
-            shape=Shapes.plot(x, y, colour=Colour.GREEN),
+        self.renderer.update_object('plot_green', static=True, line_width=2.0, wireframe_colour=Colour.GREEN,
+            shape=Shapes.plot(x, y),
             transform=Transform(translate=(-3, -2, 0))
         )
         x = np.linspace(0, 3, 50)
         y = np.sin(x * np.pi / 1.5)
-        self.renderer.update_object('scatter_cyan', static=True, point_size=5.0,
-            shape=Shapes.scatter(x, y, colour=Colour.CYAN),
+        self.renderer.update_object('scatter_cyan', static=True, point_size=5.0, colour=Colour.CYAN,
+            shape=Shapes.scatter(x, y),
             transform=Transform(translate=(1, -1, 0))
         )
 
@@ -250,19 +250,15 @@ class ExampleApplication(Application):
         size = self.timer.oscillate_translation(limits=[0.5, 1.5], speed=0.5)
         # Ideally, you shouldn't change the shape every frame as this is very innefficient, instead you should transform it....
         self.renderer.update_object('moving_cube_inefficient',
-            shape=Shapes.cube(position=(-2,-2,0), size=size, colour=Colour.WHITE),
-            update_shape=True # NOTE: This is very inefficient. You should instead set the transform (or use a shader for complex geometry changes)
+            shape=Shapes.cube(position=(-2,-2,0), size=size),
+            update_shape=True, # NOTE: This is very inefficient. You should instead set the transform (or use a shader for complex geometry changes)
+            colour=Colour.WHITE
         )
         self.renderer.update_object('moving_cube_efficient',
-            shape=Shapes.cube(colour=Colour.WHITE),
-            transform=Transform(translate=(-1,-2,0), scale=(size, size, size)) # NOTE: This is a better way to acheive the same thing as above
+            shape=Shapes.cube(),
+            transform=Transform(translate=(-1,-2,0), scale=(size, size, size)), # NOTE: This is a better way to acheive the same thing as above
+            colour=Colour.WHITE
         )
-        # setting the shape each frame is very ineffiecient, instead we transform it
-        self.renderer.update_object('beam_yellow_2', static=True,
-            shape=Shapes.cube(colour=Colour.YELLOW),
-            transform=Shapes.calculate_transform(p0=(0,0,0), p1=(1,0,0), cross_section=(0.5,0.25))
-        )
-
 
         # Dynamic text label
         self.renderer.update_text('label_3d',

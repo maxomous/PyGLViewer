@@ -1085,7 +1085,7 @@ class Shapes:
         return sphere
     
     @staticmethod
-    def grid(size, increment, colour):
+    def grid(size, increment, colour=DEFAULT_LINE_COLOUR):
         """Create a grid in the XY plane centreed at origin.
         
         Args:
@@ -1182,7 +1182,7 @@ class Shapes:
 
 
     @staticmethod
-    def target(position=(0,0,0), size=(1,1,1), edge_length=0.2, colour=(1,1,1)):
+    def target(position=(0,0,0), size=(1,1,1), edge_length=0.2, colour=DEFAULT_LINE_COLOUR):
         """Create a target around a 3D shape.
         
         Args:

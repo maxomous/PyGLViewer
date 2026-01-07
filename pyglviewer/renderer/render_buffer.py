@@ -274,21 +274,31 @@ class RenderBuffer:
                         if lights:
                             shader.set_light_uniforms(lights)
                         current_shader = shader
-                            
-                    # Set line width or point properties if needed
-                    if primitive in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP):
-                        glLineWidth(object._line_width)
-                    elif primitive == GL_POINTS:
-                        glPointSize(object._point_size)
-                        current_shader.set_point_shape(object._point_shape)
-                        
+                    
                     # Draw each object in the batch
                     if shape.vertex_data is None or shape.indices is None:
                         continue
-                    # Set model matrix for this object
-                    current_shader.set_model_matrix(object._model_matrix)
+                
+                    # Reset the colour flag
+                    current_shader.set_colour(None)
+
+                    # Wireframe
+                    if primitive in (GL_LINES, GL_LINE_STRIP, GL_LINE_LOOP) :
+                        glLineWidth(object._line_width)
+                        if object._wireframe_colour: # Override colour
+                            current_shader.set_colour(object._wireframe_colour)
+                    else:
+                        if object._colour: # Override colour
+                            current_shader.set_colour(object._colour)
+                    # Points
+                    if primitive == GL_POINTS:
+                        glPointSize(object._point_size)
+                        current_shader.set_point_shape(object._point_shape)
+
                     # Set alpha for transparency
                     current_shader.set_alpha(object._alpha)
+                    # Set model matrix for this object
+                    current_shader.set_model_matrix(object._model_matrix)
                     # Draw the object
                     glDrawElements(
                         primitive,
