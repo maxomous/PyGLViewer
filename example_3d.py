@@ -98,7 +98,7 @@ class ExampleApplication(Application):
             - Text and images persist between frames if `static=True`. 
             For dynamic text/images, set `static=False` and update each frame.
         """
-        # Grid and axes
+        # Render grid and axes (as we don't want to create the geometry every frame)
         self.renderer.update_object('grid', static=True, selectable=False, shape=Shapes.grid(size=self.GRID_SIZE*2, increment=1, colour=Colour.WHITE))
         self.renderer.update_object('axis_ticks', static=True, selectable=False, shape=Shapes.axis_ticks(size=self.GRID_SIZE))
         self.renderer.update_object('axis', static=True, selectable=False, shape=Shapes.axis(size=1))
